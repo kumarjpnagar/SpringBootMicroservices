@@ -1,0 +1,9 @@
+version: '3'
+services:
+  config-git-server:
+    build: .
+    image: config-git-server:0.0.1
+    ports:
+      - "80:80"
+    extra_hosts:
+      - "scc_host:$DOCKERHOST"

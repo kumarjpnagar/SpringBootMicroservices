@@ -1,0 +1,45 @@
+- targets: ['OH0LW0068.intellig.local:8134']
+  labels:
+    asg: 'archiving-and-purging'
+- targets: ['OH0LW0068.intellig.local:8113']
+  labels:
+    asg: 'BELService'
+- targets: ['OH0LW0068.intellig.local:8129']
+  labels:
+    asg: 'central-configuration'
+- targets: ['OH0LW0068.intellig.local:8128']
+  labels:
+    asg: 'custom-teeoff'
+- targets: ['OH0LW0068.intellig.local:8091']
+  labels:
+    asg: 'dec'
+- targets: ['OH0LW0068.intellig.local:8111']
+  labels:
+    asg: 'dec-core'
+- targets: ['OH0LW0068.intellig.local:8098']
+  labels:
+    asg: 'domain-services'
+- targets: ['OH0LW0068.intellig.local:9051']
+  labels:
+    asg: 'goods-to-operator'
+- targets: ['OH0LW0068.intellig.local:8132']
+  labels:
+    asg: 'gs1-validation-service'
+- targets: ['OH0LW0068.intellig.local:8111']
+  labels:
+    asg: 'gto'
+- targets: ['OH0LW0068.intellig.local:9051']
+  labels:
+    asg: 'dec-core'
+- targets: ['OH0LW0068.intellig.local:8111']
+  labels:
+    asg: 'gto'
+- targets: ['OH0LW0068.intellig.local:9051']
+  labels:
+    asg: 'dec-core'
+- targets: ['OH0LW0068.intellig.local:8111']
+  labels:
+    asg: 'gto'
+- targets: ['OH0LW0068.intellig.local:8111']
+  labels:
+    asg: 'gto'

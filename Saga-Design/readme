@@ -1,0 +1,23 @@
+## Readme ##
+This Utility is used to Dockerized the 'Configurations' repositories.
+- It takes 'configuration.zip' as input while creating the docker-image
+- Upon running this as docker-container, it carries out below tasks
+    -  Unzipping Configuration Zip 
+    -  Git clone the config repo from git-server 
+    - Cleans intermediate folders
+    - Renames Configuration Zip with timestamps
+    - Setting git config
+        -   user.email "gitserver@honeywell.com"
+        -   config user.name "gitserver"
+    -  Commit and push configrations to config repo #
+
+
+## Starting GIT SERVER ##
+- Checkout https://bitbucket.intellig.local/projects/RPS/repos/config-git-server/browse
+- Run 'start-self-docker.sh'
+
+## Configuration setup -- below is an example, please change values as per the underlying environment ##
+docker run --rm --name config \
+-v /Users/h265231/Documents/devops/reds-platform/config_mount:/opt/config-repos/config-dir \
+-e GITHOST="10.79.194.245" \
+configs:0.0.1;

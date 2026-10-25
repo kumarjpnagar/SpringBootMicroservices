@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# Called by "git push" with no arguments.
+#
+
+echo "Running hook.."
+
+dateTime=$(git log -1 --format='%cd' $newvalue)
+echo $dateTime
+    
+user=$(git log -1 --format='%cn' $newvalue)
+echo $user
+    
+message=$(git log -1 --format='%B' $newvalue)
+echo $message
+
+curl -v -X POST "http://scc_host:8080/bus/refresh"

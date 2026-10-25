@@ -1,0 +1,41 @@
+buildscript {
+	ext {
+		springBootVersion = '1.4.5.RELEASE'
+		springBootAdminVersion = "1.5.0"
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+
+group = 'com.intelligrated.nexgen'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:Camden.SR5"
+		mavenBom "org.springframework.boot:spring-boot-starter-parent:${springBootVersion}"
+	}
+}
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-actuator')
+	compile('org.springframework.boot:spring-boot-starter-web')
+	compile("de.codecentric:spring-boot-admin-server:${springBootAdminVersion}")
+	compile("de.codecentric:spring-boot-admin-server-ui:${springBootAdminVersion}")
+	compile('org.springframework.cloud:spring-cloud-starter-eureka')
+
+	testCompile('org.springframework.boot:spring-boot-starter-test')
+}
