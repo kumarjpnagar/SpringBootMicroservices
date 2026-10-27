@@ -1,0 +1,667 @@
+
+Generative AI Engineering: LLMs, RAG, and Agentic Systems
+==========================================================
+
+Chapter 1: Introduction
+
+Section overview
+
+Setup development environment
+
+Install Python UV tool
+
+Dev setup : Install Anaconda
+
+Dev setup : UV
+
+Quizzes, Exercises, and Projects
+
+Accessing the Large Language Models
+
+------------------------------------------------
+
+Chapter 2: Setup Development Environment
+
+Section overview
+
+Intro to AI, ML, Neural Networks, and Gen AI
+
+Neurons, Neural & Deep Learning Networks
+
+Exercise: Try out a Neural Network for Solving Math Equations
+
+A Look at Generative AI Model as a Black Box
+
+Quiz: Fundamentals of Generative AI Models
+
+An Overview of Generative AI Applications
+
+Exercise: Setup Access to Google Gemini Models
+
+Introduction to Hugging Face
+
+Exercise: Checkout the Hugging Face Portal
+
+Exercise: Join the Community and Explore Hugging Face
+
+Quiz: Generative AI and Hugging Face
+
+Intro to Natural Language Processing (NLP, NLU, NLG)
+
+NLP with LLMs
+
+Exercise: Try Out NLP Tasks with Hugging Face Models
+
+---------------------------------------------------------------
+
+Chapter 3: Generative AI : Fundamentals
+
+Section overview
+
+Introduction to OLlama
+
+OLlama model hosting
+
+Model Naming Scheme
+
+Instruct, Embedding, and Chat Models
+
+Quiz: Instruct, Embedding, and Chat Models
+
+Next Word Prediction by LLM and Fill Mask Task
+
+Model Inference Control Parameters
+
+Randomness Control Inference Parameters
+
+Exercise: Setup Cohere Key and Try Out Randomness Control Parameters
+
+Diversity Control Inference Parameters
+
+Output Length Control Parameters
+
+Exercise: Try Out Decoding or Inference Parameters
+
+Exercise: Decoding Hyper-parameters
+
+
+Introduction to In-Context Learning
+
+
+-------------------------------------------------
+
+Chapter 4: Generative AI Applications
+
+
+Section overview
+
+Exercise: Install & Work with Hugging Face Transformers Library
+
+Transformers Library Pipeline Classes
+
+Quiz: Hugging Face Transformers Library
+
+Hugging Face Hub Library & Working with Endpoints
+
+Quiz: Hugging Face Hub Library
+
+Exercise: Proof of Concept (PoC) for Summarization Task
+
+Hugging Face CLI Tools and Model Caching
+
+-------------------------------------------------------
+
+Chapter 5: Hugging Face Models : Fundamentals
+
+Section overview
+
+Model Input/Output and Tensors
+
+Hugging Face Model Configuration Classes
+
+Model Tokenizers & Tokenization Classes
+
+Working with Logits
+
+Hugging Face Models Auto Classes
+
+Quiz: Hugging Face Classes
+
+Exercise: Build a Question Answering System
+
+--------------------------------------------------------
+
+Chapter 6: (Optional) Hugging Face Models : Advanced  
+  
+  
+Section overview
+
+Challenges with Large Language Models
+
+Model Grounding and Conditioning
+
+Exercise: Explore the Domain Adapted Models
+
+Prompt Engineering and Practices (1 of 2)
+
+Prompt Engineering and Practices (2 of 2)
+
+Quiz & Exercise: Prompting Best Practices
+
+Few-Shot & Zero-Shot Prompts
+
+Quiz & Exercise: Few-Shot Prompts
+
+Chain of Thought Prompting Technique
+
+Quiz & Exercise: Chain of Thought
+
+Self-Consistency Prompting Technique
+
+Tree of Thoughts Prompting Technique
+
+Quiz & Exercise: Tree of Thought
+
+Exercise: Creative Writing Workbench (v1)
+
+--------------------------------------------
+
+Chapter 7: LLM Challenges & Prompt Engineering
+
+Section overview
+
+Prompt Templates
+
+Few-Shot Prompt Template & Example Selectors
+
+Prompt Model Specificity
+
+LLM Invoke, Streams, Batches & Fake LLM
+
+Exercise: Interact with LLM Using LangChain
+
+Exercise: LLM Client Utility
+
+Quiz: Prompt Templates, LLM, and Fake LLM
+
+Introduction to LangChain Execution Language
+
+Exercise: Create Compound Sequential Chain
+
+LCEL: Runnable Classes (1 of 2)
+
+LCEL: Runnable Classes (2 of 2)
+
+Exercise: Try Out Common LCEL Patterns
+
+Exercise: Creative Writing Workbench v2
+
+Quiz: LCEL, Chains and Runnables
+
+----------------------------------------------
+
+Chapter 8: Langchain : Prompts, Chains & LCL
+
+
+Section overview
+
+Challenges with Structured Responses
+
+LangChain Output Parsers
+
+Exercise: Use the EnumOutputParser
+
+Exercise: Use the PydanticOutputParser
+
+Project: Creative Writing Workbench
+
+Project: Solution Walkthrough (1 of 2)
+
+Project: Solution Walkthrough (2 of 2)
+
+Handling Parsing Errors
+
+Quiz and Exercise: Parsers, Error Handling
+
+-----------------------------------------------------
+
+Chapter 9: Dealing with Structured Responses from LLM
+
+Section overview
+
+Datasets for LLM Pre-training
+
+HuggingFace Datasets and Datasets Library
+
+Exercise: Use Features of Datasets Library
+
+Exercise: Create and Publish a Dataset on Hugging Face
+
+-----------------------------------------------------------
+
+Chapter 10: Datasets for Model Training, and Testing
+
+
+What is the Meaning of Contextual Understanding?
+
+Building Blocks of Transformer Architecture
+
+Intro to Vectors, Vector Spaces, and Embeddings
+
+Measuring semantic similarity with distance
+
+Quiz: Vectors, Embeddings, Similarity
+
+Sentence transformer models (SBERT)
+
+Working with sentence transformers
+
+Exercise: Work with Classification and Mining Tasks
+
+Creating embeddings with LangChain
+
+Exercise: CacheBackedEmbeddings Classes
+
+Lexical, semantic, and kNN search
+
+Search Efficiency and Search Performance Metrics
+
+Search Algorithms, Indexing, ANN, FAISS
+
+Quiz & Exercise: Try Out FAISS for Similarity Search
+
+Search Algorithm: Local Sensitivity Hashing (LSH)
+
+Search Algorithm: Inverted File Index (IVF)
+
+Search Algorithm: Product Quantization (PQ)
+
+Search Algorithm: HNSW (1 of 2)
+
+Search Algorithm: HNSW (2 of 2)
+
+Quiz & Exercise: Search Algorithms & Metrics
+
+Project: Build a Movie Recommendation Engine
+
+Benchmarking ANN Algorithms
+
+Exercise: Benchmark the ANN Algorithms
+
+------------------------------------------------------
+
+Chapter 11: Vectors, Embeddings & Semantic Search
+
+
+Challenges with semantic search libraries
+
+Introduction to Vector Databases
+
+Exercise: Try out ChromaDB
+
+Exercise: Custom embeddings
+
+Chunking, Symmetric & Asymmetric Searches
+
+LangChain Document Loaders
+
+LangChain Text Splitters for Chunking
+
+LangChain Retrievers & Vector stores
+
+Search Scores and Maximal-Marginal-Relevancy (MMR)
+
+Project: Pinecone Adoption @ Company
+
+Quiz: Vector Databases, Chunking, Text Splitters
+
+-----------------------------------------------------
+
+Chapter 12: Vector Databases
+
+Introduction to Streamlit Framework
+
+Exercise: Build a HuggingFace LLM Playground
+
+Building Conversational User Interfaces
+
+Exercise: Build a Chatbot with Streamlit
+
+LangChain Conversation Memory
+
+LangChain chat model classes
+
+Exercise: Try out chat models
+
+Quiz & Exercise: Building Chatbots with LangChain
+
+Project: PDF Document Summarizer Application
+
+---------------------------------------------------
+
+Chapter 13: Conversation User Interface
+
+Introduction to Retrieval Augmented Generation (RAG)
+
+LangChain RAG Pipelines
+
+Exercise: Build Smart Retriever with LangChain
+
+Quiz: RAG and Retrievers
+
+Pattern: Multi Query Retriever (MQR)
+
+Pattern: Parent Document Retriever (PDR)
+
+Pattern: Multi Vector Retriever (MVR)
+
+Quiz: MQR, PDR and MVR
+
+Ranking, Sparse, Dense & Ensemble Retrievers
+
+Pattern: Long Context Reorder (LCR)
+
+Quiz: Ensemble & Long Context Retrievers
+
+Pattern: Contextual Compressor
+
+Pattern: Merger Retriever
+
+Quiz: Contextual Compressors and Merger Retriever Patterns
+
+-----------------------------------------------------------------
+
+Chapter 14: Advanced Retrieval Augmented Generation
+
+
+Introduction to Agents, Tools, and Agentic RAG
+
+Exercise: Build a Single-Step Agent without LangChain
+
+LangChain Tools and Toolkits
+
+Quiz: Agents, Tools & Toolkits
+
+Exercise: Try Out the FileManagement Toolkit
+
+How Do We Humans & LLMs Think?
+
+ReACT Framework & Multi-Step Agents
+
+Exercise: Build Question/Answering ReACT Agent
+
+Exercise: Build a Multi-Step ReACT Agent
+
+LangChain Utilities for Building Agentic-RAG Solutions
+
+Exercise: Build an Agentic-RAG Solution using LangChain
+
+Quiz: Agentic RAG and ReAct
+
+--------------------------------------------------------------
+
+Chapter 15: Agentic RAG
+
+Section overview
+
+Introduction to Model Context Protocol (1 of 2)
+
+Exercise: Install MCP server on Claude desktop
+
+Introduction to Model Context Protocol (2 of 2)
+
+Quiz: Fundamentals of MCP
+
+Exercise : Setup project with MCP Python SDK
+
+Exercise : Explore MCP using the Inspector tool
+
+Exercise : Code an MCP Server
+
+MCP messaging and transport
+
+Exercise : Setup standalone MCP server with notifications
+
+Quiz: MCP Servers
+
+MCP : Client
+
+Exercise: Code the MCP client
+
+Exercise : Question-Answering application
+
+Quiz: MCP Clients
+
+LangChain MCP adapter library
+
+Exercise: Create tool calling agent with MCP tools
+
+Exercise: Connect with Multiple MCP servers (tools)
+
+-------------------------------------------------------
+
+Chapter 16: Model Context Protocol (MCP)
+
+
+Section overview : LangGraph
+
+Static, Intelligent & Agentic workflows (200)
+
+Basics of Langgraph
+
+Building Stateful Workflows
+
+Exercise: Create a stateful graph
+
+Exercise: Working with annotated types (600)
+
+Quiz: Fundamentals of LangGraph
+
+Conditional edges in graphs (700)
+
+Exercise: Working with conditional edges (800)
+
+Exercise: Create loops/cycles with conditional edges (900)
+
+Quiz: Conditions and Loops
+
+Parallel processing & subgraphs (1000)
+
+Exercise : Hands-on with static parallelization (1100)
+
+Exercise: Hands-on with dynamic parallelization (1200)
+
+Exercise: Hands-on with java_spring ai_langchain (1300)
+
+Working with subgraphs (1300)
+
+Exercise: Hands-on with subgraphs (1400)
+
+Quiz: Parallelization & Subgraphs
+
+----------------------------------------------------
+
+Chapter 17: Building Workflows & Agents with LangGraph
+
+
+Persisting the graph state with checkpointing (1500)
+
+LangGraph checkpointer API (1600)
+
+Try out checkpointers (1700)
+
+Quiz: Persistence & Checkpointers (1725)
+
+Using the memory & storage (1750)
+
+Exercise: Hands-on with storage (1775)
+
+Quiz: Memory & Storage (1780)
+
+Add tool-nodes to the graph (1800)
+
+Exercise: Build a graph with tool nodes (1900)
+
+Exercise: Using MCP Servers from ToolNodes (2000)
+
+Quiz: Tools & MCP Servers (2050)
+
+Creating workflows with Human-in-the-Loop i.e., HITL (2100)
+
+Learn to use static interrupts (2200)
+
+Project: Design a payment workflow with HITL (3000)
+
+Quiz: HITL (3050)
+
+Building agents with LangGraph (3100)
+
+Exercise: Create an agent create_react_agent (3200)
+
+Exercise: Create an agent create_spring boot_Java_agent (3300)
+
+Exercise: Create an agent create_spring boot_Microservice_agent (3400)(Spring ai,LangChain)
+
+Quiz: Agents with LangGraph (3250)
+
+----------------------------------------------------------------
+
+Chapter 18: Building Workflows & Agents with LangGraph (Repeat)
+
+
+Section overview - Multi agent systems
+
+Introduction to multi agent systems
+
+Foundational patterns
+
+Exercise: Hands on parallel aggregation pattern
+
+Supervisor & Agent as tool patterns
+
+Exercise: Hands on with Supervisor pattern
+
+Quiz: Multi Agent Patterns #1
+
+Consensus & Swarm-Patterns
+
+Exercise: Hands on with Consensus pattern
+
+LangGraph Swarm Library (900)
+
+Exercise: Hands on- Build Finance Q&A with Swarm
+
+Quiz: Multi Agent Patterns #2
+
+------------------------------------------------
+
+Chapter 19: Multi Agent Systems : Patterns
+
+
+Introduction to Fine-tuning
+
+Fine-tuning : Reasons
+
+Fine tuning process overview
+
+Tools for fine tuning
+
+Exercise: Fine tune Cohere model for toxicity classification
+
+Creating a dataset for fine tuning
+
+Exercise: Prepare a dataset and fine tune Open AI 4o model
+
+Project: Build a credit card fraud detection dataset
+
+------------------------------------------
+
+Chapter 20: Fine Tuning	5	7 min
+
+Introduction to Alpaca
+
+Fine-tuning dataset formats
+
+Exercise: Explore instruct fine-tuning datasets
+
+Fine-tuning datasets for chats
+
+Exercise: Prepare chat dataset for fine-tuning
+
+Quiz: Fine-tuning datasets
+
+-------------------------------------------
+
+Chapter 21: Dataset Preparation for Fine-Tuning
+
+
+Fine-tuning under the covers
+
+Hyperparameters : part 1 of 2
+
+Hyperparameters : part 2 of 2
+
+Understand the checkpointing
+
+Exercise: Explore Hyperparameters
+
+Intro HuggingFace Trainer, Data collator classes
+
+Exercise: Try out the DataCollators
+
+Exercise: Pre-training Roberta model
+
+Exercise: Full fine-tune BERT for sentiment analysis
+
+Quiz: Hyperparameters & Fine-tuning
+
+-------------------------------------------------
+
+Chapter 22: Pre-training & Fine-tuning with HuggingFace Trainer
+
+Fine-tuning under the covers
+
+Hyperparameters : part 1 of 2
+8:18
+Hyperparameters : part 2 of 2
+
+Understand the checkpointing
+
+Exercise: Explore Hyperparameters
+
+Intro HuggingFace Trainer, Data collator classes
+
+Exercise: Try out the DataCollators
+
+Exercise: Pre-training Roberta model
+
+Exercise: Full fine-tune BERT for sentiment analysis
+
+Quiz: Hyperparameters & Fine-tuning
+
+-----------------------------------------------
+Chapter 23: Quantization
+
+LLM training compute needs
+
+Inferencing compute needs
+
+Quiz : Check your understanding of GPU & CUDA
+
+Introduction to Quantization
+
+Exercise: Quantization maths (Affine technique)
+
+Applying quantization : Static & Dynamic
+
+Exercise: Dynamic quantization with PyTorch
+
+Exercise: Static quantization with AutoGPTQ
+
+Quiz: Check your understanding of quantization
+
+
+
+
+
+

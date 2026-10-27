@@ -1,0 +1,87 @@
+
+Current Project:
+In/Out of your project.
+Technical and Functional Flow of your project
+Scenario based questions on your project
+
+=================================================
+
+Core Java
+
+OOPS Concept
+
+Four Pillars of OOPS Concept
+Access modifiers and their practical 
+Interfaces and abstract classes and their usage in real time scenario
+Polymorphism
+Constructors
+Exception hierarchy
+String and  Immutability features
+SOLID Principles and their usage
+Multithreading and concurrency
+The basic thread concepts
+Thread transitions, priorities and interruptions concepts
+Thread safety concepts and its features
+Inter thread communications
+Thread deadlocking
+Executor framework and its advantages
+Implementations of thread pools.
+Callable/Runnable and future interface 
+Different locking mechanism-Lock,re-entrant lock
+Semaphore,latches,cyclic barrier
+Blocking queue and its implementation classes.
+Atomicity,ordering,visibility features.
+Thread locale classes and volatile
+Discuss some practical scenario in thread
+
+Collection hierarchy
+Collections
+Features of list ,set and map and their implementation classes
+Internal implementations of 
+    ArrayList, 
+    LinkedList, 
+	HashSet
+	HashMap, 
+	TreeMap 
+	TreeSet
+ConcurrentHashMap and CopyonWriteArrayList
+Comparable and Comparator(Internal working)
+ 1.Java Streams API Features and 2.in-built functional interfaces 
+  + Hands on code example
+
+Sorting and searching algorithms
+Practical scenario
+
+Garbage collection concepts and JVM implementation and execution of java code
+Class loaders and how program is stored in a different memory
+SOLID Design principles
+Design pattern: Singleton,factory,Builder,observer,decorator,adapter,facade etc.
+
+====
+🔥 Internal working of HashMap (very important 🔥)
+🔥 ConcurrentHashMap internals
+🔥 Fail-fast vs fail-safe iterators
+🔥 Performance tuning of collections
+=====
+Database: 
+Stored procedures 
+Primay key and Unique key in a table
+Delete, truncate and Drop
+DDL And DML
+Clustered Vs non clustered index
+Single Vs composite index
+Advantages and disadvantages of various index types
+Inner and outer join
+Performance tuning a query
+Query plan
+Join, left join,right join,left outer join,Hash join,Loop Hash join
+              PL/SQL
+			  
+Spring:MVC,Microservices,Boot,IOC,AOP,security in spring
+Web services(Rest/SOAP)
+Jax-rs,jax-ws,cxf,create/consume,wsdl,wadl
+Security in webservices
+Backward comaptibility
+Hibernate/JPA:Basic with Examples
+
+https://medium.com/@javatechie/solid-design-principle-java-ae96a48db97

@@ -1,0 +1,1281 @@
+Develop one solution design docs with complete definition with hands for each chapters one by one?
+Note:For code development use Java spring boot microservices AWS CLI for Lambda, s3 and other required chapters? 
+
+https://joudwawad.medium.com/aws-cloudfront-deep-dive-08bd04081662
+
+https://hkcodeblogs.medium.com/deploy-a-spring-boot-application-to-aws-ecs-91742a32a5f1
+
+https://www.baeldung.com/spring-boot-google-app-engine
+
+https://medium.com/@smccartney09/deploy-a-spring-boot-api-to-gcp-app-engine-722198bab4d4
+
+https://medium.com/@sumbul.first/aws-cloud-formation-lab-2a007a28d3c8
+
+https://medium.com/@syed.fawzul.azim/asynchronous-communication-between-microservices-01-aws-simple-queue-service-sqs-7b7f2b7df080
+
+https://medium.com/@syed.fawzul.azim/asynchronous-communication-between-microservices-02-aws-sns-sqs-c66c5a209bd0
+
+https://medium.com/@shukla.chandan12/aws-certified-solutions-architect-associate-series-tutorial-25-monitoring-auditing-with-c04eddcbd1ff
+
+https://medium.com/@javatechie/deploying-spring-boot-applications-to-aws-lambda-with-api-gateway-ae5c810008e5
+
+https://medium.com/@anuradha.kadurugasyaya/aws-dynamodb-crud-example-with-spring-boot-b0abac728605
+
+https://tharinduk001.medium.com/microservices-deployment-on-aws-with-jenkins-ci-cd-1c9901873e84
+
+https://www.networkershome.com/fundamentals/aws-cloud/ci-cd-on-aws-codepipeline-codebuild-codedeploy/
+
+https://dev.to/onepoint/integrating-aws-cognito-as-an-identity-provider-with-spring-boot-terraform-441c
+
+https://medium.com/@abhishekranjandev/integrating-amazon-cognito-for-authentication-and-authorization-in-a-spring-boot-application-fe5fe7d78db
+
+
+
+----------------------
+
+develop hands on one spring boot application deployed in app engine in gcp how to authenthicate and getting secured?
+Authenticate, authorise and protect app in app engine from unautorised users?
+
+Add one section for Real time enterprise end to end GCP Setup, sdk, shell, cli, console to develop 
+one spring boot app and deploy to app emgine and manage security, debug using logs, metrics
+and run db proxy scipt to connect to cloud sql and do DML And DDL Operations
+Also Use Cloud Run and Cloud Function(Pub-sub: Topics and subcription from subcription send Json meassge that is consumed by consumer that is devloped using java, spring boot,kafka temple, listener and see logs status for ack, nack and DLQ, success) with Bigquery/postgresql
+
+--------------------------------------------------------------------------
+PART II: GCP-ACE Advance
+
+Section1): Deploying a Google Kubernetes Engine cluster
+
+ Deploying a container application to Google Kubernetes Engine using pods
+ Configuring Google Kubernetes Engine application monitoring and logging
+------------------
+
+Section2: Create kubernetes cluster from Google cloud console
+
+2. Deploy Workload
+3. Create Docker images 
+4. Push it to container registry
+5. Deploy docker image to cluster
+6. Expose as service
+------------------------
+Section 3: Deploying and implementing 
+
+App Engine,Cloud Run, and Cloud Functions resources
+ Deploying an application, updating scaling configuration, versions, and traffic splitting
+ Deploying an application that receives Google Cloud events (e.g., Cloud Pub/Sub events, Cloud 
+Storage object change notification events)
+----------------------------
+Section 4: Google Cloud Function (Hands-on)Java spring boot gke pub-sub trigger
+Http
+Cloud Storage
+Pubsub
+
+--------------------------------
+Section 5: Deploying and implementing data
+ 
+solutions.
+ Initializing data systems with products (e.g., Cloud SQL, Cloud Datastore, BigQuery, Cloud 
+Spanner, Cloud Pub/Sub, Cloud Bigtable, Cloud Dataproc, Cloud Dataflow, Cloud Storage)
+ Loading data (e.g., command line upload, API transfer, import/export, load data from Cloud 
+Storage, streaming data to Cloud Pub/Sub)
+-------------------------------
+Section 6: Create Bucket & upload(image) object(Java spring boot gke)
+a)Object Lifecycle
+b)Access control
+c)Signed URL
+---------------------------------- 
+Section 7: Below Lab:-
+
+Cloud Spanner (Hands-on)
+
+Cloud Memorystore (Hands-on)
+
+Cloud Firestore (Hands-on)
+
+Cloud Big table (Hands-on)
+----------------------------------
+Section 8: Cloud Dataflow:
+
+ Fully managed data processing service
+ Apache beam inside GCP (Unified programming language for ETL)
+ Batch + Stream processing
+ Number of template are available 
+ If not use custom template 
+ Use Python, Java, SQ
+-----------------------------------
+Section 9: Cloud DataProc
+
+ Managed Hadoop & Spark inside GCP
+ You can submit Spark, Hadoop job.
+ DataProc – Demo
+ Create DataProc cluster
+ Submit Spark job to calculate Value of PI
+---------------------------------------
+Section 10: Cloud Pubsub (Hands-on):
+
+Fully-managed asynchronous messaging service 
+ Scale to billions of message per day
+ Push & Pull way to access messages
+
+-------------------------------------------
+
+Section 11: Deploying and implementing 
+
+networking resources.
+
+ Creating a VPC with subnets (e.g., custom-mode VPC, shared VPC)
+ Launching a Compute Engine instance with custom network configuration (e.g., internal-only IP 
+address, Google private access, static external and private IP address, network tags)
+ Creating ingress and egress firewall rules for a VPC (e.g., IP subnets, tags, service accounts)
+ Creating a VPN between a Google VPC and an external network using Cloud VPN
+ Creating a load balancer to distribute application network traffic to an application (e.g., Global 
+HTTP(S) load balancer, Global SSL Proxy load balancer, Global TCP Proxy load balancer, regional 
+network load balancer, regional internal load balancer)
+----------------------------------------------
+Section 12: Organisation having project1 and project 2: Host Project using Shared VPC and VPC Peering(Hands-on)
+---------------------------------------------
+Section 13: Managing Google Kubernetes 
+
+Engine resources:
+
+ Viewing current running cluster inventory (nodes, pods, services)
+ Browsing the container image repository and viewing container image details
+ Working with node pools (e.g., add, edit, or remove a node pool)
+ Working with pods (e.g., add, edit, or remove pods)
+ Working with services (e.g., add, edit, or remove a service)
+ Working with stateful applications (e.g. persistent volumes, stateful sets)
+ Working with management interfaces (e.g., Cloud Console, Cloud Shell, Cloud SDK)
+
+--------------------------------------------
+Section 14: Managing App Engine and Cloud 
+Run resources.
+ Adjusting application traffic splitting parameters
+ Setting scaling parameters for autoscaling instances
+ Working with management interfaces (e.g., Cloud Console, Cloud Shell, Cloud SDK)
+-------------------------------------
+Section 15: Managing storage and database 
+solutions.
+ Moving objects between Cloud Storage buckets
+ Converting Cloud Storage buckets between storage classes
+ Setting object life cycle management policies for Cloud Storage buckets
+ Executing queries to retrieve data from data instances (e.g., Cloud SQL, BigQuery, Cloud Spanner, Cloud 
+Datastore, Cloud Bigtable)
+ Estimating costs of a BigQuery query
+ Backing up and restoring data instances (e.g., Cloud SQL, Cloud Datastore)
+ Reviewing job status in Cloud Dataproc, Cloud Dataflow, or BigQuery
+ Working with management interfaces (e.g., Cloud Console, Cloud Shell, Cloud SDK)
+
+-----------------------------------------
+
+Section 16: Managing networking 
+resources
+ Adding a subnet to an existing VPC
+ Expanding a subnet to have more IP addresses
+ Reserving static external or internal IP addresses
+ Working with management interfaces (e.g., Cloud Console, Cloud Shell, Cloud SDK)
+
+--------------------------------------------
+
+Section 17: Monitoring and logging.
+
+ Creating Stackdriver alerts based on resource metrics
+ Creating Stackdriver custom metrics
+ Configuring log sinks to export logs to external systems (e.g., on-premises or BigQuery)
+ Viewing and filtering logs in Stackdriver
+ Viewing specific log message details in Stackdriver
+ Using cloud diagnostics to research an application issue (e.g., viewing Cloud Trace data, using Cloud Debug 
+to view an application point-in-time)
+ Viewing Google Cloud Platform status
+ Working with management interfaces (e.g., Cloud Console, Cloud Shell, Cloud SDK)
+
+--------------------------------------------
+
+Section 18: Uptime check & Alerting
+
+ Create VM Instance – allow http
+ Deploy Hello world app
+ Create uptime check
+ Create Alert
+ Stop VM or Shutdown app
+ Check Email as Alert
+ Observe incident
+ Start App Again
+ Close incident & check alerting email
+
+--------------------------------------------
+
+Section 19: Lab: Cloud Logging (Hands-on)
+
+Section 20: Cloud Debugger
+
+ Live debugging
+ Inspect App without stopping it
+ Supported language – Java
+
+---------------------------------------
+
+Section 21: Managing identity and access 
+
+management (IAM)
+ Viewing IAM role assignments
+ Assigning IAM roles to accounts or Google Groups
+ Defining custom IAM roles
+
+----------------------------------
+
+Section 22:Managing service accounts.
+
+ Managing service accounts with limited privileges
+ Assigning a service account to VM instances
+ Granting access to a service account in another project
+
+------------------------------------
+
+Section 23:
+
+a)Managing service accounts with 
+limited privileges
+
+b)Assigning a service account to VM 
+instances
+
+c)Granting access to a service 
+account in another project
+
+======================================================================================
+
+AWS Certified Developer – Associate
+-----------------------------------
+
+Chapter 1: Getting Started with AWS
+
+AWS Cloud Overview - Regions & AZ
+
+[Important] AWS Console UI Update
+
+Tour of the AWS Console & Services in AWS
+
+----------------------------------------------
+
+Chapter 2: IAM & AWS CLI
+
+IAM Introduction: Users, Groups, Policies
+
+IAM Users & Groups Hands On
+
+AWS Console Simultaneous Sign-in
+
+IAM Policies
+
+IAM Policies Hands On
+
+IAM MFA Overview
+
+IAM MFA Hands On
+
+AWS Access Keys, CLI and SDK
+
+AWS CLI Setup on Windows
+
+AWS CLI Setup on Mac OS X
+
+AWS CLI Setup on Linux
+
+AWS CLI Hands On
+
+AWS CloudShell
+
+IAM Roles for AWS Services
+
+IAM Roles Hands On
+
+IAM Security Tools
+
+IAM Security Tools Hands On
+
+IAM Best Practices
+
+Shared Responsibility Model for IAM
+
+IAM Summary
+
+IAM & AWS CLI Quiz
+
+-----------------------------------------------
+
+Chapter 3: EC2 Fundamentals
+
+AWS Budget Setup
+
+EC2 Basics
+
+Create an EC2 Instance with EC2 User Data to have a Website Hands On
+
+EC2 Instance Types Basics
+
+Security Groups & Classic Ports Overview
+
+Security Groups Hands On
+
+SSH Overview
+
+How to SSH using Linux or Mac
+
+How to SSH using Windows
+
+How to SSH using Windows 10
+
+SSH Troubleshooting
+
+EC2 Instance Connect
+
+EC2 Instance Roles Demo
+
+EC2 Instance Purchasing Options
+
+EC2 Fundamentals Quiz
+
+-------------------------------------------------
+
+Chapter 4: EC2 Instance Storage
+
+EBS Overview
+
+EBS Hands On
+
+EBS Snapshots
+
+EBS Snapshots - Hands On
+
+AMI Overview
+
+AMI Hands On
+
+EC2 Instance Store
+
+EBS Volume Types
+
+EBS Multi-Attach
+
+Amazon EFS
+
+Amazon EFS - Hands On
+
+EFS vs EBS
+
+EBS & EFS - Section Cleanup
+
+EC2 Data Management Quiz
+
+----------------------------------------------------
+
+Chapter 5: AWS Fundamentals: ELB + ASG
+
+High Availability and Scalability
+
+Elastic Load Balancing (ELB) Overview
+
+Note: About the Classic Load Balancer (CLB)
+
+Application Load Balancer (ALB)
+
+Application Load Balancer (ALB) - Hands On - Part 1
+
+Application Load Balancer (ALB) - Hands On - Part 2
+
+Network Load Balancer (NLB)
+
+Network Load Balancer (NLB) - Hands On
+
+Gateway Load Balancer (GWLB)
+
+Elastic Load Balancer - Sticky Sessions
+
+Elastic Load Balancer - Cross Zone Load Balancing
+
+Elastic Load Balancer - SSL Certificates
+
+Elastic Load Balancer - SSL Certificates - Hands On
+
+Elastic Load Balancer - Connection Draining
+
+Auto Scaling Groups (ASG) Overview
+
+Auto Scaling Groups Hands On
+
+Auto Scaling Groups - Scaling Policies
+
+Auto Scaling Groups - Scaling Policies Hands On
+
+Auto Scaling Groups - Instance Refresh
+
+High Availability & Scalability Quiz
+
+------------------------------------------------------------
+
+Chapter 6: AWS Fundamentals: RDS + Aurora + ElastiCache
+
+Amazon RDS Overview
+
+RDS Read Replicas vs Multi AZ
+
+Amazon RDS Hands On
+
+Amazon Aurora
+
+Amazon Aurora - Hands On
+
+RDS & Aurora Security
+
+RDS Proxy
+
+ElastiCache Overview
+
+ElastiCache Hands On
+
+ElastiCache Strategies
+
+Amazon MemoryDB for Redis - Overview
+
+RDS, Aurora, & ElastiCache Quiz
+
+--------------------------------------------------
+
+Chapter 7: Route 53
+
+What is a DNS?
+
+Route 53 Overview
+
+Route 53 - Registering a domain
+
+Route 53 - Creating our first records
+
+Route 53 - EC2 Setup
+
+Route 53 - TTL
+
+Route 53 CNAME vs Alias
+
+Routing Policy - Simple
+
+Routing Policy - Weighted
+
+Routing Policy - Latency
+
+Route 53 Health Checks
+
+Route 53 - Health Checks Hands On
+
+Routing Policy - Failover
+
+Routing Policy - Geolocation
+
+Routing Policy - Geoproximity
+
+Routing Policy - IP-based
+
+Routing Policy - Multi Value
+
+3rd Party Domains & Route 53
+
+Route 53 - Section Cleanup
+
+Route 53 Quiz
+
+----------------------------------------------
+
+Chapter 8: VPC Fundamentals
+
+VPC Fundamentals - Section Introduction
+
+VPC, Subnets, IGW and NAT
+
+NACL, SG, VPC Flow Logs
+
+VPC Peering, Endpoints, VPN, DX
+
+VPC Cheat Sheet & Closing Comments
+
+Three Tier Architecture
+
+VPC Quiz
+
+-----------------------------------------------
+
+Chapter 9: Amazon S3 Introduction
+
+S3 Overview
+
+S3 Hands On
+
+S3 Security: Bucket Policy
+
+S3 Security: Bucket Policy Hands On
+
+S3 Website Overview
+
+S3 Website Hands On
+
+S3 Versioning
+
+S3 Versioning - Hands On
+
+S3 Replication
+
+S3 Replication Notes
+
+S3 Replication - Hands On
+
+S3 Storage Classes Overview
+
+S3 Storage Classes Hands On
+
+Amazon S3 Quiz
+
+-------------------------------------------------
+
+Chapter 10: AWS CLI, SDK, IAM Roles & Policies
+
+AWS EC2 Instance Metadata
+
+AWS EC2 Instance Metadata - Hands On
+
+AWS CLI Profiles
+
+AWS CLI with MFA
+
+AWS SDK Overview
+
+Exponential Backoff & Service Limit Increase
+
+AWS Signature v4 Signing (Sigv4)
+
+AWS IAM, CLI, & SDK Quiz
+
+------------------------------------------------
+
+Chapter 11: Advanced Amazon S3
+
+S3 Lifecycle Rules (with S3 Analytics)
+
+S3 Lifecycle Rules - Hands On
+
+S3 Event Notifications
+
+S3 Event Notifications - Hands On
+
+S3 Performance
+
+S3 Object Tags & Metadata
+
+Amazon S3 Advanced Quiz
+
+---------------------------------------------
+
+Chapter 12: Amazon S3 Security
+
+S3 Encryption
+
+About DSSE-KMS
+
+S3 Encryption - Hands On
+
+S3 Default Encryption
+
+S3 CORS
+
+S3 CORS Hands On
+
+S3 MFA Delete
+
+S3 MFA Delete Hands On
+
+S3 Access Logs
+
+S3 Access Logs - Hands On
+
+S3 Pre-signed URLs
+
+S3 Pre-signed URLs - Hands On
+
+S3 Access Points
+
+S3 Object Lambda
+
+Amazon S3 Security Quiz
+
+-----------------------------------------------
+
+Chapter 13: CloudFront
+
+CloudFront - Overview
+
+CloudFront Hands On
+
+CloudFront - Caching & Caching Policies
+
+CloudFront - Cache Invalidations
+
+CloudFront - Cache Behaviors
+
+CloudFront - Caching & Caching Invalidations - Hands On
+
+CloudFront - ALB/EC2 as an Origin
+
+CloudFront - Geo Restriction
+
+CloudFront Signed URL / Cookies
+
+CloudFront Signed URL - Key Groups + Hands On
+
+CloudFront Advanced Concepts
+
+CloudFront - Real Time Logs
+
+CloudFront Quiz
+
+--------------------------------------------
+
+Chapter 14: ECS, ECR & Docker in AWS
+
+Docker Introduction
+
+Amazon ECS
+
+Creating ECS Cluster - Hands On
+
+Creating ECS Service - Hands On
+
+Amazon ECS - Auto Scaling
+
+Amazon ECS - Rolling Updates
+
+Amazon ECS - Solutions Architectures
+
+Amazon ECS Task Definitions - Deep Dive
+
+Amazon ECS Task Definitions - Hands On
+
+Amazon ECS - Task Placements
+
+Amazon ECS - Clean Up - Hands On
+
+Amazon ECR
+
+Amazon ECR - Hands On
+
+Amazon EKS
+
+Containers on AWS Quiz
+
+--------------------------------------------------------
+
+Chapter 15: AWS Elastic Beanstalk
+
+AWS Elastic Beanstalk - Section Introduction
+
+Elastic Beanstalk Overview (High level)
+
+Beanstalk First Environment
+
+Beanstalk Second Environment
+
+Beanstalk Deployment Modes
+
+Beanstalk Deployment Modes Hands On
+
+Beanstalk CLI and Deployment Process
+
+Beanstalk Lifecycle Policy Overview + Hands On
+
+Beanstalk Extensions
+
+Beanstalk & CloudFormation
+
+Beanstalk Cloning
+
+Beanstalk Migrations
+
+Beanstalk Cleanup
+
+Elastic Beanstalk Quiz
+
+-----------------------------------------------
+
+Chapter 16: AWS CloudFormation
+
+CloudFormation - Overview
+
+CloudFormation - Create Stack - Hands On
+
+CloudFormation - Update & Delete Stack - Hands On
+
+YAML Crash Course
+
+CloudFormation - Resources
+
+CloudFormation - Parameters
+
+CloudFormation - Mappings
+
+CloudFormation - Outputs & Exports
+
+CloudFormation - Conditions
+
+CloudFormation - Intrinsic Functions
+
+CloudFormation - Rollbacks
+
+CloudFormation - Service Role
+
+CloudFormation - Capabilities
+
+CloudFormation - Deletion Policy
+
+CloudFormation - Stack Policy
+
+CloudFormation - Termination Protection
+
+CloudFormation - Custom Resources
+
+CloudFormation - StackSets
+
+CloudFormation Quiz
+
+-------------------------------------------------------------
+
+Chapter 17: AWS Integration & Messaging: SQS, SNS & Kinesis
+
+AWS Integration & Messaging - Section Introduction
+
+Introduction to Messaging
+
+Amazon SQS - Standard Queues Overview
+
+SQS - Standard Queue Hands On
+
+SQS Queue Access Policy
+
+SQS - Message Visibility Timeout
+
+SQS - Dead Letter Queues
+
+SQS - Dead Letter Queues - Hands On
+
+SQS - Delay Queues
+
+SQS - Certified Developer concepts
+
+SQS - FIFO Queues
+
+SQS - FIFO Queues Advanced
+
+Amazon SNS
+
+Amazon SNS and SQS - Fan Out Pattern
+
+SNS Hands On
+
+Amazon Kinesis Data Streams
+
+Amazon Kinesis Data Streams - Hands On
+
+Amazon Data Firehose
+
+Amazon Data Firehose - Hands On
+
+Amazon Managed Service for Apache Flink
+
+SQS vs SNS vs Kinesis
+
+Messaging & Integration Quiz
+
+----------------------------------------------------------
+
+Chapter 18: AWS Monitoring & Audit: CloudWatch, X-Ray and CloudTrail
+
+AWS Monitoring - Section Introduction
+
+Monitoring Overview in AWS
+
+CloudWatch Metrics
+
+CloudWatch Custom Metrics
+
+CloudWatch Logs
+
+CloudWatch Logs - Hands On
+
+CloudWatch Logs - Live Tail - Hands On
+
+CloudWatch Agent & CloudWatch Logs Agent
+
+CloudWatch Logs - Metric Filters
+
+CloudWatch Logs - Metric Filters Hands On
+
+CloudWatch Alarms
+
+CloudWatch Alarms Hands On
+
+CloudWatch Synthetics
+
+Amazon EventBridge
+
+Amazon EventBridge - Hands On
+
+Amazon EventBridge - Multi-Account Aggregation
+
+X-Ray Overview
+
+X-Ray Hands On
+
+X-Ray: Instrumentation and Concepts
+
+X-Ray: Sampling Rules
+
+X-Ray APIs
+
+X-Ray with Beanstalk
+
+X-Ray & ECS
+
+AWS Distro for OpenTelemetry
+
+CloudTrail
+
+CloudTrail Hands On
+
+CloudTrail - EventBridge Integration
+
+CloudTrail vs CloudWatch vs X-Ray
+
+AWS Quick Clean-Up
+
+Monitoring & Audit Quiz
+
+---------------------------------------------
+
+Chapter 19: AWS Services: Lambda
+
+AWS Lambda - Section Introduction
+
+Serverless Introduction
+
+AWS Lambda Overview
+
+AWS Lambda - First Hands On
+
+Lambda Synchronous Invocations
+
+Lambda Synchronous Invocations Hands On
+
+Lambda & Application Load Balancer
+
+Lambda & Application Load Balancer Hands On
+
+Lambda Asynchronous Invocations & DLQ
+
+Lambda Asynchronous Invocations Hands On
+
+Lambda & CloudWatch Events / EventBridge
+
+Lambda & CloudWatch Events / EventBridge Hands On
+
+Lambda & S3 Event Notifications
+
+Lambda & S3 Event Notifications - Hands On
+
+Lambda Event Source Mapping
+
+Lambda Event Source Mapping Hands On (SQS)
+
+Lambda Event & Context Objects
+
+Lambda Destinations
+
+Lambda Destinations Hands On
+
+Lambda Permissions - IAM Roles & Resource Policies
+
+Lambda Permissions - IAM Roles & Resource Policies - Hands On
+
+Lambda Environment Variables
+
+Lambda Environment Variables - Hands On
+
+Lambda Monitoring & X-Ray Tracing
+
+Lambda Monitoring & X-Ray Tracing - Hands On
+
+Lambda@Edge & CloudFront Functions
+
+Lambda in VPC
+
+Lambda in VPC - Hands On
+
+Lambda Function Performance
+
+Lambda Function Performance - Hands On
+
+Lambda Layers
+
+Lambda Layers - Hands On
+
+Lambda File Systems Mounting
+
+Lambda Concurrency
+
+Lambda Concurrency Hands On
+
+Lambda External Dependencies
+
+Lambda External Dependencies - Hands On
+
+Lambda and CloudFormation
+
+Lambda and CloudFormation - Hands On
+
+Lambda Container Images
+
+Lambda Versions and Aliases
+
+Lambda Versions and Aliases - Hands On
+
+Lambda and CodeDeploy
+
+Lambda Function URL
+
+Lambda Function URL - Hands On
+
+Lambda Limits
+
+Lambda Best Practices
+
+Lambda Quiz
+
+--------------------------------------------------
+
+Chapter 20: AWS Services: DynamoDB
+
+DynamoDB - Section Introduction
+
+DynamoDB Overview
+
+DynamoDB Basics - Hands On
+
+DynamoDB WCU & RCU - Throughput
+
+DynamoDB WCU & RCU - Hands On
+
+DynamoDB - Basic Operations
+
+DynamoDB Basic APIs - Hands On
+
+DynamoDB - Conditional Writes
+
+DynamoDB Indexes (GSI + LSI)
+
+DynamoDB Indexes (GSI + LSI) - Hands On
+
+DynamoDB PartiQL
+
+DynamoDB Optimistic Locking
+
+DynamoDB DAX
+
+DynamoDB DAX - Hands On
+
+DynamoDB Streams
+
+DynamoDB Streams - Hands On
+
+DynamoDB TTL
+
+DynamoDB CLI
+
+DynamoDB Transactions
+
+DynamoDB Session State
+
+DynamoDB Partitioning Strategies
+
+DynamoDB Conditional Writes, Concurrent Writes & Atomic Writes
+
+DynamoDB Patterns with S3
+
+DynamoDB Operations
+
+DynamoDB Security & Other
+
+DynamoDB Quiz
+
+---------------------------------------------------
+
+Chapter 21: AWS Services: API Gateway
+
+API Gateway - Section Introduction
+
+API Gateway Overview
+
+API Gateway Basics Hands On
+
+API Gateway Stages and Deployment
+
+API Gateway Stages and Deployment Hands On
+
+API Gateway Stages Configurations Hands On
+
+API Gateway Canary Deployments
+
+API Gateway Canary Deployments Hands On
+
+API Gateway Integration Types & Mappings
+
+API Gateway Mapping Templates Hands On
+
+API Gateway Open API
+
+API Gateway Open API - Hands On
+
+API Gateway Caching
+
+API Gateway Usage Plans & API Keys
+
+API Gateway Monitoring, Logging and Tracing
+
+API Gateway CORS
+
+API Gateway Authentication and Authorization
+
+API Gateway Authentication and Authorization - Hands On
+
+API Gateway REST API vs HTTP API
+
+API Gateway Websocket API
+
+API Gateway - Architecture
+
+API Gateway Quiz
+
+--------------------------------------------------------------
+
+Chapter 22: AWS CI/CD: CodeCommit, CodePipeline, CodeBuild, CodeDeploy
+
+AWS CICD - Section Introduction
+
+Introduction to CICD in AWS
+
+CodeCommit Overview
+
+CodeCommit Hands On Part I
+
+CodeCommit Hands On Part 2
+
+CodePipeline Overview
+
+CodePipeline - Hands On - Prerequisite
+
+CodePipeline - Hands On
+
+CodeBuild Overview
+
+CodeBuild Hands On Part I
+
+CodeBuild Hands On Part 2
+
+CodeDeploy Overview
+
+CodeDeploy Hands On
+
+CodeDeploy for EC2 and ASG
+
+CodeArtifact - Overview
+
+CodeArtifact - Hands On
+
+AWS CICD Quiz
+
+--------------------------------------------------------
+
+Chapter 23: AWS Services: SAM - Serverless Application Model
+
+AWS SAM - Section Introduction
+
+SAM Overview
+
+SAM - Hands On
+
+SAM with DynamoDB - Hands On
+
+SAM Policy Templates
+
+SAM with CodeDeploy
+
+SAM - Local Capabilities
+
+SAM - Multiple Environments
+
+SAM Quiz
+
+-------------------------------------------------
+
+Chapter 24: Cloud Development Kit (CDK)
+
+CDK Overview
+
+CDK - Hands On
+
+CDK - Constructs
+
+CDK - Commands & Bootstrapping
+
+CDK - Unit Testing
+
+CDK Quiz
+
+---------------------------------------------------------
+
+Chapter 25: Cognito: Cognito User Pools, Cognito Identity Pools & Cognito Sync
+
+Cognito Overview
+
+Cognito User Pools
+
+Cognito User Pools Hands On
+
+Cognito User Pools - Others
+
+Application Load Balancer - User Authentication
+
+Cognito Identity Pools
+
+Cognito Identity Pools Hands On
+
+Cognito User Pools vs Cognito Identity Pools
+
+Cognito Quiz
+
+-----------------------------------------------
+
+Chapter 26: Other Services: Step Functions & AppSync
+
+Step Functions Overview
+
+Step Functions - Hands On
+
+Step Functions - Invoke Lambda - Hands On
+
+Step Functions - Error Handling
+
+Step Functions - Error Handling Hands On
+
+Step Functions - Wait For Task Token
+
+Step Functions - Activity Tasks
+
+Step Functions - Standard vs Express
+
+AppSync Overview
+
+AppSync Hands On
+
+AWS Amplify
+
+AWS Amplify - Hands On
+
+Other Serverless Quiz
+
+------------------------------------------------------
+
+Chapter 27: Advanced Identity
+
+STS Overview
+
+Advanced IAM
+
+Granting a User Permissions to Pass a Role to an AWS Service
+
+AWS Directory Services
+
+Advanced IAM Quiz
+
+---------------------------------------------------------
+
+Chapter 28: AWS Security & Encryption: KMS, Encryption SDK, SSM Parameter Store, IAM & STS
+
+AWS Security - Section Introduction
+
+Encryption 101
+
+KMS Overview
+
+KMS Hands On w/ CLI
+
+KMS Encryption Patterns and Envelope Encryption
+
+Encryption SDK CLI Hands On
+
+KMS Limits
+
+KMS and AWS Lambda Practice
+
+S3 Bucket Key
+
+KMS Key Policies & IAM Principals
+
+CloudHSM Overview
+
+SSM Parameter Store Overview
+
+SSM Parameter Store Hands On (CLI)
+
+Secrets Manager - Overview
+
+Secrets Manager - Hands On
+
+SSM Parameter Store vs Secrets Manager
+
+CloudFormation - Secrets Manager & SSM Integration
+
+CloudWatch Logs Encryption
+
+CodeBuild Security
+
+AWS Nitro Enclaves
+
+AWS Security & Encryption Quiz
+
+----------------------------------------------------------------
+
+Chapter 29: AWS Other Services
+
+AWS Other Services - Section Introduction
+
+AWS SES
+
+Amazon OpenSearch Service - Overview
+
+Amazon Athena - Overview
+
+Amazon Athena - Hands On
+
+Amazon MSK - Overview
+
+Amazon Certificate Manager (ACM)
+
+Amazon Certificate Manager (ACM) Hands On
+
+ACM Private CA - Overview
+
+Amazon Macie
+
+AWS AppConfig - Overview
+
+Other Services Quiz
+
+-----------------------------------------------------
+
+
+

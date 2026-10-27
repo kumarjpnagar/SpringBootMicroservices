@@ -1,0 +1,1626 @@
+https://www.udemy.com/course/graphql-with-java-spring-boot-query-mutation-schema-resolver-edge-jpa/
+
+GraphQL API with Java Spring Boot & Spring Framework(Hands on)
+
+Below is a complete hands-on guide to build a GraphQL API using Java, Spring Boot, and Spring Framework.
+We will create a simple Product Service with Query, Mutation, and Schema.
+
+============================
+GraphQL vs REST
+
+GraphQL Schema
+
+Query
+
+Mutation
+
+Resolver
+
+Spring Boot Integration
+
+Testing with GraphiQL/Postman
+
+1️⃣ What is GraphQL?
+GraphQL is a query language for APIs that allows clients to request only the data they need.
+
+REST Example
+GET /products/1
+Response
+
+{
+ id:1,
+ name:"Laptop",
+ price:70000,
+ description:"Gaming Laptop",
+ category:"Electronics"
+}
+But if the client needs only name, REST still returns everything.
+
+GraphQL Example
+Query
+
+query {
+ productById(id:1){
+  name
+ }
+}
+Response
+
+{
+ "data":{
+   "productById":{
+      "name":"Laptop"
+   }
+ }
+}
+
+✔ Only requested data returned.
+
+2️⃣ GraphQL Architecture
+Client
+  |
+GraphQL Query
+  |
+Spring Boot GraphQL Controller
+  |
+Resolver
+  |
+Service
+  |
+Repository
+  |
+Database
+
+3️⃣ Create Spring Boot Project
+Use Spring Initializr
+
+Dependencies
+
+Spring Web
+Spring Data JPA
+Spring for GraphQL
+H2 Database
+Lombok
+Maven dependency
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-graphql</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>com.h2database</groupId>
+ <artifactId>h2</artifactId>
+ <scope>runtime</scope>
+</dependency>
+
+4️⃣ Project Structure
+product-service
+   |
+   ├── controller
+   │      ProductController
+   |
+   ├── service
+   │      ProductService
+   |
+   ├── repository
+   │      ProductRepository
+   |
+   ├── entity
+   │      Product
+   |
+   └── resources
+         └── graphql
+               schema.graphqls
+			   
+5️⃣ Create Product Entity
+package com.example.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Product {
+
+ @Id
+ @GeneratedValue(strategy = GenerationType.IDENTITY)
+ private Long id;
+
+ private String name;
+ private double price;
+ private String category;
+}
+
+6️⃣ Create Repository
+package com.example.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.example.entity.Product;
+
+public interface ProductRepository 
+       extends JpaRepository<Product,Long> {
+
+}
+
+7️⃣ Create Service Layer
+package com.example.service;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import com.example.entity.Product;
+import com.example.repository.ProductRepository;
+
+@Service
+public class ProductService {
+
+ private final ProductRepository repository;
+
+ public ProductService(ProductRepository repository) {
+     this.repository = repository;
+ }
+
+ public List<Product> getProducts() {
+     return repository.findAll();
+ }
+
+ public Product getProductById(Long id) {
+     return repository.findById(id).orElse(null);
+ }
+
+ public Product saveProduct(Product product) {
+     return repository.save(product);
+ }
+
+}
+
+8️⃣ Create GraphQL Schema
+Create file:
+
+resources/graphql/schema.graphqls
+type Product {
+ id: ID
+ name: String
+ price: Float
+ category: String
+}
+
+type Query {
+ products: [Product]
+ productById(id: ID): Product
+}
+
+type Mutation {
+ createProduct(name:String, price:Float, category:String): Product
+}
+Explanation
+
+type Product → Object
+
+Query → Read data
+
+Mutation → Write data
+
+9️⃣ GraphQL Controller (Resolver)
+package com.example.controller;
+
+import java.util.List;
+
+import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.stereotype.Controller;
+
+import com.example.entity.Product;
+import com.example.service.ProductService;
+
+@Controller
+public class ProductController {
+
+ private final ProductService service;
+
+ public ProductController(ProductService service) {
+     this.service = service;
+ }
+
+ // Query -> get all products
+ @QueryMapping
+ public List<Product> products() {
+     return service.getProducts();
+ }
+
+ // Query -> get product by id
+ @QueryMapping
+ public Product productById(@Argument Long id) {
+     return service.getProductById(id);
+ }
+
+ // Mutation -> create product
+ @MutationMapping
+ public Product createProduct(
+     @Argument String name,
+     @Argument double price,
+     @Argument String category) {
+
+     Product product = new Product();
+     product.setName(name);
+     product.setPrice(price);
+     product.setCategory(category);
+
+     return service.saveProduct(product);
+ }
+}
+Important annotations
+
+@QueryMapping → GraphQL Query
+@MutationMapping → GraphQL Mutation
+@Argument → input parameter
+
+🔟 application.properties
+spring.h2.console.enabled=true
+
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+spring.graphql.graphiql.enabled=true
+
+1️⃣1️⃣ Run Application
+Start Spring Boot.
+
+Open GraphQL UI
+
+http://localhost:8080/graphiql
+1️⃣2️⃣ Test Query
+Get all products
+query{
+ products{
+   id
+   name
+   price
+ }
+}
+Response
+
+{
+ "data":{
+  "products":[]
+ }
+}
+1️⃣3️⃣ Test Mutation
+mutation{
+ createProduct(
+   name:"Laptop"
+   price:75000
+   category:"Electronics"
+ ){
+   id
+   name
+ }
+}
+Response
+
+{
+ "data":{
+  "createProduct":{
+   "id":1,
+   "name":"Laptop"
+  }
+ }
+}
+
+1️⃣4️⃣ Query by ID
+query{
+ productById(id:1){
+  name
+  price
+ }
+}
+Response
+
+{
+ "data":{
+  "productById":{
+    "name":"Laptop",
+    "price":75000
+  }
+ }
+}
+
+1️⃣5️⃣ GraphQL vs REST
+Feature	REST	GraphQL
+Endpoints	Multiple	Single
+Over-fetching	Yes	No
+Under-fetching	Yes	No
+Query flexibility	Limited	High
+Versioning	Required	Not required
+
+1️⃣6️⃣ GraphQL Request Flow
+Client Query
+   |
+GraphQL Engine
+   |
+Resolver (@QueryMapping)
+   |
+Service Layer
+   |
+Repository
+   |
+Database
+
+1️⃣7️⃣ Advanced GraphQL Features
+You can also implement
+
+1️⃣ Pagination
+products(page:1,size:10)
+
+2️⃣ Subscriptions (Real-time)
+Using WebSocket.
+
+3️⃣ DataLoader
+Solves N+1 query problem
+
+4️⃣ Security
+Spring Security + JWT
+
+5️⃣ Microservices
+GraphQL Gateway → multiple services
+
+1️⃣8️⃣ Real Microservices GraphQL Architecture
+Client
+   |
+GraphQL Gateway
+   |
+--------------------------------
+|        |         |           |
+User MS  Order MS  Product MS  Payment MS
+
+1️⃣ GraphQL with Spring Boot Microservices Architecture
+2️⃣ GraphQL + Kafka Event Driven System
+3️⃣ GraphQL Federation (Netflix / Apollo style)
+4️⃣ GraphQL + Spring Security JWT
+5️⃣ GraphQL + DataLoader N+1 Problem solution
+6️⃣ GraphQL Subscription (Realtime updates)
+7️⃣ GraphQL + JPA pagination + filtering
+
+
+We will build a Student Management GraphQL API step by step.
+
+1️⃣ Introduction to GraphQL
+
+What is GraphQL?
+GraphQL is a query language for APIs and a runtime for executing queries.
+
+It allows clients to request exact data they need.
+
+REST Problem
+Example REST endpoint
+
+GET /students/1
+Response
+
+{
+ id:1,
+ name:"Ravi",
+ age:20,
+ department:"CS",
+ address:"Delhi"
+}
+But the client only needs name.
+
+REST still returns all fields.
+
+GraphQL Solution
+Query
+
+query {
+ studentById(id:1){
+   name
+ }
+}
+Response
+
+{
+ "data":{
+  "studentById":{
+   "name":"Ravi"
+  }
+ }
+}
+
+✔ Only required fields returned.
+
+2️⃣ Introduction to GraphQL Concepts
+
+GraphQL has 3 main components
+
+1️⃣ Schema
+Defines API structure
+
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+2️⃣ Query
+Used to fetch data
+
+query{
+ students{
+   name
+ }
+}
+
+3️⃣ Mutation
+Used to modify data
+
+mutation{
+ createStudent(name:"Ravi",age:20){
+  id
+ }
+}
+
+3️⃣ Project Setup (Spring Boot)
+Step 1 Create Spring Boot Project
+Dependencies
+
+Spring Web
+Spring Data JPA
+Spring for GraphQL
+H2 Database
+Lombok
+Maven dependency
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-graphql</artifactId>
+</dependency>
+
+4️⃣ Project Lombok With Spring Boot
+Lombok reduces boilerplate code.
+
+Without Lombok
+
+public class Student {
+
+ private Long id;
+ private String name;
+
+ public Long getId(){ return id;}
+ public void setId(Long id){this.id=id;}
+
+}
+With Lombok
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Student {
+
+ private Long id;
+ private String name;
+
+}
+
+5️⃣ Getting Started With GraphQL (Hands-on)
+Project structure
+
+graphql-demo
+ |
+ ├── entity
+ │     Student
+ |
+ ├── repository
+ │     StudentRepository
+ |
+ ├── service
+ │     StudentService
+ |
+ ├── controller
+ │     StudentGraphQLController
+ |
+ └── resources
+        └── graphql
+              schema.graphqls
+			  
+6️⃣ GraphQL Query (Hands-on)
+Schema
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+type Query{
+ students:[Student]
+ studentById(id:ID):Student
+}
+Controller
+@Controller
+public class StudentGraphQLController {
+
+ @Autowired
+ private StudentService service;
+
+ @QueryMapping
+ public List<Student> students(){
+   return service.getAllStudents();
+ }
+
+ @QueryMapping
+ public Student studentById(@Argument Long id){
+   return service.getStudent(id);
+ }
+
+}
+Query Test
+query{
+ students{
+  id
+  name
+ }
+}
+
+7️⃣ GraphQL Query With Spring Data JPA
+Repository
+
+@Repository
+public interface StudentRepository 
+       extends JpaRepository<Student,Long>{
+
+}
+Service
+
+@Service
+public class StudentService {
+
+ @Autowired
+ private StudentRepository repo;
+
+ public List<Student> getAllStudents(){
+  return repo.findAll();
+ }
+
+ public Student getStudent(Long id){
+  return repo.findById(id).orElse(null);
+ }
+
+}
+Now GraphQL queries will fetch data from DB.
+
+8️⃣ GraphQL Resolver
+Resolver connects GraphQL schema fields to Java methods.
+
+Example
+
+Schema
+
+type Query{
+ studentById(id:ID):Student
+}
+Resolver
+
+@QueryMapping
+public Student studentById(@Argument Long id){
+ return service.getStudent(id);
+}
+Field Resolver Example
+type Student{
+ id:ID
+ name:String
+ department:Department
+}
+Resolver
+
+@SchemaMapping
+public Department department(Student student){
+ return departmentService.getDepartment(student.getId());
+}
+
+9️⃣ GraphQL Edges (Relationships)
+GraphQL supports nested queries.
+
+Example
+
+type Student{
+ id:ID
+ name:String
+ courses:[Course]
+}
+
+type Course{
+ id:ID
+ title:String
+}
+Query
+
+query{
+ students{
+   name
+   courses{
+      title
+   }
+ }
+}
+Response
+
+{
+ students:[
+   {
+     name:"Ravi",
+     courses:[
+        {title:"Java"},
+        {title:"Spring"}
+     ]
+   }
+ ]
+}
+
+🔟 GraphQL Mutation (Hands-on)
+Mutation modifies data.
+
+Schema
+
+type Mutation{
+ createStudent(name:String,age:Int):Student
+}
+Controller
+
+@MutationMapping
+public Student createStudent(
+        @Argument String name,
+        @Argument int age){
+
+ Student s=new Student();
+ s.setName(name);
+ s.setAge(age);
+
+ return service.saveStudent(s);
+}
+Mutation Query
+
+mutation{
+ createStudent(name:"Rahul",age:22){
+  id
+  name
+ }
+}
+
+1️⃣1️⃣ GraphQL Deployment to Cloud
+Example deploy to Heroku / Cloud Platform
+
+Steps
+
+1️⃣ Build jar
+
+mvn clean package
+2️⃣ Create Procfile
+
+web: java -jar target/app.jar
+
+3️⃣ Deploy
+
+git push heroku main
+
+1️⃣2️⃣ GraphQL With Postman
+POST Request
+
+POST http://localhost:8080/graphql
+Body
+
+{
+ "query":"query{students{id name}}"
+}
+Response
+
+{
+ "data":{
+   "students":[
+     {"id":1,"name":"Ravi"}
+   ]
+ }
+}
+
+1️⃣3️⃣ GraphQL Variables
+Instead of hardcoding values.
+
+Query
+
+query getStudent($id:ID){
+ studentById(id:$id){
+  name
+ }
+}
+Variables
+
+{
+ "id":1
+}
+
+1️⃣4️⃣ GraphQL Client With Spring Boot
+Spring Boot provides GraphQLClient
+
+Example
+
+@Autowired
+GraphQlClient graphQlClient;
+
+public Student getStudent(){
+
+ return graphQlClient
+       .document("{studentById(id:1){name}}")
+       .retrieve("studentById")
+       .toEntity(Student.class)
+       .block();
+}
+Used when one microservice calls another GraphQL service.
+
+1️⃣5️⃣ Final GraphQL Architecture
+Frontend (React / Angular)
+        |
+        |
+     GraphQL API
+        |
+--------------------------------
+|            |                |
+User MS   Order MS       Payment MS
+GraphQL acts as single API gateway.
+
+🔥 Real Industry GraphQL Topics (VERY IMPORTANT)
+Since you are learning Spring Boot + Microservices, the following are very useful:
+
+1️⃣ GraphQL + Microservices Gateway
+GraphQL Gateway
+     |
+-------------------------
+|          |           |
+User MS   Order MS   Payment MS
+
+2️⃣ GraphQL + Kafka
+Event-driven system
+
+Mutation → Publish Event → Kafka → Other Service
+
+3️⃣ GraphQL + Spring Security JWT
+Secure GraphQL APIs.
+
+4️⃣ GraphQL DataLoader (N+1 Query Problem)
+Performance optimization.
+
+1️⃣ GraphQL Resolver Deep Dive (Netflix style)
+2️⃣ GraphQL DataLoader (N+1 Query Problem)
+3️⃣ GraphQL with Microservices Gateway
+4️⃣ GraphQL + Spring Security JWT
+5️⃣ GraphQL Subscription (Real-time updates)
+6️⃣ GraphQL vs REST internal execution flow
+
+1️⃣ GraphQL Resolver Deep Dive (Netflix style)(Hands-On)
+2️⃣ GraphQL DataLoader (N+1 Query Problem)(Hands-On)
+3️⃣ GraphQL with Microservices Gateway(Hands-On)
+4️⃣ GraphQL + Spring Security JWT(Hands-On)
+5️⃣ GraphQL Subscription (Real-time updates)(Hands-On)
+6️⃣ GraphQL vs REST internal execution flow(Hands-On)
+
+We will extend a Student–Course microservice system.
+
+Architecture we will gradually reach:
+
+Client (React/Postman)
+        |
+    GraphQL Gateway
+        |
+----------------------------------
+|            |                   |
+User MS     Course MS          Payment MS
+
+1️⃣ GraphQL Resolver Deep Dive (Netflix Style)
+Resolvers are the core of GraphQL execution.
+Netflix, Airbnb, Shopify etc. use resolver-based architecture heavily.
+
+What is a Resolver?
+A resolver maps GraphQL schema fields → Java methods.
+
+Example schema:
+
+type Student{
+ id:ID
+ name:String
+ courses:[Course]
+}
+
+type Course{
+ id:ID
+ title:String
+}
+Query:
+
+query{
+ students{
+   name
+   courses{
+     title
+   }
+ }
+}
+
+GraphQL execution flow:
+
+Query
+ |
+Resolve students()
+ |
+Resolve courses() for each student
+ |
+Return result
+Hands-On Implementation
+
+Step 1 Entity
+@Entity
+@Data
+public class Student {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private String name;
+}
+Course Entity
+@Entity
+@Data
+public class Course {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private String title;
+
+ private Long studentId;
+}
+
+Step 2 GraphQL Schema
+type Student{
+ id:ID
+ name:String
+ courses:[Course]
+}
+
+type Course{
+ id:ID
+ title:String
+}
+
+type Query{
+ students:[Student]
+}
+
+Step 3 Query Resolver
+@QueryMapping
+public List<Student> students(){
+ return studentService.getStudents();
+}
+
+Step 4 Field Resolver
+@SchemaMapping(typeName="Student", field="courses")
+public List<Course> getCourses(Student student){
+ return courseService.getCourses(student.getId());
+}
+Execution:
+
+students() → returns students
+
+for each student:
+   getCourses(studentId)
+   
+⚠ This causes N+1 problem (explained next).
+
+2️⃣ GraphQL DataLoader (Solving N+1 Query Problem)
+Problem
+
+If we have 100 students:
+
+GraphQL execution:
+
+1 query → get students
+100 queries → get courses
+Total queries = 101
+
+This is called N+1 problem.
+
+Solution: DataLoader
+DataLoader batches queries.
+
+Instead of
+
+getCourses(1)
+getCourses(2)
+getCourses(3)
+It sends
+
+SELECT * FROM course WHERE student_id IN (1,2,3)
+Hands-On Implementation
+
+Step 1 Dependency
+Already included in Spring GraphQL.
+
+Step 2 Create DataLoader
+
+@Component
+public class CourseBatchLoader
+      implements BatchLoader<Long,List<Course>> {
+
+ @Autowired
+ CourseRepository repo;
+
+ @Override
+ public CompletionStage<List<List<Course>>> load(List<Long> studentIds){
+
+   List<Course> courses = repo.findByStudentIdIn(studentIds);
+
+   Map<Long,List<Course>> map = courses.stream()
+      .collect(Collectors.groupingBy(Course::getStudentId));
+
+   List<List<Course>> result = studentIds.stream()
+       .map(id -> map.getOrDefault(id,List.of()))
+       .toList();
+
+   return CompletableFuture.completedFuture(result);
+ }
+}
+
+Step 3 Use DataLoader in Resolver
+@SchemaMapping(typeName="Student", field="courses")
+public CompletableFuture<List<Course>> courses(
+       Student student,
+       DataLoader<Long,List<Course>> loader){
+
+ return loader.load(student.getId());
+}
+
+Now execution becomes:
+
+students()
+
+DataLoader batch query
+
+SELECT * FROM course WHERE student_id IN (1..100)
+✔ Performance improved.
+
+3️⃣ GraphQL Microservices Gateway (Hands-On)
+GraphQL works best as API Gateway.
+
+Example microservices:
+
+User Service
+Order Service
+Product Service
+Instead of client calling all:
+
+Client
+ |
+3 REST calls
+Use GraphQL gateway.
+
+Client
+ |
+GraphQL Gateway
+ |
+---------------------------
+|        |               |
+User     Order          Product
+
+Hands-On Implementation
+
+Step 1 Gateway Schema
+type User{
+ id:ID
+ name:String
+ orders:[Order]
+}
+
+type Order{
+ id:ID
+ product:String
+}
+
+type Query{
+ users:[User]
+}
+
+Step 2 Gateway Resolver
+
+Gateway calls other services.
+
+@QueryMapping
+public List<User> users(){
+
+ return userClient.getUsers();
+}
+
+Step 3 Order Resolver
+
+@SchemaMapping(typeName="User",field="orders")
+public List<Order> orders(User user){
+
+ return orderClient.getOrders(user.getId());
+}
+Clients now call one endpoint
+
+POST /graphql
+
+4️⃣ GraphQL + Spring Security JWT (Hands-On)
+GraphQL endpoints also need authentication.
+
+We secure /graphql.
+
+Step 1 Add dependencies
+
+spring-boot-starter-security
+jwt
+
+Step 2 JWT Filter
+@Component
+public class JwtFilter extends OncePerRequestFilter {
+
+ protected void doFilterInternal(...){
+
+   String token = request.getHeader("Authorization");
+
+   if(token != null){
+      String username = jwtUtil.extractUsername(token);
+      SecurityContextHolder.getContext()
+         .setAuthentication(
+           new UsernamePasswordAuthenticationToken(username,null,List.of())
+         );
+   }
+
+   filterChain.doFilter(request,response);
+ }
+}
+
+Step 3 Security Config
+@Bean
+SecurityFilterChain security(HttpSecurity http) throws Exception{
+
+ return http
+    .csrf().disable()
+    .authorizeHttpRequests(auth -> auth
+      .requestMatchers("/graphql").authenticated()
+      .anyRequest().permitAll()
+    )
+    .build();
+}
+
+Step 4 Query with Token
+Postman
+
+POST /graphql
+Authorization: Bearer JWT_TOKEN
+
+5️⃣ GraphQL Subscription (Realtime Updates)
+Subscriptions use WebSocket.
+
+Used for:
+
+Chat apps
+Stock price updates
+Notifications
+Live dashboards
+Schema
+type Subscription{
+ newStudent:Student
+}
+Publisher
+@Component
+public class StudentPublisher {
+
+ private final Sinks.Many<Student> sink =
+        Sinks.many().multicast().onBackpressureBuffer();
+
+ public void publish(Student s){
+   sink.tryEmitNext(s);
+ }
+
+ public Flux<Student> getStudents(){
+   return sink.asFlux();
+ }
+}
+Subscription Resolver
+@SubscriptionMapping
+public Flux<Student> newStudent(){
+
+ return publisher.getStudents();
+}
+When student created
+publisher.publish(student);
+Client gets realtime update.
+
+6️⃣ GraphQL vs REST Internal Execution Flow
+REST Flow
+Client
+ |
+HTTP GET /students/1
+ |
+Controller
+ |
+Service
+ |
+Repository
+ |
+DB
+ |
+Response
+Single endpoint → single response.
+
+GraphQL Flow
+Client Query
+ |
+GraphQL Parser
+ |
+GraphQL Execution Engine
+ |
+Resolvers
+ |
+Service
+ |
+Repository
+ |
+DB
+ |
+Response
+Execution example:
+
+Query
+
+query{
+ students{
+   name
+   courses{
+      title
+   }
+ }
+}
+
+Execution steps
+
+1 Parse query
+2 Validate schema
+3 Execute students resolver
+4 Execute courses resolver
+5 Merge response
+🚀 Final Real Industry GraphQL Architecture
+Frontend
+   |
+GraphQL Gateway
+   |
+-----------------------------------------
+|          |           |                |
+User MS   Order MS   Product MS   Payment MS
+Technologies used in companies:
+
+Spring Boot
+GraphQL Federation
+DataLoader
+Redis Cache
+Kafka
+JWT Security
+WebSocket Subscription
+
+1️⃣ Apollo GraphQL Federation (Netflix architecture)
+2️⃣ GraphQL Caching with Redis
+3️⃣ GraphQL Performance Tuning
+4️⃣ GraphQL Rate Limiting
+5️⃣ GraphQL Error Handling Best Practices
+6️⃣ GraphQL Testing with JUnit + GraphQlTester
+========================================================
+->build a complete GraphQL Microservices Project (User + Order + Product + Gateway) step-by-step.
+
+
+Below is a complete step-by-step GraphQL Microservices project using Java + Spring Boot + Spring for GraphQL.
+
+We will build 4 services:
+
+1️⃣ User Service
+2️⃣ Product Service
+3️⃣ Order Service
+4️⃣ GraphQL Gateway Service
+
+Final architecture:
+
+Client (Postman / React)
+        |
+   GraphQL Gateway
+        |
+-------------------------------------
+|            |                     |
+User MS    Product MS            Order MS
+ (8081)      (8082)               (8083)
+
+The Gateway exposes a single GraphQL API while internally calling REST/GraphQL services.
+
+1️⃣ Create Microservices
+
+Create 4 Spring Boot projects
+
+user-service
+product-service
+order-service
+graphql-gateway
+
+Dependencies for all services:
+
+Spring Web
+Spring Data JPA
+H2 Database
+Lombok
+Spring for GraphQL (only gateway)
+
+2️⃣ USER MICROSERVICE
+
+Port
+
+8081
+Entity
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class User {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private String name;
+ private String email;
+
+}
+Repository
+@Repository
+public interface UserRepository 
+       extends JpaRepository<User,Long> {
+
+}
+Service
+@Service
+public class UserService {
+
+ @Autowired
+ UserRepository repo;
+
+ public List<User> getUsers(){
+   return repo.findAll();
+ }
+
+ public User getUser(Long id){
+   return repo.findById(id).orElse(null);
+ }
+
+ public User saveUser(User user){
+   return repo.save(user);
+ }
+}
+Controller (REST)
+
+Gateway will call this service.
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+ @Autowired
+ UserService service;
+
+ @GetMapping
+ public List<User> getUsers(){
+   return service.getUsers();
+ }
+
+ @GetMapping("/{id}")
+ public User getUser(@PathVariable Long id){
+   return service.getUser(id);
+ }
+}
+
+3️⃣ PRODUCT MICROSERVICE
+
+Port
+
+8082
+Entity
+@Entity
+@Data
+public class Product {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private String name;
+ private double price;
+}
+Repository
+public interface ProductRepository 
+      extends JpaRepository<Product,Long>{
+
+}
+Controller
+@RestController
+@RequestMapping("/products")
+public class ProductController {
+
+ @Autowired
+ ProductRepository repo;
+
+ @GetMapping
+ public List<Product> products(){
+   return repo.findAll();
+ }
+
+ @GetMapping("/{id}")
+ public Product getProduct(@PathVariable Long id){
+   return repo.findById(id).orElse(null);
+ }
+}
+
+4️⃣ ORDER MICROSERVICE
+
+Port
+
+8083
+Entity
+@Entity
+@Data
+public class Order {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private Long userId;
+ private Long productId;
+}
+Repository
+public interface OrderRepository
+      extends JpaRepository<Order,Long>{
+
+ List<Order> findByUserId(Long userId);
+}
+Controller
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+ @Autowired
+ OrderRepository repo;
+
+ @GetMapping("/user/{userId}")
+ public List<Order> ordersByUser(
+        @PathVariable Long userId){
+
+   return repo.findByUserId(userId);
+ }
+}
+
+5️⃣ GRAPHQL GATEWAY SERVICE
+
+Port
+
+8080
+
+Dependencies
+
+Spring Web
+Spring for GraphQL
+WebClient
+
+6️⃣ GraphQL Schema
+
+Create file
+
+resources/graphql/schema.graphqls
+
+Schema
+
+type User{
+ id:ID
+ name:String
+ email:String
+ orders:[Order]
+}
+
+type Order{
+ id:ID
+ product:Product
+}
+
+type Product{
+ id:ID
+ name:String
+ price:Float
+}
+
+type Query{
+ users:[User]
+ user(id:ID):User
+}
+
+7️⃣ WebClient Configuration
+
+Gateway will call microservices.
+
+@Configuration
+public class WebClientConfig {
+
+ @Bean
+ public WebClient userClient(){
+   return WebClient.create("http://localhost:8081");
+ }
+
+ @Bean
+ public WebClient productClient(){
+   return WebClient.create("http://localhost:8082");
+ }
+
+ @Bean
+ public WebClient orderClient(){
+   return WebClient.create("http://localhost:8083");
+ }
+}
+
+8️⃣ Query Resolver
+
+@Controller
+public class UserResolver {
+
+ @Autowired
+ WebClient userClient;
+
+ @QueryMapping
+ public List<User> users(){
+
+  return userClient.get()
+        .uri("/users")
+        .retrieve()
+        .bodyToFlux(User.class)
+        .collectList()
+        .block();
+ }
+}
+
+9️⃣ User → Orders Resolver
+
+@SchemaMapping(typeName="User",field="orders")
+public List<Order> orders(User user){
+
+ return orderClient.get()
+      .uri("/orders/user/"+user.getId())
+      .retrieve()
+      .bodyToFlux(Order.class)
+      .collectList()
+      .block();
+}
+
+🔟 Order → Product Resolver
+
+@SchemaMapping(typeName="Order",field="product")
+public Product product(Order order){
+
+ return productClient.get()
+      .uri("/products/"+order.getProductId())
+      .retrieve()
+      .bodyToMono(Product.class)
+      .block();
+}
+
+1️⃣1️⃣ Test GraphQL Query
+
+Open
+
+http://localhost:8080/graphiql
+
+Query
+
+query{
+ users{
+   id
+   name
+   orders{
+      id
+      product{
+         name
+         price
+      }
+   }
+ }
+}
+
+1️⃣2️⃣ Execution Flow
+
+GraphQL execution
+
+Client Query
+ |
+GraphQL Gateway
+ |
+users()
+ |
+User Service
+ |
+orders()
+ |
+Order Service
+ |
+product()
+ |
+Product Service
+ |
+Final Response
+Example Response
+{
+ "data":{
+  "users":[
+   {
+    "id":1,
+    "name":"Ravi",
+    "orders":[
+      {
+       "id":101,
+       "product":{
+         "name":"Laptop",
+         "price":70000
+       }
+      }
+    ]
+   }
+  ]
+ }
+}
+
+1️⃣3️⃣ Production Improvements
+
+Real companies add:
+
+DataLoader
+
+Solve N+1 problem.
+
+Redis Cache
+User Cache
+Product Cache
+Kafka
+OrderCreated Event
+InventoryUpdated Event
+JWT Security
+
+Secure GraphQL endpoint.
+
+GraphQL Federation
+
+Large scale schema merging.
+
+1️⃣4️⃣ Real Industry Architecture
+
+React / Angular
+      |
+GraphQL Gateway
+      |
+---------------------------------------------
+|           |             |                 |
+User MS   Product MS   Order MS         Payment MS
+
+🚀 below are the important topics:
+
+1️⃣ GraphQL Gateway + Apollo Federation architecture
+2️⃣ GraphQL DataLoader optimization (critical for interviews)
+3️⃣ GraphQL + Kafka event-driven microservices
+4️⃣ GraphQL + Spring Security JWT authentication
+5️⃣ GraphQL performance tuning used by Netflix

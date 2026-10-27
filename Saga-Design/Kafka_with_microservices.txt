@@ -1,0 +1,205 @@
+
+
+Chapter1: Introduction & event-driven architecture
+
+Provide very basic with simple hands on code for each topics explanation in this chapter
+Note: try to use best suited code example if possible(Use Tech stack:Java, spring boot, microservices and kafka, cloud function stream)
+
+What is a microservice
+Microservice vs monolithic
+Microservices communication
+Apache Kafka for microservices
+Messages and events in Kafka
+Topics, partitions & ordering
+
+
+Chapter2: Kafka brokers & cluster setup
+
+Provide very basic with simple hands on code for each topics explanation in this chapter
+Note: try to use best suited code example if possible(Use Tech stack:Java, spring boot, microservices and kafka, cloud function stream)
+
+What is a Kafka broker
+Leader and follower roles & leadership balance
+Single broker with KRaft
+Multiple broker configuration files
+Storage folder setup
+Starting & stopping brokers with KRaft
+
+
+
+Chapter3: Kafka CLI: topics, producers & consumers
+
+Topic CLI — create, list, describe, delete
+Producer CLI — messages without key / key-value pairs
+Consumer CLI — from beginning, new-only, key-value, ordered
+
+
+
+Chapter4: Kafka Producer API in Java (Spring Boot)
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+
+Sync vs async communication patterns
+Spring Boot project setup & Kafka config
+Creating topics programmatically
+REST controller + Service + Event class
+Async send with callback & sync send
+Exception handling & logging RecordMetadata
+
+
+
+Chapter5: Producer acknowledgements, retries & idempotence
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+
+acks=0 / 1 / all explained
+min.insync.replicas configuration
+Retry mechanics, delivery timeout & request timeout
+Idempotent producer — introduction
+Enable idempotence via properties & Spring Bean
+
+
+
+Chapter6: Kafka Consumer API in Java (Spring Boot)
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+
+Consumer config properties
+@KafkaListener and @KafkaHandler annotations
+Core module as shared dependency
+Spring Bean config & ListenerContainerFactory
+
+
+
+Chapter7: Error handling, DLT & retries in consumers
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+
+ErrorHandlingDeserializer for deserialization failures
+DefaultErrorHandler + DeadLetterPublishingRecoverer
+Configuring Dead Letter Topics
+Retryable vs non-retryable exceptions
+Wait-time intervals for retries
+
+
+
+Chapter8: Consumer groups, rebalancing & idempotent consumer
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+	  
+	  Ref for coding standard: https://www.youtube.com/watch?v=NWLwGtkBrkQ(Apache Kafka Course For Beginners with Spring Boot Project, Spring Cloud Streams)
+	  
+Consumer group mechanics
+Rebalancing and partition assignment strategies
+Running multiple microservice instances
+Idempotent consumer pattern with unique message IDs
+JPA entity to track processed message IDs
+
+
+
+Chapter9: Transactions & exactly-once processing
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+	  
+	  Ref for coding standard: https://www.youtube.com/watch?v=NWLwGtkBrkQ(Apache Kafka Course For Beginners with Spring Boot Project, Spring Cloud Streams)
+
+Kafka transactions introduction
+Enable transactions via properties & @Bean
+@Transactional annotation with Kafka
+Rollback for specific exceptions
+Reading committed messages (isolation.level)
+Kafka + Database synchronized transactions
+
+
+
+
+Chapter10: Testing Kafka producers & consumers
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+	  
+	  Ref for coding standard: https://www.youtube.com/watch?v=NWLwGtkBrkQ(Apache Kafka Course For Beginners with Spring Boot Project, Spring Cloud Streams)
+
+Test class setup & annotations
+Arrange-Act-Assert structure for Kafka
+Consumer configuration in test class
+setUp() and tearDown() lifecycle
+Verifying producer config (idempotence)
+Mocking objects for consumer unit tests
+
+
+
+Chapter11: Saga pattern: choreography & orchestration
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+	  
+	  Ref for coding standard: https://www.youtube.com/watch?v=NWLwGtkBrkQ(Apache Kafka Course For Beginners with Spring Boot Project, Spring Cloud Streams)
+
+Choreography-based saga (Spring Transaction+roll back compensation)
+Orchestration-based saga (Spring Transaction+roll back compensation)
+OrderCreatedEvent → ReserveProductCommand flow
+ProductReservedEvent → ProcessPaymentCommand
+OrderApprovedEvent — happy path
+Saga history table for order status
+
+
+Chapter12: Saga compensating transactions
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+	  
+	  Ref for coding standard: https://www.youtube.com/watch?v=NWLwGtkBrkQ(Apache Kafka Course For Beginners with Spring Boot Project, Spring Cloud Streams)
+
+PaymentFailedEvent handling
+CancelProductReservationCommand
+ProductReservationCancelledEvent
+RejectOrderCommand & full rollback flow
+Trying the compensating transaction end-to-end
+
+
+Chapter13: Apache Kafka in Docker
+
+Note: Use CLI And Java, Kafka Spring Boot where best suited
+      And Spring Cloud Function with Streams
+	  
+	  Ref for coding standard: https://www.youtube.com/watch?v=NWLwGtkBrkQ(Apache Kafka Course For Beginners with Spring Boot Project, Spring Cloud Streams)
+
+Docker Compose initial config
+KRaft & listeners configuration
+Volume setup
+Single broker container
+CLI scripts inside and outside Docker
+Multiple brokers in Docker Compose
+
+
+
+Chapter 14
+
+
+👉 Kafka "exactly-once" = combination of: Idempotent producer Transactions Idempotent consumer
+
+Exponential backoff is one of the most important retry strategies in distributed systems and event-driven microservices.
+
+Consumer rebalancing simulation
+Outbox Pattern
+Saga Pattern
+CDC with Debezium
+Kafka Streams Exactly Once
+low label and high lable consumer?
+Consumer rebalancing internals
+Cooperative rebalancing
+Sticky partition assignment
+Consumer lag analysis
+Parallel consumer processing
+Batch consumers
+Backpressure handling
+Pause/resume consumers
+Max poll interval issues
+Kafka consumer thread 

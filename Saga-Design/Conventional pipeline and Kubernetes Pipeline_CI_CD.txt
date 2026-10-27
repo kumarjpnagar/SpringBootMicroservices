@@ -1,0 +1,491 @@
+
+
+Conventional pipeline and Kubernetes Pipeline(CI/CD Pipeline)
+==============================================================
+
+🔹 Conventional Pipeline (Left Side)
+
+Code → Build → Store Artifact → Deploy (VM-based environments)
+Build JAR/WAR
+
+Store in JFrog Artifactory
+
+Deploy to:
+
+Staging → QA → Prod (manual or scripted)
+
+🔹 Kubernetes Pipeline (Right Side) ⭐
+
+Code → Docker Build → Push Image → Kubernetes Deploy → Rollout Strategy
+Instead of JARs, we deploy Docker containers into Kubernetes clusters
+
+🧠 2. Step-by-Step Flow (Kubernetes CI/CD)
+
+🔷 STEP 1: Developer Commits Code
+
+git add .
+git commit -m "feature added"
+git push origin main
+Triggers CI/CD pipeline in:
+
+Jenkins / GitHub Actions / GitLab CI
+
+🔷 STEP 2: Build + Test
+
+Run Unit Tests (JUnit)
+mvn clean test
+Code Quality Check
+Using:
+
+SonarQube
+
+mvn sonar:sonar \
+  -Dsonar.projectKey=my-app \
+  -Dsonar.host.url=http://localhost:9000 \
+  -Dsonar.login=TOKEN
+  
+🔷 STEP 3: Docker Build (Core Difference)
+
+🐳 Create Dockerfile
+
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+COPY target/app.jar app.jar
+ENTRYPOINT ["java","-jar","app.jar"]
+Build Docker Image
+docker build -t my-app:1.0 .
+
+Tag Image
+docker tag my-app:1.0 username/my-app:1.0
+
+🔷 STEP 4: Push to Registry
+Push to:
+
+Docker Hub OR GitHub Container Registry
+
+docker login
+docker push username/my-app:1.0
+
+🔷 STEP 5: Kubernetes Configuration
+Now comes the K8s YAML files
+
+📄 deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: username/my-app:1.0
+        ports:
+        - containerPort: 8080
+		
+📄 service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-service
+spec:
+  type: NodePort
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30007
+	  
+🔷 STEP 6: Deploy to Kubernetes
+
+Apply configs:
+
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+Check:
+
+kubectl get pods
+kubectl get svc
+
+🔥 3. Environments (From Diagram)
+Our deploy to different clusters:
+
+Environment	Kubernetes
+Staging	Staging Cluster
+QA	QA Cluster
+Prod	Prod Cluster
+Switch cluster:
+
+kubectl config use-context staging
+kubectl config use-context qa
+kubectl config use-context prod
+
+🧪 STEP 7: Testing Flow
+
+Staging
+curl http://staging-url
+
+QA
+Integration tests
+
+Performance tests
+
+🚀 STEP 8: Deployment Strategies (IMPORTANT)
+our diagram shows:
+
+🔵 Blue-Green Deployment
+
+Concept:
+
+Blue = Old version
+
+Green = New version
+
+Switch traffic instantly
+
+Example:
+
+kubectl set image deployment/my-app my-app=username/my-app:2.0
+Or use separate deployments and switch service selector.
+
+🟣 Canary Deployment
+
+Concept:
+Release to small % users first
+
+Example:
+
+replicas: 1   # new version
+While old version has:
+
+replicas: 9
+Gradually increase:
+
+kubectl scale deployment my-app --replicas=5
+
+🔄 STEP 9: Rolling Updates (Default)
+kubectl rollout status deployment/my-app
+
+Rollback:
+
+kubectl rollout undo deployment/my-app
+
+📊 STEP 10: Monitoring
+Use:
+
+Prometheus
+
+Grafana
+
+Check logs:
+
+kubectl logs pod-name
+
+⚙️ 4. Full CI/CD Pipeline Example (Jenkinsfile)
+
+pipeline {
+  agent any
+
+  stages {
+
+    stage('Build') {
+      steps {
+        sh 'mvn clean package'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        sh 'mvn test'
+      }
+    }
+
+    stage('Docker Build') {
+      steps {
+        sh 'docker build -t username/my-app:1.0 .'
+      }
+    }
+
+    stage('Push Image') {
+      steps {
+        sh 'docker push username/my-app:1.0'
+      }
+    }
+
+    stage('Deploy to K8s') {
+      steps {
+        sh 'kubectl apply -f deployment.yaml'
+      }
+    }
+  }
+}
+
+🔥 5. Key Differences (Important Interview Point)
+
+Feature	Conventional	Kubernetes
+Artifact	JAR/WAR	Docker Image
+Infra	VM	Container
+Scaling	Manual	Auto
+Deployment	Script-based	YAML
+Rollback	Hard	Easy (kubectl undo)
+
+🎯 6. End-to-End Flow Summary
+
+Developer → Git Push
+   ↓
+CI Tool (Jenkins)
+   ↓
+Build + Test + SonarQube
+   ↓
+Docker Build
+   ↓
+Push to Registry
+   ↓
+Kubernetes Deployment
+   ↓
+Staging → QA → Prod
+   ↓
+Monitoring.
+================================================
+🚨 1. Problem: Why Saga is Needed
+In microservices:
+
+Order Service → creates order
+
+Payment Service → processes payment
+
+Inventory Service → reserves stock
+
+👉 Each has its own database
+👉 No global transaction (no ACID across services)
+
+❌ Failure Example
+
+Order Created ✅
+Payment Failed ❌
+
+👉 Now DB is inconsistent → Order exists but payment not done
+
+🔥 2. Solution: Saga Pattern
+👉 Instead of one big transaction:
+
+✔ Break into multiple local transactions
+✔ If failure → run compensating transactions (rollback)
+
+🧠 3.our Diagram Explained (Step-by-Step)
+
+✅ Happy Flow:
+
+1. Create Order
+2. Process Payment
+3. Update Inventory
+4. Deliver Order
+
+❌ Failure Flow (Important)
+If step 3 fails:
+
+Update Inventory ❌
+↓
+Reverse Payment
+↓
+Cancel Order
+
+👉 This is called Compensation
+
+⚙️ 4. Two Types of Saga (From Screenshot)
+
+🔵 1. Choreography (Event-Based)
+👉 No central controller
+👉 Services talk via events
+
+Using:
+
+Apache Kafka
+
+🔁 Flow
+Order Service → publishes OrderCreated
+Payment Service → listens → processes payment
+Payment Service → publishes PaymentSuccess
+Inventory Service → listens → update stock
+
+🧑‍✈️ 2. Orchestration (Central Control)
+👉 One service controls flow
+
+Using:
+
+Spring Boot Orchestrator
+
+Flow
+Orchestrator → calls Order Service
+Orchestrator → calls Payment Service
+Orchestrator → calls Inventory Service
+
+🧪 5. HANDS-ON IMPLEMENTATION (Choreography using Kafka)
+
+🔧 Step 1: Start Kafka
+docker run -d -p 9092:9092 apache/kafka
+
+📦 Step 2: Define Events
+class OrderCreatedEvent {
+    String orderId;
+    String productId;
+}
+class PaymentProcessedEvent {
+    String orderId;
+    String status;
+}
+
+🧩 Step 3: Order Service
+
+@PostMapping("/order")
+public String createOrder() {
+    Order order = new Order("123", "P1");
+
+    // save to DB
+    orderRepository.save(order);
+
+    // publish event
+    kafkaTemplate.send("order-created", order);
+
+    return "Order Created";
+}
+
+💳 Step 4: Payment Service
+
+@KafkaListener(topics = "order-created")
+public void processPayment(Order order) {
+
+    boolean success = paymentGateway.charge();
+
+    if(success) {
+        kafkaTemplate.send("payment-success", order);
+    } else {
+        kafkaTemplate.send("payment-failed", order);
+    }
+}
+
+📦 Step 5: Inventory Service
+
+@KafkaListener(topics = "payment-success")
+public void updateInventory(Order order) {
+    boolean available = checkStock();
+
+    if(!available) {
+        kafkaTemplate.send("inventory-failed", order);
+    }
+}
+
+🔁 Step 6: Compensation Logic
+
+❌ If Payment Fails
+
+@KafkaListener(topics = "payment-failed")
+public void cancelOrder(Order order) {
+    orderRepository.delete(order.getId());
+}
+
+❌ If Inventory Fails
+
+@KafkaListener(topics = "inventory-failed")
+public void reversePayment(Order order) {
+    paymentGateway.refund(order);
+}
+
+🧪 6. HANDS-ON (Orchestration Approach)
+
+🧑‍✈️ Orchestrator Service
+
+public void executeSaga(OrderRequest request) {
+
+    try {
+        orderService.createOrder(request);
+
+        paymentService.processPayment(request);
+
+        inventoryService.updateStock(request);
+
+    } catch(Exception e) {
+
+        paymentService.reversePayment(request);
+
+        orderService.cancelOrder(request);
+    }
+}
+
+🔄 7. Real Execution Flow
+
+✅ Scenario 1: Success
+Order Created → Payment Done → Inventory Updated → Completed
+
+❌ Scenario 2: Payment Failed
+Order Created → Payment Failed
+↓
+Cancel Order
+
+❌ Scenario 3: Inventory Failed
+Order Created → Payment Done → Inventory Failed
+↓
+Reverse Payment → Cancel Order
+
+⚠️ 8. Common Mistakes (From Screenshot + Real World)
+❌ 1. No Compensation Logic
+👉 Biggest mistake
+👉 Saga becomes useless
+
+❌ 2. Duplicate Events
+👉 Use idempotency
+
+if(processedEvents.contains(eventId)) return;
+
+❌ 3. No Retry Mechanism
+Use:
+
+Retry topics
+
+Dead Letter Queue (DLQ)
+
+🧠 9. Advanced Production Setup
+🔹 Add Retry + DLQ
+spring:
+  kafka:
+    consumer:
+      enable-auto-commit: false
+	  
+🔹 Idempotency Table
+processed_events
+----------------
+event_id
+status
+
+🔹 Timeout Handling
+👉 If no response in X seconds → trigger rollback
+
+📊 10. Saga vs Traditional Transactions
+Feature	Traditional	Saga
+Transaction	Global	Local
+Rollback	Automatic	Manual (compensation)
+Scalability	Low	High
+Microservices	Not suitable	Best fit
+
+🎯 11. Final Understanding (Very Important)
+👉 Saga = Sequence of local transactions + rollback logic
+
+👉 Key Rules:
+
+Every step must have compensation
+
+Use events for loose coupling
+
+Keep flows simple
+==============================================

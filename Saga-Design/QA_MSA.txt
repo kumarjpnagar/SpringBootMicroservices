@@ -1,0 +1,39 @@
+How to scope microservices using bounded context using spring boot java microservices?
+
+How to architect asynchronous microservices using spring boot java microservices, kafka?
+
+How to architect api based microservices using rest, using spring boot java microservices?
+
+How one microservices exposes and other consume using rest template, grpc and feign client?
+
+How achieve data consistency across microservices?
+
+How to centralise access to microservices using API Gateway?
+
+How to split monolithic DB acoss microservices
+
+How to make microservices more resilent? exaplain with hands on example
+
+How to make microservices backward compatible?
+
+how to manage document microservices contracts?
+
+How to implement microservices centralised logging?
+
+How to provide reporting from distributed microservice?
+
+How to automate on-prem microservices?
+
+How to approach cloud based microservices infrastaructure?
+
+How to manage microservices config?
+
+How to manage microservices registration and discovery?
+
+How to monitor microservices?
+
+Asynchronous Communication Between Microservices — 01: AWS — SQS
+https://medium.com/@syed.fawzul.azim/asynchronous-communication-between-microservices-01-aws-simple-queue-service-sqs-7b7f2b7df080
+
+Asynchronous Communication Between Microservices — 02: AWS - SNS + SQS
+https://medium.com/@syed.fawzul.azim/asynchronous-communication-between-microservices-02-aws-sns-sqs-c66c5a209bd0

@@ -1,0 +1,612 @@
+
+=====
+Note: https://medium.com/@ucgorai/java-8-features-that-every-programmer-must-know-39e73a1daafb
+====
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+// --- Employee Class Definition (Used in Many Examples) ---
+class Employee {
+    int id;
+    String name;
+    String department;
+    double salary;
+    int age;
+
+    // Constructor for Employee with age
+    public Employee(int id, String name, String department, double salary, int age) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+        this.salary = salary;
+        this.age = age;
+    }
+
+    // Constructor for Employee without age (for simpler examples)
+    public Employee(int id, String name, String department, double salary) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+        this.salary = salary;
+        this.age = 0; // Default age
+    }
+
+    // Getters
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getDepartment() { return department; }
+    public double getSalary() { return salary; }
+    public int getAge() { return age; }
+
+    @Override
+    public String toString() {
+        return String.format("Employee{id=%d, name='%s', dept='%s', salary=%.2f, age=%d}", 
+                             id, name, department, salary, age);
+    }
+}
+
+// --- Main Class Containing All Solutions ---
+public class StreamPractice {
+
+    // --- Common Data for Examples ---
+    static List<Integer> intList = Arrays.asList(1, 2, 3, 2, 4, 5, 1, 6, 7, 8);
+    static List<String> stringList = Arrays.asList("Java", "Spring", "Docker", "Java", "Stream");
+    static List<Employee> employees = Arrays.asList(
+            new Employee(1, "John", "IT", 60000, 30),
+            new Employee(2, "Alice", "HR", 50000, 28),
+            new Employee(3, "Bob", "IT", 70000, 35),
+            new Employee(4, "David", "Finance", 55000, 40),
+            new Employee(5, "Eva", "HR", 65000, 32),
+            new Employee(6, "Mike", "IT", 75000, 38)
+    );
+
+    // --- 1. Find Duplicate Elements ---
+    public static void findDuplicates() {
+        System.out.println("\n--- 1. Find Duplicate Elements ---");
+        List<Integer> list = Arrays.asList(1, 2, 3, 2, 4, 5, 1);
+        Set<Integer> seen = new HashSet<>();
+        Set<Integer> duplicates = list.stream()
+                .filter(n -> !seen.add(n))
+                .collect(Collectors.toSet());
+        System.out.println("Duplicates in " + list + ": " + duplicates);
+    }
+
+    // --- 2. Count Occurrence of Elements ---
+    public static void countOccurrences() {
+        System.out.println("\n--- 2. Count Occurrence of Elements ---");
+        List<Integer> list = Arrays.asList(1, 2, 3, 2, 4, 1, 5);
+        Map<Integer, Long> freq = list.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        System.out.println("Frequency: " + freq);
+    }
+
+    // --- 3. Elements with Frequency > 1 ---
+    public static void elementsWithFreqGreaterThan1() {
+        System.out.println("\n--- 3. Elements with Frequency > 1 ---");
+        List<Integer> list = Arrays.asList(1, 2, 3, 2, 4, 1, 5);
+        list.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet().stream()
+                .filter(e -> e.getValue() > 1)
+                .forEach(e -> System.out.println(e.getKey() + " appears " + e.getValue() + " times"));
+    }
+
+    // --- 4. Character Frequency in String ---
+    public static void charFrequency() {
+        System.out.println("\n--- 4. Character Frequency in String ---");
+        String str = "java";
+        Map<Character, Long> freq = str.chars()
+                .mapToObj(c -> (char) c)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        System.out.println("Frequency in '" + str + "': " + freq);
+    }
+
+    // --- 5. Remove Duplicates ---
+    public static void removeDuplicates() {
+        System.out.println("\n--- 5. Remove Duplicates ---");
+        List<Integer> list = Arrays.asList(1, 2, 2, 3, 4, 4, 5);
+        List<Integer> unique = list.stream().distinct().collect(Collectors.toList());
+        System.out.println("Original: " + list + " -> Without Duplicates: " + unique);
+    }
+
+    // --- 6. Sort List ---
+    public static void sortList() {
+        System.out.println("\n--- 6. Sort List ---");
+        List<Integer> list = Arrays.asList(5, 3, 1, 4, 2);
+        List<Integer> sorted = list.stream().sorted().collect(Collectors.toList());
+        System.out.println("Original: " + list + " -> Sorted: " + sorted);
+    }
+
+    // --- 7. Sort Employees by Salary ---
+    public static void sortEmployeesBySalary() {
+        System.out.println("\n--- 7. Sort Employees by Salary ---");
+        employees.stream()
+                .sorted(Comparator.comparing(Employee::getSalary))
+                .forEach(System.out::println);
+    }
+
+    // --- 8. Second Highest Number ---
+    public static void secondHighestNumber() {
+        System.out.println("\n--- 8. Second Highest Number ---");
+        List<Integer> list = Arrays.asList(10, 20, 30, 40, 50);
+        int secondHighest = list.stream()
+                .sorted(Comparator.reverseOrder())
+                .skip(1)
+                .findFirst()
+                .get();
+        System.out.println("Second Highest in " + list + ": " + secondHighest);
+    }
+
+    // --- 9. Highest Number ---
+    public static void highestNumber() {
+        System.out.println("\n--- 9. Highest Number ---");
+        List<Integer> list = Arrays.asList(10, 20, 30, 5);
+        int max = list.stream().max(Integer::compare).get();
+        System.out.println("Highest in " + list + ": " + max);
+    }
+
+    // --- 10. Minimum Number ---
+    public static void minNumber() {
+        System.out.println("\n--- 10. Minimum Number ---");
+        List<Integer> list = Arrays.asList(10, 20, 30, 5);
+        int min = list.stream().min(Integer::compare).get();
+        System.out.println("Minimum in " + list + ": " + min);
+    }
+
+    // --- 11. Even Numbers ---
+    public static void evenNumbers() {
+        System.out.println("\n--- 11. Even Numbers ---");
+        List<Integer> list = Arrays.asList(1, 2, 3, 4, 5, 6);
+        List<Integer> evens = list.stream().filter(n -> n % 2 == 0).collect(Collectors.toList());
+        System.out.println("Even numbers in " + list + ": " + evens);
+    }
+
+    // --- 12. Odd Numbers ---
+    public static void oddNumbers() {
+        System.out.println("\n--- 12. Odd Numbers ---");
+        List<Integer> list = Arrays.asList(1, 2, 3, 4, 5, 6);
+        List<Integer> odds = list.stream().filter(n -> n % 2 != 0).collect(Collectors.toList());
+        System.out.println("Odd numbers in " + list + ": " + odds);
+    }
+
+    // --- 13. Count Numbers Greater Than 5 ---
+    public static void countGreaterThan5() {
+        System.out.println("\n--- 13. Count Numbers Greater Than 5 ---");
+        List<Integer> list = Arrays.asList(1, 6, 7, 3, 9);
+        long count = list.stream().filter(n -> n > 5).count();
+        System.out.println("Numbers > 5 in " + list + ": " + count);
+    }
+
+    // --- 14. Convert List to Set ---
+    public static void listToSet() {
+        System.out.println("\n--- 14. Convert List to Set ---");
+        List<Integer> list = Arrays.asList(1, 2, 2, 3);
+        Set<Integer> set = list.stream().collect(Collectors.toSet());
+        System.out.println("List: " + list + " -> Set: " + set);
+    }
+
+    // --- 15. Convert List to String (Joining) ---
+    public static void listToString() {
+        System.out.println("\n--- 15. Convert List to String ---");
+        List<Integer> list = Arrays.asList(1, 2, 3);
+        String result = list.stream().map(String::valueOf).collect(Collectors.joining(", "));
+        System.out.println("List: " + list + " -> String: '" + result + "'");
+    }
+
+    // --- 16. Convert List to Map (key: id, value: name) ---
+    public static void listToMap() {
+        System.out.println("\n--- 16. Convert List to Map ---");
+        Map<Integer, String> map = employees.stream()
+                .collect(Collectors.toMap(Employee::getId, Employee::getName));
+        System.out.println("Employee Map (id->name): " + map);
+    }
+
+    // --- 17. Join list of strings into a single string ---
+    public static void joinNames() {
+        System.out.println("\n--- 17. Join Names ---");
+        List<String> names = Arrays.asList("Java", "Stream", "API");
+        String joined = names.stream().collect(Collectors.joining(" "));
+        System.out.println("Joined String: '" + joined + "'");
+    }
+
+    // --- 18. Average of List ---
+    public static void averageOfList() {
+        System.out.println("\n--- 18. Average of List ---");
+        List<Integer> list = Arrays.asList(10, 20, 30, 40);
+        double avg = list.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+        System.out.println("Average of " + list + ": " + avg);
+    }
+
+    // --- 19. Group Employees by Department ---
+    public static void groupByDept() {
+        System.out.println("\n--- 19. Group Employees by Department ---");
+        Map<String, List<Employee>> byDept = employees.stream()
+                .collect(Collectors.groupingBy(Employee::getDepartment));
+        byDept.forEach((dept, empList) -> {
+            System.out.println(dept + ": " + empList.stream().map(Employee::getName).collect(Collectors.toList()));
+        });
+    }
+
+    // --- 20. Count Employees per Department ---
+    public static void countByDept() {
+        System.out.println("\n--- 20. Count Employees per Department ---");
+        Map<String, Long> countByDept = employees.stream()
+                .collect(Collectors.groupingBy(Employee::getDepartment, Collectors.counting()));
+        System.out.println("Employee count by department: " + countByDept);
+    }
+
+    // --- 21. Sum of Salaries ---
+    public static void sumOfSalaries() {
+        System.out.println("\n--- 21. Sum of Salaries ---");
+        double sum = employees.stream().mapToDouble(Employee::getSalary).sum();
+        System.out.println("Total salary: " + sum);
+    }
+
+    // --- 22. Average Salary ---
+    public static void averageSalary() {
+        System.out.println("\n--- 22. Average Salary ---");
+        double avg = employees.stream().mapToDouble(Employee::getSalary).average().orElse(0.0);
+        System.out.println("Average salary: " + avg);
+    }
+
+    // --- 23. Highest Salary Employee ---
+    public static void highestSalaryEmployee() {
+        System.out.println("\n--- 23. Highest Salary Employee ---");
+        Employee highestPaid = employees.stream()
+                .max(Comparator.comparing(Employee::getSalary))
+                .get();
+        System.out.println("Highest paid employee: " + highestPaid);
+    }
+
+    // --- 24. Filter Null Values ---
+    public static void removeNulls() {
+        System.out.println("\n--- 24. Remove Null Values ---");
+        List<String> list = Arrays.asList("Java", null, "Spring", null);
+        List<String> nonNull = list.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        System.out.println("Original: " + list + " -> Without nulls: " + nonNull);
+    }
+
+    // --- 25. Uppercase Conversion ---
+    public static void uppercaseConversion() {
+        System.out.println("\n--- 25. Uppercase Conversion ---");
+        List<String> list = Arrays.asList("java", "spring", "docker");
+        List<String> upper = list.stream().map(String::toUpperCase).collect(Collectors.toList());
+        System.out.println("Original: " + list + " -> Uppercase: " + upper);
+    }
+
+    // --- 26. Flatten Nested List ---
+    public static void flattenNestedList() {
+        System.out.println("\n--- 26. Flatten Nested List ---");
+        List<List<Integer>> nested = Arrays.asList(
+                Arrays.asList(1, 2),
+                Arrays.asList(3, 4),
+                Arrays.asList(5, 6)
+        );
+        List<Integer> flat = nested.stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+        System.out.println("Nested: " + nested + " -> Flat: " + flat);
+    }
+
+    // --- 27. First Element ---
+    public static void firstElement() {
+        System.out.println("\n--- 27. First Element ---");
+        List<String> list = Arrays.asList("Java", "Spring", "Microservice");
+        Optional<String> first = list.stream().findFirst();
+        first.ifPresent(f -> System.out.println("First element: " + f));
+    }
+
+    // --- 28. All Even ---
+    public static void allEven() {
+        System.out.println("\n--- 28. All Even ---");
+        List<Integer> list = Arrays.asList(2, 4, 6, 8);
+        boolean allEven = list.stream().allMatch(n -> n % 2 == 0);
+        System.out.println("All even in " + list + ": " + allEven);
+    }
+
+    // --- 29. Any Match > 10 ---
+    public static void anyMatchGreaterThan10() {
+        System.out.println("\n--- 29. Any Match > 10 ---");
+        List<Integer> list = Arrays.asList(1, 5, 7, 11);
+        boolean anyMatch = list.stream().anyMatch(n -> n > 10);
+        System.out.println("Any number > 10 in " + list + ": " + anyMatch);
+    }
+
+    // --- 30. Partition Even/Odd ---
+    public static void partitionEvenOdd() {
+        System.out.println("\n--- 30. Partition Even/Odd ---");
+        List<Integer> list = Arrays.asList(1, 2, 3, 4, 5, 6);
+        Map<Boolean, List<Integer>> partition = list.stream()
+                .collect(Collectors.partitioningBy(n -> n % 2 == 0));
+        System.out.println("Even: " + partition.get(true) + ", Odd: " + partition.get(false));
+    }
+
+    // --- 31. First Non-Repeated Character ---
+    public static void firstNonRepeated() {
+        System.out.println("\n--- 31. First Non-Repeated Character ---");
+        String input = "aabbcddeff";
+        Character result = input.chars()
+                .mapToObj(c -> (char) c)
+                .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting()))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue() == 1)
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+        System.out.println("First non-repeated in '" + input + "': " + result);
+    }
+
+    // --- 32. Second Non-Repeated Character ---
+    public static void secondNonRepeated() {
+        System.out.println("\n--- 32. Second Non-Repeated Character ---");
+        String input = "aabbcddeffg";
+        Character result = input.chars()
+                .mapToObj(c -> (char) c)
+                .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting()))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue() == 1)
+                .map(Map.Entry::getKey)
+                .skip(1)
+                .findFirst()
+                .orElse(null);
+        System.out.println("Second non-repeated in '" + input + "': " + result);
+    }
+
+    // --- 33. First Repeated Character ---
+    public static void firstRepeated() {
+        System.out.println("\n--- 33. First Repeated Character ---");
+        String input = "abccba";
+        Set<Character> seen = new HashSet<>();
+        Character result = input.chars()
+                .mapToObj(c -> (char) c)
+                .filter(ch -> !seen.add(ch))
+                .findFirst()
+                .orElse(null);
+        System.out.println("First repeated in '" + input + "': " + result);
+    }
+
+    // --- 34. Second Repeated Character ---
+    public static void secondRepeated() {
+        System.out.println("\n--- 34. Second Repeated Character ---");
+        String input = "abccbaade";
+        Set<Character> seen = new HashSet<>();
+        Character result = input.chars()
+                .mapToObj(c -> (char) c)
+                .filter(ch -> !seen.add(ch))
+                .skip(1)
+                .findFirst()
+                .orElse(null);
+        System.out.println("Second repeated in '" + input + "': " + result);
+    }
+
+    // --- 35. Filter Even Numbers from Mixed List using Predicate ---
+    public static void evenFromMixedList() {
+        System.out.println("\n--- 35. Even Numbers from Mixed List ---");
+        List<String> input = Arrays.asList("1","2","3","4","abc","5");
+        Predicate<String> isNumeric = s -> {
+            try {
+                Integer.parseInt(s);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        };
+        List<Integer> evenNumbers = input.stream()
+                .filter(isNumeric)
+                .map(Integer::parseInt)
+                .filter(n -> n % 2 == 0)
+                .collect(Collectors.toList());
+        System.out.println("Even numbers from " + input + ": " + evenNumbers);
+    }
+
+    // --- 36. Sort HashMap by Value ---
+    public static void sortHashMapByValue() {
+        System.out.println("\n--- 36. Sort HashMap by Value ---");
+        Map<Integer, String> map = new HashMap<>();
+        map.put(1, "x");
+        map.put(2, "s");
+        map.put(3, "z");
+        System.out.println("Original Map: " + map);
+        Map<Integer, String> sortedMap = map.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (v1, v2) -> v1,
+                        LinkedHashMap::new
+                ));
+        System.out.println("Sorted Map (by value): " + sortedMap);
+    }
+
+    // --- 37. Process Optional<List<Employee>> ---
+    public static void processOptionalEmployees() {
+        System.out.println("\n--- 37. Process Optional<List<Employee>> ---");
+        Optional<List<Employee>> employeesOpt = Optional.of(employees); // Simulating a non-empty optional
+
+        employeesOpt.ifPresent(list -> {
+            if (list.isEmpty()) {
+                System.out.println("employee doesnot exist");
+            } else {
+                list.stream()
+                        .filter(e -> e.getAge() > 30)
+                        .forEach(e -> e.setSalary(e.getSalary() + 1000));
+                System.out.println("Updated employees (age > 30 got 1000 raise):");
+                list.stream().filter(e -> e.getAge() > 30).forEach(System.out::println);
+            }
+        });
+        // Simulating empty optional
+        Optional<List<Employee>> emptyOpt = Optional.empty();
+        emptyOpt.ifPresentOrElse(
+                list -> { if (list.isEmpty()) System.out.println("Empty list, but this won't run."); },
+                () -> System.out.println("Optional is empty, no employees to process.")
+        );
+    }
+
+    // --- 38. Find Repeated Strings and Their Count ---
+    public static void repeatedStringsCount() {
+        System.out.println("\n--- 38. Find Repeated Strings and Their Count ---");
+        List<String> list = Arrays.asList("aa","cc","bb","aa","dd","bb");
+        Map<String, Long> repeated = list.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet().stream()
+                .filter(e -> e.getValue() > 1)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        System.out.println("Repeated strings and their count: " + repeated);
+    }
+
+    // --- 39. Sort Finance Department Employees by Salary (Ascending and Descending) ---
+    public static void sortFinanceEmployeesBySalary() {
+        System.out.println("\n--- 39. Sort Finance Department Employees by Salary ---");
+        List<Employee> financeEmps = employees.stream()
+                .filter(e -> e.getDepartment().equalsIgnoreCase("Finance"))
+                .collect(Collectors.toList());
+        if (financeEmps.isEmpty()) {
+            System.out.println("No employees in Finance department.");
+            return;
+        }
+        System.out.println("Finance Employees (Ascending by salary):");
+        financeEmps.stream()
+                .sorted(Comparator.comparing(Employee::getSalary))
+                .forEach(System.out::println);
+
+        System.out.println("\nFinance Employees (Descending by salary):");
+        financeEmps.stream()
+                .sorted(Comparator.comparing(Employee::getSalary).reversed())
+                .forEach(System.out::println);
+    }
+
+    // --- 40. Check if Two Strings are Anagrams ---
+    public static void checkAnagrams() {
+        System.out.println("\n--- 40. Check if Two Strings are Anagrams ---");
+        String s1 = "listen";
+        String s2 = "silent";
+        boolean isAnagram = s1.chars().sorted().boxed()
+                .collect(Collectors.toList())
+                .equals(s2.chars().sorted().boxed().collect(Collectors.toList()));
+        System.out.println("'" + s1 + "' and '" + s2 + "' are anagrams: " + isAnagram);
+    }
+
+    // --- 41. Check Palindrome using Streams ---
+    public static void checkPalindrome() {
+        System.out.println("\n--- 41. Check Palindrome using Streams ---");
+        String str = "radar";
+        boolean isPalindrome = IntStream.range(0, str.length() / 2)
+                .allMatch(i -> str.charAt(i) == str.charAt(str.length() - 1 - i));
+        System.out.println("'" + str + "' is a palindrome: " + isPalindrome);
+    }
+
+    // --- 42. Replace Character in String ---
+    public static void replaceCharacter() {
+        System.out.println("\n--- 42. Replace Character in String ---");
+        String str = "hello world";
+        char oldChar = 'o';
+        char newChar = 'x';
+        String replaced = str.chars()
+                .map(c -> c == oldChar ? newChar : c)
+                .mapToObj(c -> String.valueOf((char) c))
+                .collect(Collectors.joining());
+        System.out.println("Original: '" + str + "' -> Replaced '" + oldChar + "' with '" + newChar + "': '" + replaced + "'");
+    }
+
+    // --- 43. Reverse Words in a String ---
+    public static void reverseWords() {
+        System.out.println("\n--- 43. Reverse Words in a String ---");
+        String sentence = "Java Stream API";
+        String reversedWords = Arrays.stream(sentence.split(" "))
+                .map(word -> new StringBuilder(word).reverse().toString())
+                .collect(Collectors.joining(" "));
+        System.out.println("Original: '" + sentence + "' -> Reversed words: '" + reversedWords + "'");
+    }
+
+    // --- 44. Count Elements Using reduce (without count/collect) ---
+    public static void countUsingReduce() {
+        System.out.println("\n--- 44. Count Elements Using reduce ---");
+        int[] arr = {1, 3, 4, 6, 7, 2};
+        int count = Arrays.stream(arr)
+                .boxed()
+                .reduce(0, (c, e) -> c + 1, Integer::sum);
+        System.out.println("Number of elements in " + Arrays.toString(arr) + ": " + count);
+    }
+
+    // --- 45. Thread-Safe Rate Limiter (Conceptual) ---
+    // Note: This requires an external library (bucket4j). 
+    // This is a simplified version showing the core concept using Java's atomic package.
+    public static void rateLimiterConcept() {
+        System.out.println("\n--- 45. Thread-Safe Rate Limiter Concept (Simplified) ---");
+        // This is a conceptual implementation using AtomicInteger for simplicity.
+        // A real implementation would use a token bucket algorithm (like bucket4j).
+        java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger(0);
+        int maxRequests = 10;
+        long windowMillis = 60000; // 60 seconds
+
+        // Simulating requests in a single-threaded manner for demonstration
+        System.out.println("Simulating requests... (conceptual)");
+        for (int i = 0; i < 12; i++) {
+            if (counter.incrementAndGet() <= maxRequests) {
+                System.out.println("Request " + (i+1) + " allowed.");
+            } else {
+                System.out.println("Request " + (i+1) + " denied. Rate limit exceeded.");
+            }
+            // In a real scenario, we'd reset the counter after the time window.
+            // This is a simplistic and non-thread-safe reset mechanism.
+            if ((i+1) == maxRequests) {
+                System.out.println("--- Resetting counter for the next window (conceptual) ---");
+                counter.set(0);
+            }
+        }
+        System.out.println("(Note: A production-grade rate limiter uses token bucket or leaky bucket algorithms.)");
+    }
+
+    // --- Main Method to Run All Examples ---
+    public static void main(String[] args) {
+        findDuplicates();
+        countOccurrences();
+        elementsWithFreqGreaterThan1();
+        charFrequency();
+        removeDuplicates();
+        sortList();
+        sortEmployeesBySalary();
+        secondHighestNumber();
+        highestNumber();
+        minNumber();
+        evenNumbers();
+        oddNumbers();
+        countGreaterThan5();
+        listToSet();
+        listToString();
+        listToMap();
+        joinNames();
+        averageOfList();
+        groupByDept();
+        countByDept();
+        sumOfSalaries();
+        averageSalary();
+        highestSalaryEmployee();
+        removeNulls();
+        uppercaseConversion();
+        flattenNestedList();
+        firstElement();
+        allEven();
+        anyMatchGreaterThan10();
+        partitionEvenOdd();
+        firstNonRepeated();
+        secondNonRepeated();
+        firstRepeated();
+        secondRepeated();
+        evenFromMixedList();
+        sortHashMapByValue();
+        processOptionalEmployees();
+        repeatedStringsCount();
+        sortFinanceEmployeesBySalary();
+        checkAnagrams();
+        checkPalindrome();
+        replaceCharacter();
+        reverseWords();
+        countUsingReduce();
+        rateLimiterConcept();
+    }
+}

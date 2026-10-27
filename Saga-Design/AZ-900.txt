@@ -1,0 +1,227 @@
+
+
+
+
+----Master Microsoft Azure Fundamentals: AZ-900 Exam Prep 2026---------
+
+
+1.AZ-900 Course (intro)
+
+Introduction
+
+LIVE DEMO: A quick look into Azure
+
+AZ-900 Exam Requirements
+
+Udemy Video Player
+
+AZ-900 : 21-Day Study Plan1
+
+Pass AZ-900 Azure Fundamentals with the Help of AI
+
+===========================
+
+2. Describe Cloud Computing
+    
+What is Cloud Computing?
+
+Shared Responsibility Model
+
+Public Cloud, Private Cloud, Hybrid Cloud
+
+The Consumption-Based Model
+
+Cloud Pricing
+
+LIVE DEMO: Pricing Calculator
+
+=========================================
+
+3. Benefits of Cloud Computing
+
+High Availability Benefit of Cloud Computing
+
+
+Scalability Benefit of Cloud Computing
+
+Elasticity Benefit of Cloud Computing
+
+Reliability Benefit of Cloud Computing
+
+Predictability Benefit of Cloud Computing
+
+Security Benefit of Cloud Computing
+
+Governance Benefit of Cloud Computing
+
+Managability Benefit of Cloud Computing
+
+====================================
+
+4. Cloud Service Types
+    
+Cloud Service Types
+
+Serverless
+
+==========================================
+
+5.Core Architectural Components
+   
+Regions, Region Pairs, Sovereign Regions
+
+
+Availability Zones and Data Centers
+
+Resources and Resource Groups
+
+Subscriptions
+
+Management Groups 
+
+========================================
+6.Compute and Networking Services
+
+Azure Compute services and Azure Virtual Machines
+
+Scaling Virtual Machines using VM Scale Sets (VMSS)
+
+Availability Sets and Proximity Groups
+
+App Services, Containers and Azure Virtual Desktop
+
+Azure Functions
+
+Azure Networking services
+
+Network Peering, Azure DNS, and VPN Gateway
+
+Public and Private Endpoints
+
+===========================================
+
+7.Azure Compute Demo
+
+LIVE DEMO: Creating a Virtual Machine (VM)
+
+LIVE DEMO: Connecting to a Virtual Machine
+
+LIVE DEMO: Creating Azure App Services / Web Apps
+
+LIVE DEMO: Azure App Services In Action
+
+LIVE DEMO: Creating Azure Functions
+
+LIVE DEMO: Kubernetes and Azure Container Instances
+
+LIVE DEMO: Azure Container Apps
+
+Reminder: How to Delete Azure Resources
+
+============================================
+
+8.Azure Storage
+
+Overview of Azure Storage
+
+Container (Blob) Storage
+
+LIVE DEMO: Create an Unmanaged Storage Account
+
+LIVE DEMO: Upload Files to a Storage Account
+
+LIVE DEMO: Azure Storage Explorer & Storage Browser
+
+AZCOPY
+
+Azure Files and Azure File Sync
+
+Azure Migrate
+
+Azure Data Box
+
+=======================================
+
+9.Identity, Access and Security
+
+Identity and Microsoft Entra ID (formerly Azure Active Directory)
+
+Benefits of Microsoft Entra ID (formerly Azure Active Directory (Azure AD))
+
+Authenication vs Authorization
+
+External Identities (Entra ID B2B and B2C)
+
+Single Sign-On in Azure
+
+Azure AD Conditional Access
+
+Multi-Factor Authentication (MFA or 2FA)
+
+Passwordless
+
+Role-Based Access Control (RBAC)
+
+Zero-Trust Model of Security
+
+Defense in Depth
+
+Microsoft Defender for Cloud
+
+==================================
+
+10.Cost Management
+
+Factors that Affect Cost
+
+Azure Pricing Calculator
+
+Azure Cost Management
+
+Resource Tags
+
+=====================================
+
+11.Governance and Compliance
+
+Azure Governance and Compliance
+
+Azure Policy
+
+DEMO: Azure Policy
+
+Resource Locks
+
+Microsoft Purview
+
+==================================
+
+12.Tools for Managing/Deploying 
+
+The Azure Portal
+
+Azure Cloud Shell
+
+LIVE DEMO: Create Resources Using Command Line
+
+Azure Arc
+
+Infrastructure as Code (IaC)
+
+ARM Templates
+
+====================================
+
+13.Monitoring Tools
+
+LIVE DEMO: Generate ARM Templates in the Azure Portal
+
+Azure Advisor
+
+Azure Service Health
+
+Azure Monitor Centralized Dashboard
+
+Azure Monitor Reports
+
+=========================

@@ -1,0 +1,200 @@
+https://learn.microsoft.com/en-us/azure/architecture/microservices/model/microservice-boundaries
+
+https://learn.microsoft.com/en-us/dotnet/architecture/microservices/architect-microservice-container-applications/identify-microservice-domain-model-boundaries
+
+https://medium.com/@aamermail/asynchronous-communication-in-microservices-14d301b9016
+
+https://learn.microsoft.com/en-us/dotnet/architecture/microservices/architect-microservice-container-applications/asynchronous-message-based-communication
+
+https://dilfuruz.medium.com/data-consistency-in-microservices-architecture-5c67e0f65256
+
+https://dzone.com/articles/data-consistency-in-microservices-architecture
+
+Using sagas to maintain data consistency in a microservice architecture by Chris Richardson
+https://www.youtube.com/watch?v=YPbGW3Fnmbc
+
+Microservices + Events + Docker = A Perfect Trio
+https://www.youtube.com/watch?v=sSm2dRarhPo
+
+How Prometheus Monitoring works | Prometheus Architecture explained
+https://www.youtube.com/watch?v=h4Sl21AKiDg
+
+Setup Prometheus Monitoring on Kubernetes using Helm and Prometheus Operator | Part 1
+https://www.youtube.com/watch?v=QoDqxm7ybLc
+
+Prometheus Monitoring - Steps to monitor third-party apps using Prometheus Exporter | Part 2
+https://www.youtube.com/watch?v=mLPg49b33sA
+
+=====================
+
+Design Pattern References:
+
+https://sourcemaking.com/design_patterns
+
+https://www.oodesign.com/
+
+https://javapapers.com/category/design-patterns/
+
+=================
+SOLID Principles with Easy Examples | OOPs SOLID Principles
+https://www.youtube.com/watch?v=XI7zep97c-Y
+
+Design Patterns in Plain English | Mosh Hamedani
+https://www.youtube.com/watch?v=NU_1StN5Tkk
+
+
+=======================================================
+
+Rest API
+
+https://www.youtube.com/@sdetpavan/videos
+
+Part 1- Rest API & Microservices| Monolithic Vs Microservices
+https://www.youtube.com/watch?v=sZKzpHkJ-xw
+
+Part 2- Rest API & Microservices| How To Setup SpringBoot Project in Eclipse & IntelliJ
+https://www.youtube.com/watch?v=gbnBY3skFZc
+
+Part 3 Rest API & Microservices| How To Create Rest Service to handle CRUD Operations
+https://www.youtube.com/watch?v=n6GA1p6Wbvs
+
+Part 4- Rest API & Microservices| How To Create Rest API & Microservice using SpringBoot
+https://www.youtube.com/watch?v=gEm-Ory5NQw
+
+Part 5- Rest API & Microservices| How To Create Rest API & Microservice using SpringBoot
+https://www.youtube.com/watch?v=wWnVPPKbqKY&t=1s
+
+Part 6- Rest API & Microservices| How To Create Rest API & Microservice using SpringBoot |JPA| MySQL
+https://www.youtube.com/watch?v=m5-tEb1kdaE
+
+Part 7- Rest API & Microservices| How To Create Rest API & Microservice using SpringBoot |JPA| MySQL
+https://www.youtube.com/watch?v=cm9cCymt1y0
+
+Part 8- Rest API & Microservices | Microservices Testing using Spring Boot+JUnit5+Mockito
+https://www.youtube.com/watch?v=KwXl20f_v1w
+
+Part 9- Rest API & Microservices | Microservices Testing using Spring Boot+JUnit5+Mockito
+https://www.youtube.com/watch?v=H-3oYLLPvMM
+
+Part 10- Rest API & Microservices | Microservices Unit Testing using Spring Boot+JUnit5+Mockito
+https://www.youtube.com/watch?v=_2fs_qjc0RQ
+
+Part 11- Rest API & Microservices | Microservices Unit Testing using Spring Boot+JUnit5+Mockito
+https://www.youtube.com/watch?v=8cqs3PyKXaM
+
+Part 12- Rest API & Microservices | Microservices Testing using Spring Boot+JUnit5+Mockito+MockMvc
+https://www.youtube.com/watch?v=QKJYOf7q1E4
+
+Part 13- Rest API & Microservices | H2 Database Mock Database for Unit/Integration Testing
+https://www.youtube.com/watch?v=-XB51XdLLUo
+
+Part 14- Rest API & Microservices|Integration Testing|Spring Boot,JUnit5,H2 Database & RestTemplate
+https://www.youtube.com/watch?v=lBLXthAO5OM
+
+
+How to work with Git & Github using Eclipse | Commit | Push | Branching | Pull Request | Merging
+https://www.youtube.com/watch?v=HCeBd5GKNO8
+
+Java Collection Framework:
+https://www.youtube.com/watch?v=hKhlkx_6HeI&list=PLUDwpEzHYYLu9-xrx5ykNH8wmN1C1qClk
+
+
+Java Lambda & Streams [Examples With Selenium WebDriver]
+Learn Java 8 Lambda, Stream, Functional Style Programming & How To Apply Them In Test Automation to be a rock solid SDET
+
+https://www.udemy.com/course/java-8-and-beyond-for-testers/
+
+Java Streams Part 1 - Introduction
+https://www.youtube.com/watch?v=33JrZGtKOEE
+
+======================================
+Design Pattern
+https://refactoring.guru/design-patterns/catalog
+
+
+https://stackabuse.com/object-oriented-design-principles-in-java/
+
+https://codegym.cc/groups/posts/232-solid-five-basic-principles-of-class-design-in-java
+
+====================================
+Spring Boot Tutorial | Full Course [NEW] 🔥 by JavaGuides
+https://www.youtube.com/watch?v=slTUtTSwRKU
+
+Spring Boot + Apache Kafka Tutorial
+https://www.youtube.com/watch?v=U17DtHLOsTU&list=PLGRDMO4rOGcNLwoack4ZiTyewUcF6y6BU
+
+https://github.com/RameshMF
+
+https://github.com/RameshMF/springboot-kafka-course
+
+GitHub:
+https://github.com/RameshMF/springboot-kafka-course/tree/main/springboot-kafka-real-world-project
+
+
+Complete Jenkins Pipeline Tutorial | Jenkinsfile explained
+https://www.youtube.com/watch?v=7KCS70sCoK0
+
+Spring Boot Kafka Microservices - Spring Boot Kafka Real-World Project Tutorial
+https://www.youtube.com/watch?v=TkhU8d-uao8
+
+For Windows Users - How to Install Apache Kafka on Windows at https://youtu.be/aKDWWICgfA0
+
+Spring Data JPA Tutorial | Crash Course [New] [2023]
+https://www.youtube.com/watch?v=dKK2dZVLFug
+
+Spring Boot Tutorial for Beginners - Learn Spring Boot in 10 Hours
+https://www.youtube.com/watch?v=_thI-4AF7M8&t=18323s
+
+Jenkins Full Course | Jenkins Tutorial For Beginners | Learn Jenkins Step By Step | Simplilearn
+https://www.youtube.com/watch?v=MayMkFCkzj4
+
+Complete Docker Course - From BEGINNER to PRO! (Learn Containers)
+https://www.youtube.com/watch?v=RqTEHSBrYFw
+
+Docker - Docker Complete Guide [5 HOURS]
+https://www.youtube.com/watch?v=REL8M6aecEo
+
+circuit Breaker 
+https://howtodoinjava.com/spring-cloud/microservices-monitoring/
+
+
+Implement SAGA Design Pattern using Spring Boot
+https://www.youtube.com/watch?v=pUFGOngzJig
+
+
+Design Microservices Architecture with Patterns & Principles
+https://www.udemy.com/course/design-microservices-architecture-with-patterns-principles/
+
+https://medium.com/design-microservices-architecture-with-patterns
+
+
+Spring Boot | Apache Kafka JSON Serialization & Deserialization Example | JavaTechie
+https://www.youtube.com/watch?v=wlFnlNthAPQ
+
+Spring Boot 3.0 Security | Authentication and Authorization | [New Changes] | javaTechie
+https://www.youtube.com/watch?v=R76S0tfv36w
+
+Spring Boot 3.0 + Spring Security 6 | JWT Authentication & Authorization | JavaTechie
+https://www.youtube.com/watch?v=NcLtLZqGu2M
+
+Spring Boot | Spring Data JPA Transaction Management | @Transactional | JavaTechie
+https://www.youtube.com/watch?v=95kxPSbHzVg
+
+Dockerizing Spring Boot Apps using Google Jib | Google-Container-Tools | JavaTechie
+https://www.youtube.com/watch?v=dKXx4O_GIyo
+
+Docker complete tutorial for beginners | Dockerization | DockerHub | Jenkin Integration | JavaTechie
+https://www.youtube.com/watch?v=jnDdNcoJjng
+
+How to use Logback in Spring Boot – Rolling Files Example
+https://www.codejava.net/frameworks/spring-boot/logback-rolling-files-example
+
+
+Design Pattern:
+
+https://sourcemaking.com/design_patterns
+
+http://www.oodesign.com/
+
+http://javapapers.com/category/design-patterns/
+

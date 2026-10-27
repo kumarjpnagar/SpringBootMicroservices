@@ -1,0 +1,2594 @@
+
+Java 8 (March 2014): java-8-features-that-every-programmer-must-know
+
+Note: https://medium.com/@ucgorai/java-8-features-that-every-programmer-must-know-39e73a1daafb
+
+1. Lambda Expressions
+
+Lambda expressions in Java 8 are a powerful feature introduced to enable functional programming.They allow you to express instances of single-method interfaces (functional interfaces) more succinctly by providing a clear and concise way to represent a method.
+
+Syntax:
+
+A lambda expression in Java 8 has the following general syntax:
+
+(parameters) -> expression
+or
+(parameters) -> { statements }
+
+Components of Lambda Expressions
+
+Parameters: The input to the lambda function, enclosed in parentheses. If there is only one parameter, you can omit the parentheses.
+
+Arrow Operator (->): Separates the parameter(s) from the body of the lambda.
+
+Body: The code to execute, which can be a single expression or a block of statements.
+
+A single expression doesn’t require braces, and its value is implicitly returned.
+
+A block of statements requires braces ({}), and you must use the return keyword to return a value.
+
+java
+import java.util.Arrays;
+import java.util.List;
+
+public class LambdaExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+
+        // Using Lambda Expression
+        names.forEach(name -> System.out.println(name));
+    }
+}
+
+Using a Lambda with Parameters
+
+Using a lambda expression to sort a list with a custom comparator:
+
+java
+
+List<String> list = Arrays.asList("apple", "banana", "cherry");
+Collections.sort(list, (a, b) -> b.compareTo(a)); // Sort in reverse order
+System.out.println(list);
+
+Using a Lambda with Block Syntax
+If the body contains multiple statements:
+
+java
+Comparator<Integer> comparator = (a, b) -> {
+    System.out.println("Comparing " + a + " and " + b);
+    return Integer.compare(a, b);
+};
+
+Advantages of Lambda Expressions:
+
+Less Boilerplate Code: Reduces the verbosity of anonymous classes.
+
+Improved Readability: Code becomes cleaner and easier to understand.
+
+Supports Functional Programming: Facilitates declarative and functional styles of coding.
+
+Enhanced API Usage: Works seamlessly with the Streams API.
+
+2. Functional Interfaces:
+
+A lambda expression can only be used where a functional interface is expected. A functional interface is an interface with a single abstract method (SAM). Examples include Runnable, Comparator, and custom ones annotated with @FunctionalInterface.
+
+Using a lambda expression to implement the Runnable interface:
+
+
+Runnable r = () -> System.out.println("Running with a lambda!");
+new Thread(r).start();
+
+Using Custom Functional Interface
+Define a functional interface and use it with a lambda:
+
+java
+@FunctionalInterface
+interface Calculator {
+    int operate(int a, int b);
+}
+
+public class LambdaExample {
+    public static void main(String[] args) {
+        Calculator add = (a, b) -> a + b;
+        Calculator multiply = (a, b) -> a * b;
+
+        System.out.println("Addition: " + add.operate(5, 3)); // Outputs 8
+        System.out.println("Multiplication: " + multiply.operate(5, 3)); // Outputs 15
+    }
+}
+
+3. Stream API
+
+The Stream API in Java 8 is a powerful feature introduced to process collections of data in a functional style. It provides a way to perform operations such as filtering, mapping, and reducing on data in a declarative manner. A Stream represents a sequence of elements from a source, such as a collection, array, or I/O channel, that can be processed in a pipeline of operations. These operations can be intermediate (e.g., filtering, mapping) or terminal (e.g., collecting results, printing).
+
+Key characteristics of the Stream API:
+
+Functional: Operates using functional-style programming, leveraging Lambda Expressions.
+
+Lazy Execution: Streams are evaluated lazily, meaning operations are performed only when needed.
+
+Parallelism: Streams can perform parallel operations easily, utilizing multiple threads for improved performance.
+
+Non-interfering: Operations on the stream do not modify the source data.
+
+Benefits of the Stream API
+
+Improved Readability: The declarative style of coding makes operations like filtering, mapping, and reduction easier to understand.
+
+Less Boilerplate Code: Stream API reduces the need for explicit loops and temporary data structures, resulting in concise and clean code.
+
+Enhanced Performance with Parallel Streams: By using parallel streams, you can process large datasets faster by leveraging multi-core processors.
+
+Composability: Multiple operations can be chained together, forming a pipeline for data processing.
+
+Ease of Transformation: Easily transform data into different formats or structures using mapping and flat-mapping techniques.
+
+Examples of Stream API Usage
+
+Basic Stream Operations
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class StreamExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("John", "Jane", "Tom", "Alice", "John");
+
+        // Filter names starting with "J" and collect them into a new list
+        List<String> filteredNames = names.stream()
+                                          .filter(name -> name.startsWith("J"))
+                                          .collect(Collectors.toList());
+
+        System.out.println(filteredNames); // Output: [John, Jane, John]
+    }
+}
+
+Mapping Elements
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class StreamMapExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("John", "Jane", "Tom");
+
+        // Convert names to uppercase
+        List<String> uppercasedNames = names.stream()
+                                            .map(String::toUpperCase)
+                                            .collect(Collectors.toList());
+
+        System.out.println(uppercasedNames); // Output: [JOHN, JANE, TOM]
+    }
+}
+
+Reducing Elements
+
+java
+import java.util.Arrays;
+import java.util.List;
+
+public class StreamReduceExample {
+    public static void main(String[] args) {
+        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+
+        // Calculate the sum of all numbers
+        int sum = numbers.stream()
+                         .reduce(0, Integer::sum);
+
+        System.out.println(sum); // Output: 15
+    }
+}
+
+Parallel Streams
+
+java
+import java.util.stream.IntStream;
+
+public class ParallelStreamExample {
+    public static void main(String[] args) {
+        // Print numbers in parallel
+        IntStream.range(1, 10).parallel().forEach(System.out::println);
+    }
+}
+
+Using Collectors for Grouping
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class StreamGroupingExample {
+    public static void main(String[] args) {
+        List<String> items = Arrays.asList("apple", "banana", "orange", "apple", "banana");
+
+        // Group items by name and count their occurrences
+        Map<String, Long> itemCount = items.stream()
+                                           .collect(Collectors.groupingBy(item -> item, Collectors.counting()));
+
+        System.out.println(itemCount); // Output: {banana=2, orange=1, apple=2}
+    }
+}
+
+Key Points to Remember:
+
+Intermediate Operations: filter, map, sorted, etc., which return a new stream.
+
+Terminal Operations: collect, forEach, reduce, etc., which produce a result or side-effect.
+
+Parallel Processing: Streams can be converted to parallel streams for better performance in large datasets.
+
+4. Default Methods in Interfaces
+
+Before Java 8, interfaces could only declare methods without providing any implementation. However, Default Methods were introduced in Java 8 to allow interfaces to have methods with default implementations. These methods are defined with the default keyword within the interface, providing flexibility while maintaining backward compatibility.
+
+A default method in an interface:
+
+Can have a method body (implementation).
+
+Allows extending interfaces without breaking existing implementations.
+
+Provides a mechanism to add new functionality to existing interfaces in a consistent way.
+
+Benefits of Default Methods in Interfaces
+
+Backward Compatibility: Default methods enable you to add new methods to existing interfaces without requiring all implementing classes to provide an implementation. This ensures backward compatibility with older versions of the code.
+
+Code Reusability: Default methods allow interfaces to share common behavior across multiple implementing classes, reducing code duplication.
+
+Enhanced Interfaces: Interfaces can now act as semi-abstract classes by including reusable code.
+
+Functional Interface Support: Default methods complement functional programming by enabling enhanced functionality in interfaces like Iterable, Collection, and Stream.
+
+Simplified Design: Developers can focus on implementing only the core functionality in implementing classes, while shared functionality resides in the interface.
+
+Syntax and Examples of Default Methods
+
+Defining a Default Method
+
+java
+interface Vehicle {
+    // Abstract method
+    void start();
+
+    // Default method with implementation
+    default void stop() {
+        System.out.println("Vehicle stopped.");
+    }
+}
+
+Using a Default Method
+
+java
+class Car implements Vehicle {
+    @Override
+    public void start() {
+        System.out.println("Car started.");
+    }
+}
+
+public class DefaultMethodExample {
+    public static void main(String[] args) {
+        Vehicle car = new Car();
+        car.start(); // Calls the implemented method
+        car.stop();  // Calls the default method
+    }
+}
+
+Overriding a Default Method
+
+Implementing classes can override default methods if a specific implementation is required.
+
+java
+class Bike implements Vehicle {
+    @Override
+    public void start() {
+        System.out.println("Bike started.");
+    }
+
+    @Override
+    public void stop() {
+        System.out.println("Bike stopped quickly.");
+    }
+}
+
+public class OverrideDefaultMethodExample {
+    public static void main(String[] args) {
+        Vehicle bike = new Bike();
+        bike.start();
+        bike.stop(); // Calls the overridden method
+    }
+}
+
+Multiple Inheritance with Default Methods (Conflict Resolution)
+If a class implements multiple interfaces with conflicting default methods, it must resolve the conflict by overriding the method.
+
+java
+interface Vehicle {
+    default void honk() {
+        System.out.println("Vehicle honking!");
+    }
+}
+
+interface Airplane {
+    default void honk() {
+        System.out.println("Airplane honking!");
+    }
+}
+
+class FlyingCar implements Vehicle, Airplane {
+    @Override
+    public void honk() {
+        System.out.println("FlyingCar honking uniquely!");
+    }
+}
+
+public class ConflictResolutionExample {
+    public static void main(String[] args) {
+        FlyingCar flyingCar = new FlyingCar();
+        flyingCar.honk(); // Resolves the conflict by using its own implementation
+    }
+}
+
+Use Cases of Default Methods
+
+Enhancing Existing APIs: Java’s core library added default methods to many existing interfaces, such as Iterable, Collection, and List. For example:
+
+forEach method in Iterable is a default method.
+
+java
+Iterable<String> items = List.of("A", "B", "C");
+items.forEach(System.out::println); // Default method in Iterable
+
+Multiple Interfaces with Common Behavior: Default methods can provide shared functionality across interfaces without requiring code duplication.
+
+Simplifying Functional Interfaces: Default methods enable functional interfaces to have additional helper methods while maintaining their core functionality.
+
+5. Method References
+
+Method References are a shorthand notation introduced in Java 8 for referring to methods or constructors directly without executing them. They provide a more concise and readable way to write lambda expressions when the lambda is only calling an existing method. Method references are part of Java’s functional programming features and work with functional interfaces.
+
+The syntax for a method reference is ClassName::methodName or object::methodName.
+
+Benefits of Method References
+
+Improved Readability: Method references simplify the code by eliminating boilerplate syntax found in lambda expressions.
+
+Reusability: They allow existing methods to be reused as functional interface implementations.
+
+Reduced Errors: By removing unnecessary lambda code, method references reduce the chances of mistakes and improve clarity.
+
+Elegant Code: They enhance code aesthetics by replacing verbose lambda expressions with concise, meaningful references.
+
+Types of Method References
+
+Reference to a Static Method (ClassName::staticMethod)
+
+Reference to an Instance Method of a Particular Object (instance::instanceMethod)
+
+Reference to an Instance Method of an Arbitrary Object of a Particular Type (ClassName::instanceMethod)
+
+Reference to a Constructor (ClassName::new)
+
+Examples of Method References
+
+Reference to a Static Method
+
+java
+import java.util.function.Consumer;
+
+class MethodReferenceExample {
+    public static void printMessage(String message) {
+        System.out.println("Static Method: " + message);
+    }
+
+    public static void main(String[] args) {
+        Consumer<String> consumer = MethodReferenceExample::printMessage;
+        consumer.accept("Hello, World!");
+    }
+}
+Reference to an Instance Method of a Particular Object
+
+java
+import java.util.function.Consumer;
+
+class MethodReferenceExample {
+    public void display(String message) {
+        System.out.println("Instance Method: " + message);
+    }
+
+    public static void main(String[] args) {
+        MethodReferenceExample example = new MethodReferenceExample();
+        Consumer<String> consumer = example::display;
+        consumer.accept("Hello, Instance!");
+    }
+}
+Reference to an Instance Method of an Arbitrary Object of a Particular Type
+
+java
+import java.util.Arrays;
+import java.util.List;
+
+public class ArbitraryObjectMethodReference {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+
+        // Using method reference for String's instance method
+        names.forEach(System.out::println);
+    }
+}
+Reference to a Constructor
+
+java
+import java.util.function.Supplier;
+
+class Person {
+    private String name;
+
+    public Person() {
+        this.name = "Default Name";
+    }
+
+    @Override
+    public String toString() {
+        return "Person{name='" + name + "'}";
+    }
+}
+
+public class ConstructorReferenceExample {
+    public static void main(String[] args) {
+        Supplier<Person> personSupplier = Person::new;
+        Person person = personSupplier.get();
+        System.out.println(person);
+    }
+}
+
+Combining Method References with Streams
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class StreamMethodReferenceExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+
+        // Convert names to uppercase using method reference
+        List<String> uppercasedNames = names.stream()
+                                            .map(String::toUpperCase)
+                                            .collect(Collectors.toList());
+
+        uppercasedNames.forEach(System.out::println);
+    }
+}
+
+6. Optional Class:
+
+The Optional class in Java 8 is a container class introduced to represent a value that might or might not be present. It is a part of the java.util package and provides a way to avoid null pointer exceptions by explicitly handling the absence of a value.
+
+Optional acts as a wrapper for an object that can either contain a non-null value or be empty. It provides methods to check, retrieve, or process the contained value without directly working with null values.
+
+Benefits of the Optional Class
+
+Avoids NullPointerExceptions: Reduces the likelihood of runtime exceptions by ensuring null checks are explicitly handled.
+
+Improves Code Readability: Makes the intent clear by explicitly signaling the possibility of an absent value.
+
+Encourages Functional Programming: Works well with Java 8’s functional constructs like streams and lambda expressions.
+
+Reduces Boilerplate Code: Simplifies common patterns like checking for null values and returning defaults.
+
+Makes APIs More Robust: Enables clear and explicit contracts in APIs about when values might be optional.
+
+Key Methods of the Optional Class
+
+of(value): Creates an Optional containing the specified non-null value.
+
+ofNullable(value): Creates an Optional that can contain a value or be empty if the value is null.
+
+empty(): Returns an empty Optional.
+
+isPresent(): Returns true if the value is present, otherwise false.
+
+ifPresent(Consumer): Executes a consumer if the value is present.
+
+orElse(value): Returns the value if present; otherwise, returns a default value.
+
+orElseGet(Supplier): Returns the value if present; otherwise, invokes a supplier to provide a value.
+
+orElseThrow(Supplier): Returns the value if present; otherwise, throws an exception.
+
+map(Function): Applies a function to the value if present and returns a new Optional.
+
+flatMap(Function): Similar to map, but avoids nesting of Optional.
+
+filter(Predicate): Returns an Optional if the value satisfies the predicate.
+
+Examples of the Optional Class
+
+Creating an Optional
+
+java
+import java.util.Optional;
+
+public class OptionalExample {
+    public static void main(String[] args) {
+        // Creating an Optional with a value
+        Optional<String> optional = Optional.of("Hello, Optional!");
+        System.out.println(optional.isPresent()); // Output: true
+        System.out.println(optional.get());       // Output: Hello, Optional!
+
+        // Creating an Optional with a null value
+        Optional<String> optionalNullable = Optional.ofNullable(null);
+        System.out.println(optionalNullable.isPresent()); // Output: false
+
+        // Creating an empty Optional
+        Optional<String> emptyOptional = Optional.empty();
+        System.out.println(emptyOptional.isPresent());    // Output: false
+    }
+}
+
+Avoiding Null Checks
+
+java
+import java.util.Optional;
+
+public class AvoidNullChecksExample {
+    public static void main(String[] args) {
+        String value = null;
+
+        // Using Optional to handle potential null value
+        Optional<String> optionalValue = Optional.ofNullable(value);
+
+        String result = optionalValue.orElse("Default Value");
+        System.out.println(result); // Output: Default Value
+    }
+}
+
+Using ifPresent
+
+
+import java.util.Optional;
+
+public class IfPresentExample {
+    public static void main(String[] args) {
+        Optional<String> optional = Optional.of("Hello, World!");
+
+        // Perform an action only if the value is present
+        optional.ifPresent(value -> System.out.println("Value is: " + value));
+        // Output: Value is: Hello, World!
+    }
+}
+Using map and flatMap
+
+
+import java.util.Optional;
+
+public class MapFlatMapExample {
+    public static void main(String[] args) {
+        Optional<String> optional = Optional.of("Hello");
+
+        // Transforming the value using map
+        Optional<String> uppercased = optional.map(String::toUpperCase);
+        uppercased.ifPresent(System.out::println); // Output: HELLO
+
+        // Transforming using flatMap (avoids nested Optional)
+        Optional<Optional<String>> nestedOptional = optional.map(value -> Optional.of(value.toLowerCase()));
+        System.out.println(nestedOptional); // Output: Optional[Optional[hello]]
+
+        Optional<String> flatMapped = optional.flatMap(value -> Optional.of(value.toLowerCase()));
+        System.out.println(flatMapped); // Output: Optional[hello]
+    }
+}
+
+Throwing an Exception with orElseThrow
+
+java
+import java.util.Optional;
+
+public class OrElseThrowExample {
+    public static void main(String[] args) {
+        Optional<String> optional = Optional.ofNullable(null);
+
+        // Throw an exception if the value is not present
+        String value = optional.orElseThrow(() -> new IllegalArgumentException("Value is not present"));
+    }
+}
+Filtering Values
+
+java
+import java.util.Optional;
+
+public class FilterExample {
+    public static void main(String[] args) {
+        Optional<String> optional = Optional.of("Optional Example");
+
+        // Filter values that satisfy a condition
+        optional.filter(value -> value.startsWith("Optional"))
+                .ifPresent(System.out::println); // Output: Optional Example
+    }
+}
+Use Cases of the Optional Class
+
+Method Return Types: Instead of returning null, methods can return an Optional to indicate the possibility of an absent value.
+
+java
+public Optional<String> findUserById(int id) {
+    return id == 1 ? Optional.of("User1") : Optional.empty();
+}
+Chaining Operations: Optional allows chaining operations like map and filter to process data more elegantly.
+
+Avoiding Explicit Null Checks: Code that previously relied on cumbersome null checks can now handle absence more declaratively with Optional.
+
+7. Date and Time API
+
+Java 8 introduced a modern Date and Time API in the java.time package to address the shortcomings of the previous java.util.Date and java.util.Calendar classes. The new API is inspired by the Joda-Time library and provides a comprehensive, robust, and user-friendly approach to handle date and time.
+
+The key classes of the java.time package are:
+
+LocalDate: Represents a date without time (e.g., 2024-12-03).
+
+LocalTime: Represents a time without a date (e.g., 14:30:15).
+
+LocalDateTime: Represents a combination of date and time without timezone.
+
+ZonedDateTime: Represents a date-time with a timezone.
+
+Instant: Represents a specific point on the timeline (typically used for timestamps).
+
+Duration and Period: Represent time-based and date-based amounts, respectively.
+
+DateTimeFormatter: Used for formatting and parsing dates and times.
+
+Benefits of the Date and Time API in Java 8
+
+Immutability: All classes in the new API are immutable and thread-safe, ensuring consistency and preventing unexpected behavior in concurrent environments.
+
+Clearer API Design: The new API offers intuitive and clear methods for manipulating dates and times, avoiding the confusion of java.util.Date and java.util.Calendar.
+
+Seamless Timezone Handling: The ZonedDateTime class simplifies handling of time zones.
+
+Fluent API: Provides a fluent and chainable API for performing operations like adding, subtracting, or formatting dates and times.
+
+Separation of Concerns: Different classes for date (LocalDate), time (LocalTime), and date-time (LocalDateTime) improve clarity.
+
+Built-in Support for ISO Standards: Default formats align with ISO-8601 standards, reducing errors in date-time parsing.
+
+Easy Conversion: Provides methods to convert between legacy and modern date-time classes.
+
+Key Classes and Examples
+
+LocalDate (Date without time)
+
+java
+import java.time.LocalDate;
+
+public class LocalDateExample {
+    public static void main(String[] args) {
+        LocalDate today = LocalDate.now(); // Current date
+        System.out.println("Today's date: " + today);
+
+        LocalDate specificDate = LocalDate.of(2024, 12, 3);
+        System.out.println("Specific date: " + specificDate);
+
+        // Add days
+        LocalDate nextWeek = today.plusDays(7);
+        System.out.println("Next week's date: " + nextWeek);
+
+        // Check if leap year
+        System.out.println("Is 2024 a leap year? " + specificDate.isLeapYear());
+    }
+}
+
+LocalTime (Time without date)
+
+java
+import java.time.LocalTime;
+
+public class LocalTimeExample {
+    public static void main(String[] args) {
+        LocalTime now = LocalTime.now(); // Current time
+        System.out.println("Current time: " + now);
+
+        LocalTime specificTime = LocalTime.of(14, 30, 15);
+        System.out.println("Specific time: " + specificTime);
+
+        // Subtract hours
+        LocalTime earlier = now.minusHours(2);
+        System.out.println("Two hours earlier: " + earlier);
+    }
+}
+
+LocalDateTime (Date and time without timezone)
+
+java
+import java.time.LocalDateTime;
+
+public class LocalDateTimeExample {
+    public static void main(String[] args) {
+        LocalDateTime now = LocalDateTime.now(); // Current date and time
+        System.out.println("Current date-time: " + now);
+
+        LocalDateTime specificDateTime = LocalDateTime.of(2024, 12, 3, 14, 30);
+        System.out.println("Specific date-time: " + specificDateTime);
+
+        // Add months
+        LocalDateTime nextMonth = now.plusMonths(1);
+        System.out.println("Next month: " + nextMonth);
+    }
+}
+
+
+ZonedDateTime (Date-time with timezone)
+
+java
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
+
+public class ZonedDateTimeExample {
+    public static void main(String[] args) {
+        ZonedDateTime now = ZonedDateTime.now(); // Current date-time with system default timezone
+        System.out.println("Current zoned date-time: " + now);
+
+        ZonedDateTime specificZone = ZonedDateTime.now(ZoneId.of("Asia/Kolkata"));
+        System.out.println("Date-time in Kolkata: " + specificZone);
+
+        ZonedDateTime utcTime = ZonedDateTime.now(ZoneId.of("UTC"));
+        System.out.println("Date-time in UTC: " + utcTime);
+    }
+}
+
+
+Instant (Timestamp)
+
+java
+import java.time.Instant;
+
+public class InstantExample {
+    public static void main(String[] args) {
+        Instant now = Instant.now();
+        System.out.println("Current timestamp: " + now);
+
+        Instant specificInstant = Instant.ofEpochSecond(1672531200); // Epoch time
+        System.out.println("Specific timestamp: " + specificInstant);
+    }
+}
+
+
+Formatting and Parsing with DateTimeFormatter
+
+java
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+public class DateTimeFormatterExample {
+    public static void main(String[] args) {
+        LocalDate today = LocalDate.now();
+
+        // Formatting date
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        String formattedDate = today.format(formatter);
+        System.out.println("Formatted date: " + formattedDate);
+
+        // Parsing date
+        LocalDate parsedDate = LocalDate.parse("03-12-2024", formatter);
+        System.out.println("Parsed date: " + parsedDate);
+    }
+}
+
+
+Duration and Period
+
+java
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.Period;
+import java.time.LocalDate;
+
+public class DurationAndPeriodExample {
+    public static void main(String[] args) {
+        // Duration for time-based differences
+        LocalTime startTime = LocalTime.of(14, 0);
+        LocalTime endTime = LocalTime.of(16, 30);
+        Duration duration = Duration.between(startTime, endTime);
+        System.out.println("Duration: " + duration.toHours() + " hours");
+
+        // Period for date-based differences
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 12, 3);
+        Period period = Period.between(startDate, endDate);
+        System.out.println("Period: " + period.getMonths() + " months, " + period.getDays() + " days");
+    }
+}
+
+
+8. Nashorn JavaScript Engine
+The Nashorn JavaScript Engine is a lightweight, high-performance JavaScript engine introduced in Java 8 as a replacement for the older Rhino engine. It is part of the javax.script package and is built to provide a more efficient and faster execution of JavaScript code within the Java Virtual Machine (JVM). Nashorn means "rhino" in German, symbolizing its predecessor, but it was developed to address the shortcomings of Rhino with better performance and modern features.
+
+Nashorn is based on Java 7’s Project JSR-223 (Scripting for the Java Platform) and supports ECMAScript 5.1 and partial ECMAScript 6 features. It allows developers to run JavaScript code, embed JavaScript in Java applications, and even call Java code from JavaScript.
+
+Key Features of Nashorn
+
+Execution of JavaScript from Java: Nashorn allows Java applications to evaluate and execute JavaScript code.
+
+ECMAScript 5.1 Compliance: It supports most ECMAScript 5.1 features, providing a modern JavaScript experience.
+
+Improved Performance: Nashorn is designed for high performance, leveraging the invokedynamic feature of Java 7.
+
+Tight Integration with Java: JavaScript code can interact seamlessly with Java objects and APIs.
+
+Command-Line Tool (jjs): Nashorn comes with a command-line tool (jjs) for executing JavaScript files.
+
+Benefits of Nashorn JavaScript Engine in Java 8
+
+Improved Performance: Nashorn provides significant performance improvements over the older Rhino engine, which made JavaScript execution slower. It compiles JavaScript code to Java bytecode dynamically, enabling faster execution.
+
+Compatibility with Modern JavaScript: Nashorn supports most of ECMAScript 5.1 features and parts of ECMAScript 6, which makes it more aligned with contemporary JavaScript standards compared to the older Rhino engine.
+
+Interoperability with Java: Nashorn allows seamless interaction between Java and JavaScript. Java objects can be passed into JavaScript, and JavaScript can access Java classes, libraries, and methods.
+
+Simplified Syntax: Nashorn comes with a simpler API for integration, compared to its predecessor, making it easier for developers to use within Java applications.
+
+Access to Java APIs: JavaScript code executed in Nashorn can access Java APIs directly, enabling hybrid applications where Java and JavaScript components work together.
+
+Lightweight: Nashorn is designed to be efficient and use fewer resources compared to other JavaScript engines.
+
+Example of Using Nashorn JavaScript Engine in Java 8
+To use Nashorn, developers typically use the ScriptEngineManager class provided by javax.script.
+
+Example 1: Executing JavaScript Code from Java
+
+java
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+public class NashornExample {
+    public static void main(String[] args) {
+        // Create a ScriptEngineManager instance and get the Nashorn engine
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+
+        // JavaScript code as a string
+        String script = "var greeting = 'Hello, world!';" +
+                        "var number = 42;" +
+                        "greeting + ' The number is ' + number;";
+
+        try {
+            // Evaluate the script and print the result
+            Object result = engine.eval(script);
+            System.out.println("Result: " + result);
+        } catch (ScriptException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Example 2: Passing Java Objects to JavaScript
+
+java
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+public class NashornJavaInteraction {
+    public static void main(String[] args) {
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+
+        // Pass a Java variable to JavaScript
+        engine.put("name", "Alice");
+
+        String script = "var greeting = 'Hello, ' + name + '!';" +
+                        "greeting;";
+
+        try {
+            // Evaluate the script and print the result
+            Object result = engine.eval(script);
+            System.out.println("Result: " + result);
+        } catch (ScriptException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Example 3: Calling Java Methods from JavaScript
+
+java
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+public class NashornMethodCallExample {
+    public static void main(String[] args) {
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+
+        // Define a Java method to be called from JavaScript
+        engine.put("square", new SquareFunction());
+
+        String script = "square.calculate(5);";
+
+        try {
+            Object result = engine.eval(script);
+            System.out.println("Result of square calculation: " + result);
+        } catch (ScriptException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static class SquareFunction {
+        public int calculate(int number) {
+            return number * number;
+        }
+    }
+}
+
+Limitations of Nashorn
+
+Deprecated in Java 11: Starting from Java 11, Nashorn is deprecated and removed in later versions.
+
+Limited ECMAScript Support: Nashorn supports ECMAScript 5.1 but lacks full support for modern JavaScript features.
+
+Performance Overhead: Embedding JavaScript into Java may introduce overhead compared to native Java code.
+
+Transition from Nashorn to Other Engines
+In Java 11, Nashorn was deprecated and removed as part of the JDK, and developers are encouraged to use alternative JavaScript engines such as GraalVM or other third-party libraries that support JavaScript execution within Java applications.
+
+GraalVM provides a modern, high-performance runtime that supports running JavaScript and other languages, offering better compatibility and performance.
+
+9. Streams for File I/O
+
+In Java 8, Streams for File I/O were enhanced with the introduction of the java.nio.file package and its associated classes, making it easier and more efficient to read and write data from files using a stream-based approach. This enhancement is part of the larger improvements Java 8 brought to functional programming through Stream API. The Files class and its methods in the java.nio.file package can be used to read files as streams of data, process them in a declarative way, and take advantage of Java's stream operations such as map, filter, and collect.
+
+Key Concepts of Streams for File I/O
+
+Stream Pipeline: A series of operations, such as filtering, mapping, and collecting, that are chained together.
+
+Functional Programming: The Streams API supports the use of lambda expressions and functional programming constructs for more flexible and powerful file processing.
+
+Lazy Evaluation: Operations on streams are evaluated lazily, which means they are only executed when a terminal operation (collect(), forEach()) is invoked.
+
+Benefits of Streams for File I/O in Java 8
+
+Simplified Code: Using streams for file I/O simplifies the code, making it more readable and expressive. It avoids the need for complex loop structures to process file content.
+
+Functional Programming: The use of streams supports functional programming constructs, allowing developers to use map, filter, forEach, and other operations that make the code more concise and easier to understand.
+
+Lazy Evaluation: Stream operations are lazy by default, meaning that data processing only happens when necessary, which can improve performance when processing large files.
+
+Parallel Processing: Java 8 streams support parallel operations, enabling multi-threaded file processing to improve performance on large files or datasets.
+
+Pipeline Processing: The ability to chain stream operations allows for the creation of complex processing pipelines in a clean and readable way.
+
+Improved Error Handling: Streams handle errors more effectively, allowing for cleaner exception handling when dealing with I/O operations.
+
+How to Use Streams for File I/O
+The main classes used for file operations with the Streams API are:
+
+Files class from java.nio.file package for reading and writing files.
+
+Stream class for representing a sequence of elements that can be processed sequentially or in parallel.
+
+Examples of File I/O with Streams in Java 8
+
+Reading a File Line by Line
+
+java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Stream;
+
+public class FileReadExample {
+    public static void main(String[] args) {
+        Path path = Paths.get("example.txt");
+
+        try (Stream<String> lines = Files.lines(path)) {
+            lines.forEach(System.out::println); // Print each line of the file
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Explanation:
+
+Files.lines() returns a Stream<String> representing the lines in the file.
+
+The forEach() method is used to print each line to the console.
+
+Filtering and Mapping Lines
+
+java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class FileFilterExample {
+    public static void main(String[] args) {
+        Path path = Paths.get("example.txt");
+
+        try (Stream<String> lines = Files.lines(path)) {
+            List<String> filteredLines = lines
+                .filter(line -> line.contains("Java")) // Filter lines containing "Java"
+                .map(String::toUpperCase) // Convert each line to uppercase
+                .collect(Collectors.toList()); // Collect the results into a list
+
+            filteredLines.forEach(System.out::println);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Explanation:
+
+The filter() method filters lines that contain the word "Java".
+
+The map() method transforms each line to uppercase.
+
+The collect() method gathers the results into a List.
+
+Writing to a File
+
+java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+
+public class FileWriteExample {
+    public static void main(String[] args) {
+        Path path = Paths.get("output.txt");
+
+        try {
+            // Write lines to the file using write method with a list of strings
+            Files.write(path, Arrays.asList("Hello, World!", "Welcome to Java 8 Streams!"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Explanation:
+
+Files.write() writes the provided lines to the specified file.
+
+Reading a File and Collecting Lines into a List
+
+java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class FileReadCollectExample {
+    public static void main(String[] args) {
+        Path path = Paths.get("example.txt");
+
+        try (Stream<String> lines = Files.lines(path)) {
+            List<String> allLines = lines.collect(Collectors.toList());
+            System.out.println("Total number of lines: " + allLines.size());
+            allLines.forEach(System.out::println);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Explanation:
+
+The collect(Collectors.toList()) operation collects all the lines into a List.
+
+Processing Large Files with Parallel Streams
+
+java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Stream;
+
+public class ParallelStreamExample {
+    public static void main(String[] args) {
+        Path path = Paths.get("largeFile.txt");
+
+        try (Stream<String> lines = Files.lines(path)) {
+            lines.parallel() // Enables parallel processing
+                 .filter(line -> line.contains("Java"))
+                 .forEach(System.out::println);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Explanation:
+
+The parallel() method enables parallel processing, which can improve performance on large files.
+
+This can be particularly useful when filtering or mapping large data sets.
+
+10. Collectors Utility:
+
+The Collectors utility is a part of the java.util.stream package in Java 8. It is a class that provides a variety of static methods for creating Collector implementations that can be used to perform reduction operations on streams. These operations allow you to collect the elements of a stream into a collection (e.g., List, Set, Map) or to perform aggregations (e.g., counting, summarizing, joining, grouping).
+
+Collectors are essential for collecting the results of a stream operation into a desired format, such as lists, sets, or maps, or for performing calculations directly on the data.
+
+Benefits of Collectors Utility in Java 8
+
+Ease of Use: Collectors provides a simple way to gather the results of a stream operation using common and complex aggregation functions without needing to write custom code.
+
+Flexibility: It supports a variety of collection types and aggregation operations, making it suitable for different use cases such as grouping, partitioning, counting, and collecting into custom collections.
+
+Readable and Concise Code: Using Collectors helps make code more readable and reduces boilerplate code, as it encapsulates complex operations into a single line of code.
+
+Built-in Aggregation Methods: Collectors has built-in methods such as toList(), toSet(), toMap(), groupingBy(), partitioningBy(), joining(), and summarizingInt() that cover a wide range of aggregation and collection needs.
+
+Custom Collectors: You can create custom collectors by combining existing collectors or writing your own implementation using the Collector interface.
+
+Key Collectors Methods and Examples
+
+toList(): Collects stream elements into a List.
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class CollectorsExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie", "David");
+
+        // Collecting stream elements into a List
+        List<String> collectedNames = names.stream()
+                                           .filter(name -> name.length() > 3)
+                                           .collect(Collectors.toList());
+
+        System.out.println("Collected names: " + collectedNames);
+    }
+}
+
+
+toSet(): Collects stream elements into a Set.
+
+java
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class ToSetExample {
+    public static void main(String[] args) {
+        List<String> fruits = Arrays.asList("Apple", "Banana", "Apple", "Orange");
+
+        // Collecting stream elements into a Set (removes duplicates)
+        Set<String> uniqueFruits = fruits.stream()
+                                         .collect(Collectors.toSet());
+
+        System.out.println("Unique fruits: " + uniqueFruits);
+    }
+}
+
+
+toMap(): Collects stream elements into a Map.
+
+java
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class ToMapExample {
+    public static void main(String[] args) {
+        List<String> colors = Arrays.asList("Red", "Green", "Blue");
+
+        // Collecting stream elements into a Map where the key is the color and the value is the length of the color name
+        Map<String, Integer> colorMap = colors.stream()
+                                              .collect(Collectors.toMap(color -> color, String::length));
+
+        System.out.println("Color map: " + colorMap);
+    }
+}
+
+
+joining(): Concatenates the stream elements into a single String.
+
+java
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+public class JoiningExample {
+    public static void main(String[] args) {
+        List<String> words = Arrays.asList("Java", "is", "fun");
+
+        // Joining words with a space separator
+        String sentence = words.stream()
+                               .collect(Collectors.joining(" "));
+
+        System.out.println("Sentence: " + sentence);
+    }
+}
+
+
+groupingBy(): Groups stream elements by a classifier function.
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class GroupingByExample {
+    public static void main(String[] args) {
+        List<String> words = Arrays.asList("apple", "banana", "apricot", "blueberry", "blackberry");
+
+        // Grouping words by their first letter
+        Map<Character, List<String>> groupedByFirstLetter = words.stream()
+                                                                 .collect(Collectors.groupingBy(word -> word.charAt(0)));
+
+        System.out.println("Grouped by first letter: " + groupedByFirstLetter);
+    }
+}
+
+
+partitioningBy(): Partitions stream elements into two groups based on a predicate.
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class PartitioningByExample {
+    public static void main(String[] args) {
+        List<String> words = Arrays.asList("apple", "banana", "apricot", "blueberry", "blackberry");
+
+        // Partitioning words based on length greater than 5
+        Map<Boolean, List<String>> partitionedWords = words.stream()
+                                                           .collect(Collectors.partitioningBy(word -> word.length() > 5));
+
+        System.out.println("Words with length > 5: " + partitionedWords.get(true));
+        System.out.println("Words with length <= 5: " + partitionedWords.get(false));
+    }
+}
+
+
+counting(): Counts the number of elements in the stream.
+
+java
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class CountingExample {
+    public static void main(String[] args) {
+        List<String> fruits = Arrays.asList("Apple", "Banana", "Apple", "Orange");
+
+        long count = fruits.stream()
+                           .collect(Collectors.counting());
+
+        System.out.println("Number of fruits: " + count);
+    }
+}
+
+
+summarizingInt(): Collects statistics, such as count, sum, min, average, and max.
+
+java
+import java.util.Arrays;
+import java.util.IntSummaryStatistics;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class SummarizingExample {
+    public static void main(String[] args) {
+        List<String> words = Arrays.asList("apple", "banana", "apricot", "blueberry", "blackberry");
+
+        IntSummaryStatistics stats = words.stream()
+                                          .collect(Collectors.summarizingInt(String::length));
+
+        System.out.println("Word length statistics: " + stats);
+    }
+}
+
+
+Custom Collectors:
+
+If you need custom data processing logic, you can implement a custom collector by using Collector interface or the Collectors utility class to build a collector. Here's an example of creating a custom collector:
+
+java
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Stream;
+
+public class CustomCollectorExample {
+    public static void main(String[] args) {
+        Collector<String, StringBuilder, String> customCollector = Collector.of(
+            StringBuilder::new,          // Supplier
+            StringBuilder::append,       // Accumulator
+            StringBuilder::append,       // Combiner
+            StringBuilder::toString      // Finisher
+        );
+
+        String result = Stream.of("Alice", "Bob", "Charlie")
+                              .collect(customCollector);
+        System.out.println("Custom collector result: " + result);
+    }
+}
+
+Output:
+
+Custom collector result: AliceBobCharlie
+
+11. Base64 Encoding and Decoding
+
+Base64 Encoding and Decoding in Java 8 is part of the java.util package, specifically within the java.util.Base64 class. It provides a standard way to encode and decode binary data to and from strings using the Base64 encoding scheme. This is commonly used for data transmission over media that are designed to deal with textual data, such as sending binary data in HTTP requests, storing user credentials, and working with file encoding/decoding.
+
+What is Base64 Encoding?
+
+Base64 encoding is a process that converts binary data into an ASCII string format using 64 different printable characters. The output is safe for transmission over text-based protocols and can be easily transferred across different systems.
+
+Base64 Character Set:
+
+The 64 characters include uppercase and lowercase letters, digits, and some special characters (A-Z, a-z, 0-9, +, /).
+
+For URL and filename-safe encoding, the characters - and _ are used instead of + and /.
+
+Benefits of Base64 Encoding and Decoding in Java 8
+
+Ease of Use: The java.util.Base64 class provides a simple and straightforward API for encoding and decoding data, making it easy to integrate into Java applications.
+
+Standard Compliance: Java 8’s Base64 implementation conforms to the RFC 4648 standard, ensuring compatibility with other systems and programming languages that use Base64.
+
+Security: Although Base64 is not intended for encryption or security purposes, it provides a way to obscure data. It is helpful for encoding data that should not be visible in plain text but does not provide true data protection.
+
+Compatibility: Base64 encoding ensures that binary data can be safely transferred across systems that may only handle text-based data. This is especially useful for transferring data in HTTP requests, cookies, and other text-based formats.
+
+Multiple Variants: The Base64 class provides different encoding variants such as basic, URL and filename safe, and MIME-type-specific encodings, giving flexibility based on different needs.
+
+How to Use Base64 Encoding and Decoding in Java 8
+
+Encoding Data to Base64
+To encode data using Base64 in Java 8, you can use the Base64.Encoder class.
+
+java
+import java.util.Base64;
+
+public class Base64EncodingExample {
+    public static void main(String[] args) {
+        String originalString = "Hello, World!";
+        
+        // Encoding the string to Base64
+        String encodedString = Base64.getEncoder().encodeToString(originalString.getBytes());
+        
+        System.out.println("Encoded String: " + encodedString);
+    }
+}
+
+Explanation:
+
+Base64.getEncoder() returns an Encoder instance that provides the encoding functionality.
+
+encodeToString() takes the byte array and converts it to a Base64-encoded string.
+
+Decoding Base64 Data
+To decode Base64-encoded data, you can use the Base64.Decoder class.
+
+java
+import java.util.Base64;
+
+public class Base64DecodingExample {
+    public static void main(String[] args) {
+        String encodedString = "SGVsbG8sIFdvcmxkIQ==";
+        
+        // Decoding the Base64 string
+        byte[] decodedBytes = Base64.getDecoder().decode(encodedString);
+        String decodedString = new String(decodedBytes);
+        
+        System.out.println("Decoded String: " + decodedString);
+    }
+}
+Explanation:
+
+Base64.getDecoder() returns a Decoder instance that provides the decoding functionality.
+
+decode() method decodes the Base64-encoded string into a byte array.
+
+The byte array is then converted back to a String.
+
+Examples of Different Encoding Variants
+
+URL and Filename Safe Encoding
+
+For encoding data to be safe in URLs and filenames (i.e., without + and / characters), use Base64.getUrlEncoder():
+
+java
+import java.util.Base64;
+
+public class Base64UrlEncodingExample {
+    public static void main(String[] args) {
+        String originalString = "Hello, World!";
+        
+        // URL and filename safe encoding
+        String urlEncodedString = Base64.getUrlEncoder().encodeToString(originalString.getBytes());
+        
+        System.out.println("URL Safe Encoded String: " + urlEncodedString);
+    }
+}
+
+Output:
+
+URL Safe Encoded String: SGVsbG8sIFdvcmxkIQ==
+
+Explanation:
+
+The URL and filename safe encoder replaces + with - and / with _, making it safe for use in URLs and filenames.
+
+MIME-Type Safe Encoding
+
+For MIME-type-specific encoding, which is used for encoding data for email attachments, use Base64.getMimeEncoder():
+
+java
+import java.util.Base64;
+
+public class Base64MimeEncodingExample {
+    public static void main(String[] args) {
+        String originalString = "Hello, World!";
+        
+        // MIME-safe encoding with a line length of 76 characters (default)
+        String mimeEncodedString = Base64.getMimeEncoder().encodeToString(originalString.getBytes());
+        
+        System.out.println("MIME Safe Encoded String: " + mimeEncodedString);
+    }
+}
+
+Explanation:
+
+The MIME encoder adds line breaks after every 76 characters to conform to the RFC 2045 standard for email content.
+
+Use Cases of Base64 Encoding and Decoding
+
+Data Transfer in HTTP: When transmitting binary data over HTTP, it is often encoded in Base64 to ensure that special characters do not interfere with the HTTP protocol.
+
+Embedding Images in Web Pages: Base64-encoded images can be embedded directly into HTML or CSS files as data URIs.
+
+Secure String Representation: Although not secure for encryption, Base64 encoding can be used to represent sensitive data in a way that is not immediately human-readable.
+
+Token Generation: Base64 is often used to encode JSON Web Tokens (JWTs) for web authentication and authorization.
+
+12. Static methods in interface
+
+In Java 8, static methods were introduced in interfaces to allow interfaces to have methods that are not abstract and can be called without an instance of the interface. Prior to Java 8, interfaces could only have abstract methods (methods without a body) and default methods (methods with a body that provide a default implementation). The introduction of static methods added a way to have utility or helper methods directly within interfaces.
+
+Static methods in interfaces are defined using the static keyword and can be called using the interface name, without needing to implement the interface in a class. This helps to group related utility methods that are relevant to the interface.
+
+Benefits of Static Methods in Interfaces in Java 8
+
+Code Organization: Static methods allow related utility methods to be defined within the interface itself, leading to better organization of code and grouping of functionalities that are conceptually tied to the interface.
+
+Encapsulation of Helper Methods: Static methods provide a way to include helper or utility methods directly in the interface, encapsulating functionality that can be related to the interface’s purpose.
+
+Improved Readability: By defining utility methods within interfaces, the code becomes easier to read and understand. Developers can quickly locate the helper methods associated with an interface.
+
+Reduced Boilerplate Code: Since static methods can be defined directly in the interface, there is no need to create separate utility classes for such methods, reducing boilerplate code and enhancing maintainability.
+
+Consistency and Convenience: Static methods can help enforce certain behaviors and can be invoked using the interface name, making them easier to use and consistent in their invocation.
+
+Syntax of Static Methods in Interfaces
+
+java
+public interface MyInterface {
+    static void myStaticMethod() {
+        System.out.println("This is a static method in the interface.");
+    }
+}
+
+Key Points to Note:
+
+Accessed via the Interface Name: Static methods in an interface must be called using the interface name (e.g., MyInterface.myStaticMethod()).
+
+Cannot be Overridden: Unlike instance methods, static methods in interfaces cannot be overridden by the implementing classes.
+
+Used for Utility Methods: Static methods in interfaces are often used for utility or helper functions that are relevant to the interface but do not need to be implemented by the implementing classes.
+
+Examples of Static Methods in Interfaces
+
+Simple Example of a Static Method in an Interface
+
+java
+public interface MathOperations {
+    static int add(int a, int b) {
+        return a + b;
+    }
+
+    static int multiply(int a, int b) {
+        return a * b;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // Calling static methods using the interface name
+        int sum = MathOperations.add(5, 3);
+        int product = MathOperations.multiply(4, 6);
+
+        System.out.println("Sum: " + sum);
+        System.out.println("Product: " + product);
+    }
+}
+
+Explanation:
+
+The add() and multiply() methods are defined as static within the MathOperations interface.
+
+These methods are called directly using the interface name MathOperations, without any need for an implementation class.
+
+Using Static Methods for Utility Purposes
+
+java
+public interface StringUtilities {
+    static boolean isEmpty(String str) {
+        return str == null || str.isEmpty();
+    }
+
+    static String concatenate(String str1, String str2) {
+        return str1 + str2;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        String testString = "Hello, World!";
+        System.out.println("Is the string empty? " + StringUtilities.isEmpty(testString));
+        System.out.println("Concatenated string: " + StringUtilities.concatenate("Hello, ", "Java 8"));
+    }
+}
+
+Explanation:
+
+The isEmpty() method checks if a string is null or empty, and the concatenate() method joins two strings together.
+
+These utility methods are directly accessible using the StringUtilities interface name.
+
+How Static Methods Differ from Default Methods
+
+Static methods are defined using the static keyword and can be called using the interface name. They are not inherited by classes that implement the interface.
+
+Default methods are instance methods defined in an interface using the default keyword and can be overridden by implementing classes. They are inherited by classes that implement the interface.
+
+Example to Show the Difference Between Static and Default Methods
+
+java
+public interface MyInterface {
+    static void staticMethod() {
+        System.out.println("Static method in the interface.");
+    }
+
+    default void defaultMethod() {
+        System.out.println("Default method in the interface.");
+    }
+}
+
+public class MyClass implements MyInterface {
+    public static void main(String[] args) {
+        // Calling the static method
+        MyInterface.staticMethod(); // This is called using the interface name
+
+        // Calling the default method
+        MyClass obj = new MyClass();
+        obj.defaultMethod(); // This is called using an instance of the class
+    }
+}
+
+Explanation:
+
+The static method is accessed directly via MyInterface.staticMethod().
+
+The default method is accessed via an instance of MyClass, which implements MyInterface.
+
+13. ForEach() method
+
+The forEach() method in Java 8 is part of the java.util.stream package and is defined in both Iterable and Stream interfaces. It is used to iterate over elements of a collection or stream and perform an action for each element. This method is a part of the functional programming features introduced in Java 8 and can be used to simplify iterations and improve code readability.
+
+What is the forEach() Method?
+
+The forEach() method is used to iterate over elements of a collection or a stream and apply a provided action to each element.
+
+It is a default method defined in the Iterable and Stream interfaces.
+
+The method takes a Consumer functional interface as its parameter. A Consumer is a function that takes an input and returns no result (i.e., it performs an action on the input).
+
+Method signature in Stream interface:
+
+java
+void forEach(Consumer<? super T> action);
+Method signature in Iterable interface:
+
+java
+default void forEach(Consumer<? super T> action) {
+    Objects.requireNonNull(action);
+    for (T t : this) {
+        action.accept(t);
+    }
+}
+
+
+Benefits of the forEach() Method in Java 8:
+
+Readable and Concise Code: forEach() makes iteration over collections and streams more readable and concise compared to traditional for loops.
+
+Functional Programming: Encourages a functional programming approach by using lambda expressions or method references, which can lead to cleaner, more modular code.
+
+Parallel Execution: Can be used with streams that are parallelized to perform operations concurrently, improving performance for large datasets.
+
+Chaining with Streams: Can be used as the terminal operation for a stream pipeline, enabling easy data processing and iteration.
+
+Less Boilerplate Code: Reduces the need for writing boilerplate code, making the codebase more maintainable.
+
+Examples of Using forEach() Method
+
+Using forEach() with Collections
+
+java
+import java.util.Arrays;
+import java.util.List;
+
+public class ForEachExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+
+        // Using forEach() with a lambda expression
+        names.forEach(name -> System.out.println(name));
+
+        // Using forEach() with a method reference
+        names.forEach(System.out::println);
+    }
+}
+
+
+Explanation:
+
+The forEach() method is used to iterate over the names list and print each name.
+
+The System.out::println method reference is passed as a Consumer to forEach().
+
+Using forEach() with a Stream
+
+java
+import java.util.stream.Stream;
+
+public class ForEachExample {
+    public static void main(String[] args) {
+        Stream<Integer> numbers = Stream.of(1, 2, 3, 4, 5);
+
+        // Using forEach() to print each number
+        numbers.forEach(num -> System.out.println("Number: " + num));
+    }
+}
+
+
+Explanation:
+
+The forEach() method is called on a Stream to print each element.
+
+Using forEach() with Parallel Streams
+
+java
+import java.util.Arrays;
+import java.util.List;
+
+public class ForEachParallelExample {
+    public static void main(String[] args) {
+        List<String> items = Arrays.asList("Item1", "Item2", "Item3", "Item4");
+
+        // Using parallel stream to perform the action concurrently
+        items.parallelStream().forEach(item -> {
+            System.out.println("Processing: " + item);
+        });
+    }
+}
+
+
+Explanation:
+
+The parallelStream() method creates a parallel stream that can process elements concurrently. This is particularly useful for large datasets to improve performance.
+
+Note: The order of output may not be the same as the order in the original collection because of parallel execution.
+
+Comparison with Traditional for Loop
+
+Traditional for Loop
+
+java
+List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+for (String name : names) {
+    System.out.println(name);
+}
+
+Drawbacks:
+
+More verbose and less readable.
+
+Less expressive compared to the forEach() method.
+
+Limitations of the forEach() Method
+
+Non-Interruptible: The forEach() method cannot be stopped or interrupted in the middle of execution. If you need to break the iteration, use a different approach (e.g., for loop or Stream methods like filter()).
+
+Cannot Throw Checked Exceptions: The Consumer passed to forEach() cannot throw checked exceptions, so if you need to handle checked exceptions, you need to handle them within the lambda or use a wrapper method.
+
+Side Effects: Using forEach() with side effects can lead to code that is harder to debug and maintain, especially with parallel streams.
+
+Best Practices for Using forEach()
+
+Use for Simple Actions: forEach() should be used for simple, side-effect-free actions such as printing or updating an external data structure.
+
+Avoid Complex Logic: Avoid placing complex logic inside the forEach() as it may reduce readability and maintainability.
+
+Prefer map(), filter(), and collect() for Transformations: When you need to transform or aggregate data, using map(), filter(), or collect() is usually better because they provide more flexibility and better code readability.
+
+14. Parallel Array Sorting
+
+Parallel Array Sorting in Java 8 is an enhancement introduced to efficiently sort large arrays by leveraging multi-core processors. Prior to Java 8, array sorting was done sequentially, meaning only one core of the processor would be used to perform the sort operation. With Java 8, you can use the Arrays.parallelSort() method, which divides the array into smaller chunks and sorts them in parallel, leading to significant performance improvements, especially for large datasets.
+
+How Parallel Sorting Works
+
+The array is split into smaller subarrays.
+
+Each subarray is sorted independently in parallel using multiple threads.
+
+The sorted subarrays are merged to create a final sorted array.
+
+The underlying implementation in Java 8 uses the ForkJoinPool, which is part of the java.util.concurrent package. The ForkJoinPool manages the parallel tasks efficiently and helps distribute the work among the available processor cores.
+
+Benefits of Parallel Array Sorting in Java 8
+
+Improved Performance for Large Datasets: Parallel sorting can significantly reduce sorting time for large arrays compared to sequential sorting, as it takes advantage of multi-core processors.
+
+Simplified Code: The parallelSort() method simplifies parallel sorting without the need to manually create and manage threads.
+
+Optimal Use of CPU Cores: By using parallel processing, Java 8 can efficiently utilize all available CPU cores, making better use of modern hardware.
+
+Easy to Use: It requires only a single method call (Arrays.parallelSort()), reducing complexity and improving code readability.
+
+Example of Parallel Array Sorting in Java 8
+Here’s an example to illustrate how to use Arrays.parallelSort() in Java 8:
+
+java
+import java.util.Arrays;
+
+public class ParallelSortExample {
+    public static void main(String[] args) {
+        int[] numbers = {8, 3, 5, 1, 9, 2, 7, 4, 6};
+
+        // Sort the array in parallel
+        Arrays.parallelSort(numbers);
+
+        // Print the sorted array
+        System.out.println("Sorted array: " + Arrays.toString(numbers));
+    }
+}
+
+Explanation:
+
+The Arrays.parallelSort() method sorts the array using parallel processing.
+
+The result is a sorted array with minimal coding effort.
+
+Parallel Sorting for Large Arrays
+For very large datasets, the benefits of parallel sorting become evident. Here’s a comparison between the performance of Arrays.sort() (sequential sorting) and Arrays.parallelSort():
+
+java
+import java.util.Arrays;
+import java.util.Random;
+
+public class ParallelSortPerformance {
+    public static void main(String[] args) {
+        // Create a large array of random integers
+        Random random = new Random();
+        int[] largeArray = random.ints(1_000_000).toArray();
+
+        // Measure time taken by Arrays.sort() (sequential sorting)
+        long startTime = System.currentTimeMillis();
+        Arrays.sort(largeArray);
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time taken by Arrays.sort(): " + (endTime - startTime) + " ms");
+
+        // Create another large array of random integers for parallel sorting
+        int[] largeArrayParallel = random.ints(1_000_000).toArray();
+
+        // Measure time taken by Arrays.parallelSort() (parallel sorting)
+        startTime = System.currentTimeMillis();
+        Arrays.parallelSort(largeArrayParallel);
+        endTime = System.currentTimeMillis();
+        System.out.println("Time taken by Arrays.parallelSort(): " + (endTime - startTime) + " ms");
+    }
+}
+
+Explanation:
+
+The Arrays.sort() method performs sequential sorting, which might be slower for very large arrays.
+
+The Arrays.parallelSort() method utilizes multiple CPU cores, leading to faster sorting times for large datasets.
+
+Limitations of Parallel Array Sorting
+
+Overhead for Small Arrays: For smaller arrays, the overhead of parallel processing can actually make Arrays.parallelSort() slower than Arrays.sort(). This is because the cost of managing parallel threads might outweigh the benefits of parallel execution.
+
+Thread Management: The method uses ForkJoinPool, which is a shared pool of threads. For extremely large datasets or specific cases, you might need to manage thread usage more precisely to avoid performance issues.
+
+Memory Usage: Parallel sorting can use more memory, as it involves splitting the array into subarrays and managing multiple threads.
+
+Best Practices for Using Parallel Array Sorting
+
+Use for Large Arrays: It is best to use Arrays.parallelSort() for large arrays where parallel processing can make a significant impact on performance.
+
+Measure Performance: Always measure and compare performance using actual data to see if parallel sorting offers a benefit over sequential sorting.
+
+Avoid for Small Arrays: For small arrays, the overhead of parallel execution may result in poorer performance compared to Arrays.sort().
+
+15. Type and Repeating Annotations:
+
+Type Annotations and Repeating Annotations are two important features introduced in Java 8 that improve the expressiveness and usability of annotations. They extend the use cases of annotations and make Java more powerful and flexible for various programming needs, especially in areas like code analysis, validation, and documentation.
+
+Type Annotations in Java 8
+
+Type Annotations are annotations that can be applied to different types in your code, such as types in variable declarations, method parameters, return types, and type casts. Before Java 8, annotations could only be applied to declarations, methods, and fields but not directly to the types themselves. Java 8 introduced this functionality to enable more comprehensive type checking and to help tools like static analyzers catch errors at compile time.
+
+Syntax and Usage: Type annotations use the @Target meta-annotation, specifically ElementType.TYPE_USE and ElementType.TYPE_PARAMETER, to indicate where the annotation can be applied. These annotations can be used with type declarations, such as the type of a variable, method parameter, or return type.
+
+What Are Type Annotations?
+
+In Java 8, type annotations can be applied to types in a variety of contexts, such as:
+
+Generic Types: You can annotate the type parameters in generics.
+
+Type Casts: You can annotate types in explicit type casts.
+
+Method Parameters: You can annotate method parameters to provide metadata about them.
+
+Local Variables: You can annotate local variables to improve code clarity and enforce certain constraints.
+
+java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+
+@Target({ElementType.TYPE_USE, ElementType.TYPE_PARAMETER})
+@interface NonNull {}
+
+public class TypeAnnotationExample {
+    public static void main(String[] args) {
+        @NonNull String notNullString = "Hello, World!";
+        // The following line would cause a compile-time warning if `@NonNull` is enforced:
+        // notNullString = null; // Potentially problematic assignment
+    }
+}
+
+Explanation:
+
+The @NonNull annotation is applied to a variable type, indicating that it should not be null.
+
+Type annotations can be used to indicate nullability, immutability, or other type properties, improving code readability and providing better support for static analysis tools.
+
+Benefits of Type Annotations:
+
+Improved Type Safety: Type annotations help enforce stronger type checks during compilation, making code more robust.
+
+Enhanced Code Analysis: Static analysis tools can use type annotations to detect potential null pointer exceptions and other issues.
+
+Better Documentation: Type annotations serve as inline documentation, making code more self-explanatory.
+
+Repeating Annotations in Java 8
+
+Repeating Annotations allow you to apply the same annotation more than once to a single program element. This makes it possible to use annotations for cases where multiple instances of the same annotation are needed, such as applying multiple validation rules to a method or parameter.
+
+Syntax and Usage: To create a repeating annotation, you need to use the @Repeatable meta-annotation, which is applied to the annotation type itself. The @Repeatable annotation specifies the container annotation that will hold multiple instances of the repeated annotation.
+
+java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.annotation.Repeatable;
+
+// Define the container annotation
+@Target({ElementType.METHOD, ElementType.PARAMETER})
+@Retention(RetentionPolicy.RUNTIME)
+@Repeatable(ValidationContainer.class)
+@interface Validation {
+    String value();
+}
+
+// Define the container annotation that holds multiple instances of `Validation`
+@Target({ElementType.METHOD, ElementType.PARAMETER})
+@Retention(RetentionPolicy.RUNTIME)
+@interface ValidationContainer {
+    Validation[] value();
+}
+
+// Applying repeating annotations
+public class RepeatingAnnotationExample {
+
+    @Validation("NotNull")
+    @Validation("MaxLength: 10")
+    public static void validateMethod(String input) {
+        // The method has two validation annotations applied.
+    }
+}
+
+
+Explanation:
+
+The @Validation annotation can be used multiple times on the same method or parameter.
+
+The @Repeatable annotation is applied to @Validation, indicating that multiple @Validation annotations can be applied to the same element.
+
+The ValidationContainer annotation is created to act as a holder for the repeated annotations.
+
+Benefits of Repeating Annotations:
+
+Simplifies Code: Allows for cleaner code when multiple instances of the same annotation are needed, avoiding the need for creating complex container annotations manually.
+
+Increases Flexibility: Makes it easier to add validation or other rules to an element without changing the existing annotation logic.
+
+Better Readability: Repeating annotations improve code readability, making it easier to understand what rules or constraints are being applied to a method or parameter.
+
+Practical Use Cases for Type and Repeating Annotations
+
+Type Annotations:
+
+Null Safety: Ensuring that a variable cannot hold null values with @NonNull.
+
+Type Constraints: Specifying that a method parameter should be of a certain type or that a return value has certain properties.
+
+Custom Annotations for Generics: Applying constraints on generic types to ensure proper usage.
+
+Repeating Annotations:
+
+Validation Frameworks: Applying multiple validation rules (e.g., @NotNull, @Size, @Pattern) to fields or method parameters.
+
+Documentation: Tagging elements with multiple pieces of metadata or attributes.
+
+Example of Practical Use of Both Type and Repeating Annotations
+
+java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.annotation.Repeatable;
+
+// Type annotation for nullability
+@Target({ElementType.TYPE_USE})
+@Retention(RetentionPolicy.RUNTIME)
+@interface NonNull {}
+
+// Repeating annotation for field validation
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@Repeatable(FieldValidations.class)
+@interface FieldValidation {
+    String rule();
+}
+
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@interface FieldValidations {
+    FieldValidation[] value();
+}
+
+public class User {
+    @NonNull
+    @FieldValidation(rule = "NotNull")
+    @FieldValidation(rule = "MaxLength: 50")
+    private String name;
+}
+
+
+Explanation:
+
+The @NonNull annotation is used to indicate that the name field should not be null.
+
+The @FieldValidation annotation is repeated to apply multiple validation rules (e.g., NotNull and MaxLength).
+
+16. Concurrency Enhancements:
+
+Concurrency Enhancements in Java 8 introduced several new classes, interfaces, and methods to improve multi-threaded programming. These enhancements simplify the development of concurrent applications, make better use of modern multi-core processors, and address common challenges like thread safety, task management, and parallelism.
+
+Key Concurrency Enhancements in Java 8
+
+CompletableFuture
+
+Parallel Streams
+
+StampedLock
+
+ConcurrentAdders
+
+Thread-safe Accumulators in ForkJoinPool
+
+1. CompletableFuture
+
+CompletableFuture is part of the java.util.concurrent package. It provides a flexible way to handle asynchronous programming without blocking the thread. It allows chaining tasks, combining multiple tasks, and handling errors efficiently.
+
+Example: Asynchronous Task with CompletableFuture
+
+java
+import java.util.concurrent.CompletableFuture;
+
+public class CompletableFutureExample {
+    public static void main(String[] args) {
+        CompletableFuture.supplyAsync(() -> {
+            // Simulate a long-running task
+            System.out.println("Fetching data...");
+            return "Data";
+        }).thenApply(data -> {
+            // Process the data
+            return data.toUpperCase();
+        }).thenAccept(result -> {
+            // Consume the result
+            System.out.println("Processed Result: " + result);
+        });
+
+        System.out.println("Main thread is not blocked!");
+    }
+}
+
+
+Benefits:
+
+Non-blocking operations: Tasks run asynchronously, avoiding thread blocking.
+
+Better performance: Efficiently utilizes resources by avoiding blocking.
+
+Chained tasks: Allows chaining of multiple asynchronous tasks using methods like thenApply, thenAccept, and handle.
+
+2. Parallel Streams
+
+Parallel Streams in Java 8 allow you to process data in parallel using streams. Internally, they utilize the ForkJoinPool framework to divide and conquer tasks across multiple threads.
+
+Example: Processing a List in Parallel
+
+java
+import java.util.Arrays;
+import java.util.List;
+
+public class ParallelStreamExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie", "David");
+
+        names.parallelStream()
+             .map(String::toUpperCase)
+             .forEach(System.out::println);
+    }
+}
+
+
+Benefits:
+
+Automatic parallelism: Simplifies the process of parallelizing tasks.
+
+Performance boost: Reduces processing time for large datasets.
+
+No manual thread management: Internally manages threads, reducing developer effort.
+
+3. StampedLock
+
+StampedLock is a new locking mechanism introduced in Java 8. It is more scalable than traditional locks like ReentrantLock and provides three modes of locking:
+
+Write Lock: Exclusive access.
+
+Read Lock: Shared access for reading.
+
+Optimistic Read Lock: A lightweight read lock that avoids blocking other threads unless necessary.
+
+Example: Using StampedLock
+
+java
+import java.util.concurrent.locks.StampedLock;
+
+public class StampedLockExample {
+    private final StampedLock lock = new StampedLock();
+    private int value;
+
+    public void increment() {
+        long stamp = lock.writeLock();
+        try {
+            value++;
+        } finally {
+            lock.unlockWrite(stamp);
+        }
+    }
+
+    public int read() {
+        long stamp = lock.tryOptimisticRead();
+        int currentValue = value;
+        if (!lock.validate(stamp)) { // Check if the value has changed
+            stamp = lock.readLock();
+            try {
+                currentValue = value;
+            } finally {
+                lock.unlockRead(stamp);
+            }
+        }
+        return currentValue;
+    }
+}
+
+
+Benefits:
+
+Improved performance: Optimistic reads minimize contention in read-heavy scenarios.
+
+Fine-grained control: Developers can choose the appropriate locking mechanism for their use case.
+
+Less contention: Reduces blocking compared to traditional locks.
+
+4. ConcurrentAdders
+
+Java 8 introduced LongAdder and DoubleAdder for high-performance, thread-safe operations on numeric values. They are optimized for scenarios with high contention (many threads updating the same value).
+
+Example: Using LongAdder
+
+java
+import java.util.concurrent.atomic.LongAdder;
+
+public class LongAdderExample {
+    public static void main(String[] args) {
+        LongAdder adder = new LongAdder();
+
+        // Increment the value
+        adder.increment();
+        adder.increment();
+
+        System.out.println("Current Value: " + adder.sum());
+    }
+}
+
+Benefits:
+
+High throughput: Performs better than AtomicLong in high-contention scenarios.
+
+Thread safety: Allows concurrent updates without locks.
+
+5. Thread-safe Accumulators in ForkJoinPool
+
+ForkJoinPool in Java 8 includes support for thread-safe accumulators like DoubleAccumulator and LongAccumulator. These allow you to perform concurrent reductions (like summation) in a thread-safe and efficient manner.
+
+Example: Using LongAccumulator
+
+java
+import java.util.concurrent.atomic.LongAccumulator;
+
+public class LongAccumulatorExample {
+    public static void main(String[] args) {
+        LongAccumulator accumulator = new LongAccumulator(Long::sum, 0);
+
+        // Update the value
+        accumulator.accumulate(10);
+        accumulator.accumulate(20);
+
+        System.out.println("Accumulated Value: " + accumulator.get());
+    }
+}
+
+
+Benefits:
+
+Custom reduction operations: Supports user-defined operations.
+
+Thread safety: Safe for concurrent use.
+
+Benefits of Concurrency Enhancements in Java 8
+
+Simplified Asynchronous Programming: CompletableFuture eliminates the complexity of managing threads manually.
+
+Enhanced Performance: Features like parallel streams and high-performance adders/utilities optimize resource utilization.
+
+Improved Lock Mechanisms: StampedLock reduces contention and improves throughput for concurrent reads.
+
+Modern Hardware Utilization: Concurrency enhancements make better use of multi-core processors, leading to faster and more scalable applications.
+
+Ease of Development: Reduced boilerplate code and intuitive APIs make concurrent programming more accessible to developers.
+
+17. JDBC Enhancements:
+
+Java 8 introduced several JDBC (Java Database Connectivity) enhancements to improve database interactions. These updates focus on integrating new language features like Lambda Expressions, Streams, and improving ease of use and performance for database operations.
+
+Key JDBC Enhancements in Java 8
+
+Addition of java.util.stream support for JDBC ResultSet
+
+Enhanced SQL Exception Handling (SQLException subclasses)
+
+Support for Temporal types in JDBC
+
+Improvements in CallableStatement and PreparedStatement
+
+1. Stream Support for ResultSet
+
+Java 8 allows the transformation of a ResultSet into a Stream using Stream API. This enhancement helps to process large datasets from databases efficiently by leveraging the Stream API's lazy evaluation and powerful operators like map, filter, and collect.
+
+Example: Using Streams with JDBC ResultSet
+
+java
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.stream.Stream;
+
+public class ResultSetStreamExample {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/testdb";
+        String user = "root";
+        String password = "password";
+
+        try (Connection connection = DriverManager.getConnection(url, user, password);
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT id, name FROM users")) {
+
+            Stream.generate(() -> {
+                try {
+                    if (resultSet.next()) {
+                        return resultSet.getString("name");
+                    } else {
+                        return null;
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            })
+            .takeWhile(name -> name != null) // Stream terminates when null
+            .forEach(System.out::println);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+Benefits:
+
+Integration with Streams: Simplifies processing large ResultSets.
+
+Lazy Evaluation: Processes rows on-demand, improving memory usage.
+
+Readable and concise: Replaces loops with Stream API operations.
+
+2. Enhanced SQL Exception Handling
+
+Java 8 introduced specialized subclasses of SQLException to handle specific scenarios more effectively:
+
+SQLNonTransientException: For errors that are unlikely to be resolved by retrying (syntax errors).
+
+SQLTransientException: For errors that could be resolved by retrying (connection timeouts).
+
+SQLRecoverableException: For errors that require application-level recovery.
+
+java
+try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/testdb", "root", "password")) {
+    // Database operations
+} catch (SQLTransientException e) {
+    System.out.println("Transient error occurred. Retrying might help.");
+} catch (SQLNonTransientException e) {
+    System.out.println("Non-transient error. Please check your query.");
+} catch (SQLException e) {
+    e.printStackTrace();
+}
+
+Benefits:
+
+More specific exception handling: Allows fine-grained handling of database errors.
+
+Better recovery options: Helps decide whether to retry, log, or terminate based on the exception type.
+
+3. Support for java.time API in JDBC
+
+Java 8 introduced the java.time package with new date and time APIs. JDBC now supports these types directly, allowing seamless interaction between databases and Java's modern date/time classes (LocalDate, LocalTime, LocalDateTime, etc.).
+
+Example: Using java.time in PreparedStatement
+
+java
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.time.LocalDate;
+
+public class JDBCDateTimeExample {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/testdb";
+        String user = "root";
+        String password = "password";
+
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            String query = "INSERT INTO employees (name, joining_date) VALUES (?, ?)";
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+
+            preparedStatement.setString(1, "Alice");
+            preparedStatement.setObject(2, LocalDate.now()); // Using java.time.LocalDate
+
+            int rows = preparedStatement.executeUpdate();
+            System.out.println("Rows inserted: " + rows);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Benefits:
+
+Better date/time APIs: Eliminates inconsistencies and issues with java.util.Date.
+
+Type safety: Ensures proper handling of date/time types.
+
+Improved readability: java.time APIs are more intuitive and user-friendly.
+
+4. Improvements in CallableStatement and PreparedStatement
+
+Enhancements in CallableStatement and PreparedStatement include better support for IN, OUT, and INOUT parameters, along with improved error handling.
+
+Example: CallableStatement with IN and OUT Parameters
+
+java
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+public class CallableStatementExample {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/testdb";
+        String user = "root";
+        String password = "password";
+
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            CallableStatement callableStatement = connection.prepareCall("{call getEmployeeName(?, ?)}");
+            
+            // Set IN parameter
+            callableStatement.setInt(1, 101);
+            
+            // Register OUT parameter
+            callableStatement.registerOutParameter(2, java.sql.Types.VARCHAR);
+            
+            callableStatement.execute();
+            
+            // Retrieve OUT parameter
+            String employeeName = callableStatement.getString(2);
+            System.out.println("Employee Name: " + employeeName);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Benefits:
+
+Improved parameter handling: Simplifies working with stored procedures.
+
+Better error reporting: Detects invalid parameter assignments at runtime.
+
+Benefits of JDBC Enhancements in Java 8
+
+Integration with Modern APIs: JDBC now works seamlessly with Java 8 features like Streams and the java.time package.
+
+Improved Readability and Conciseness: Simplifies common tasks like processing ResultSets or handling dates and times.
+
+Enhanced Performance: Stream processing and lazy evaluation reduce memory overhead when handling large datasets.
+
+Better Exception Handling: Specific SQL exception subclasses make error recovery and debugging easier.
+
+More Flexibility: CallableStatement and PreparedStatement enhancements provide better control over SQL operations.
+
+Can you highlight what we have covered all together: summary?
+Here's a comprehensive summary of all the Java 8 features covered:
+
+Complete Java 8 Features Summary:
+
+1. Lambda Expressions
+Enable functional programming by providing concise syntax for single-method interfaces
+
+Syntax: (parameters) -> expression or (parameters) -> { statements }
+
+Benefits: Less boilerplate code, improved readability, supports functional programming styles
+
+2. Functional Interfaces:
+
+Interfaces with a single abstract method (SAM)
+
+Can be annotated with @FunctionalInterface
+
+Examples: Runnable, Comparator, custom functional interfaces
+
+Enable lambda expressions to work seamlessly with Java APIs
+
+3. Stream API:
+
+Process collections in a functional, declarative style
+
+Key operations: filter(), map(), reduce(), collect(), forEach()
+
+Features: Lazy evaluation, parallel processing support, pipeline operations
+
+Benefits: Improved readability, less boilerplate, better performance with parallel streams
+
+4. Default Methods in Interfaces:
+
+Allow interfaces to have method implementations using default keyword
+
+Enable backward compatibility when adding methods to existing interfaces
+
+Support multiple inheritance with conflict resolution mechanisms
+
+Benefits: Code reusability, enhanced interfaces, simplified API evolution
+
+5. Method References:
+
+Shorthand notation for lambda expressions using :: operator
+
+Types: Static methods, instance methods of objects, instance methods of arbitrary objects, constructors
+
+Benefits: Improved readability, reduced errors, elegant code
+
+Examples: System.out::println, String::toUpperCase, ClassName::new
+
+6. Optional Class:
+
+Container object to handle null values safely
+
+Methods: of(), ofNullable(), ifPresent(), orElse(), map(), filter()
+
+Benefits: Avoids NullPointerException, improves code readability, encourages functional programming
+
+Makes API contracts explicit about optional values
+
+7. Date and Time API (java.time):
+
+Modern, immutable date/time handling
+
+Key classes: LocalDate, LocalTime, LocalDateTime, ZonedDateTime, Instant, Period, Duration
+
+Features: Thread-safe, fluent API, ISO standard compliance, timezone support
+
+Benefits: Clear API design, better performance, easier date manipulation
+
+8. Nashorn JavaScript Engine:
+
+High-performance JavaScript engine embedded in JVM
+
+Supports ECMAScript 5.1 and partial ES6 features
+
+Features: Seamless Java-JavaScript interoperability, jjs command-line tool
+
+Note: Deprecated in Java 11, replaced by alternatives like GraalVM
+
+9. Streams for File I/O:
+
+Read/write files using Stream API with Files.lines()
+
+Features: Lazy processing, parallel file processing, functional operations
+
+Benefits: Simplified file handling, reduced boilerplate code, efficient large file processing
+
+Use with: filter(), map(), collect() operations on file content
+
+10. Collectors Utility:
+
+Provides common reduction operations for streams
+
+Key methods: toList(), toSet(), toMap(), groupingBy(), partitioningBy(), joining()
+
+Features: Built-in aggregations, custom collector support
+
+Benefits: Concise code, flexible data collection, built-in statistics collection
+
+11. Base64 Encoding and Decoding:
+
+Built-in Base64 support via java.util.Base64 class
+
+Variants: Basic, URL/filename safe, MIME
+
+Methods: getEncoder(), getDecoder(), getUrlEncoder(), getMimeEncoder()
+
+Use cases: HTTP data transfer, JWT tokens, embedding images in HTML
+
+12. Static Methods in Interfaces:
+
+Allow utility methods directly in interfaces using static keyword
+
+Called using interface name, not inherited by implementing classes
+
+Benefits: Better code organization, encapsulated helper methods, reduced utility classes
+
+Cannot be overridden by implementing classes
+
+13. forEach() Method:
+
+Iterate over collections and streams with Consumer functional interface
+
+Available in Iterable and Stream interfaces
+
+Features: Lambda expression support, method reference compatibility, parallel stream support
+
+Benefits: Concise iteration, functional programming style
+
+14. Parallel Array Sorting:
+
+Arrays.parallelSort() for sorting large arrays using multiple cores
+
+Uses ForkJoinPool internally for parallel processing
+
+Benefits: Significant performance improvement for large datasets, automatic thread management
+
+Best for: Arrays with thousands or millions of elements
+
+15. Type and Repeating Annotations:
+
+Type Annotations: Apply annotations to any type (variables, parameters, generics, casts)
+
+Uses ElementType.TYPE_USE and ElementType.TYPE_PARAMETER
+
+Benefits: Enhanced type safety, better static analysis
+
+Repeating Annotations: Apply same annotation multiple times using @Repeatable
+
+Benefits: Cleaner code, multiple validation rules, improved flexibility
+
+16. Concurrency Enhancements:
+
+CompletableFuture: Asynchronous programming with non-blocking operations
+
+Parallel Streams: Automatic parallel processing of collections
+
+StampedLock: Optimistic read locks for better concurrency
+
+ConcurrentAdders: LongAdder, DoubleAdder for high-contention scenarios
+
+Accumulators: LongAccumulator, DoubleAccumulator for custom reductions
+
+17. JDBC Enhancements:
+
+Stream API support for ResultSet processing
+
+Enhanced exception handling with specific SQLException subclasses
+
+java.time API support (LocalDate, LocalTime, etc.) in JDBC
+
+Improved CallableStatement with better IN/OUT parameter handling
+
+Benefits: Modern API integration, improved database interaction, better type safety
+
+Key Themes Across Java 8 Features:
+
+Functional Programming: Lambda expressions, Stream API, functional interfaces
+
+Code Conciseness: Method references, forEach(), Collectors utility
+
+Safety & Robustness: Optional class, type annotations, improved exception handling
+
+Performance: Parallel streams, parallel array sorting, concurrency enhancements
+
+Modern APIs: Date/Time API, Base64, Nashorn JavaScript engine
+
+Backward Compatibility: Default methods in interfaces
+
+Database Integration: JDBC enhancements with streams and modern date/time
+
+Asynchronous Programming: CompletableFuture for non-blocking operations
+

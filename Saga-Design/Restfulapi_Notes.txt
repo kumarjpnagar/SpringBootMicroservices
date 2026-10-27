@@ -1,0 +1,1692 @@
+What is REST?
+
+REST is an acronym for REpresentational State Transfer and an architectural style for distributed hypermedia systems. Roy Fielding first presented it in 2000 in his famous dissertation.
+
+Like other architectural styles, REST has its guiding principles and constraints. These principles must be satisfied if a service interface needs to be referred to as RESTful.
+
+A Web API (or Web Service) conforming to the REST architectural style is a REST API.
+
+1. Guiding Principles of REST
+The six guiding principles or constraints of the RESTful architecture are:
+
+1.1. Uniform Interface
+By applying the principle of generality to the components interface, we can simplify the overall system architecture and improve the visibility of interactions.
+
+Multiple architectural constraints help in obtaining a uniform interface and guiding the behavior of components.
+
+The following four constraints can achieve a uniform REST interface:
+
+Identification of resources – The interface must uniquely identify each resource involved in the interaction between the client and the server.
+Manipulation of resources through representations – The resources should have uniform representations in the server response. API consumers should use these representations to modify the resources state in the server.
+Self-descriptive messages – Each resource representation should carry enough information to describe how to process the message. It should also provide information of the additional actions that the client can perform on the resource.
+Hypermedia as the engine of application state – The client should have only the initial URI of the application. The client application should dynamically drive all other resources and interactions with the use of hyperlinks.
+1.2. Client-Server
+The client-server design pattern enforces the separation of concerns, which helps the client and the server components evolve independently.
+
+By separating the user interface concerns (client) from the data storage concerns (server), we improve the portability of the user interface across multiple platforms and improve scalability by simplifying the server components.
+
+While the client and the server evolve, we have to make sure that the interface/contract between the client and the server does not break.
+
+1.3. Stateless:
+
+Statelessness mandates that each request from the client to the server must contain all of the information necessary to understand and complete the request.
+
+The server cannot take advantage of any previously stored context information on the server.
+
+For this reason, the client application must entirely keep the session state.
+
+1.4. Cacheable
+The cacheable constraint requires that a response should implicitly or explicitly label itself as cacheable or non-cacheable.
+
+If the response is cacheable, the client application gets the right to reuse the response data later for equivalent requests and a specified period.
+
+1.5. Layered System
+
+The layered system style allows an architecture to be composed of hierarchical layers by constraining component behavior.
+
+For example, in a layered system, each component cannot see beyond the immediate layer they are interacting with.
+
+1.6. Code on Demand (Optional)
+
+REST also allows client functionality to extend by downloading and executing code in the form of applets or scripts.
+
+The downloaded code simplifies clients by reducing the number of features required to be pre-implemented. Servers can provide part of features delivered to the client in the form of code, and the client only needs to execute the code.
+
+2. What is a Resource?
+
+The key abstraction of information in REST is a resource. Any information that we can name can be a resource. For example, a REST resource can be a document or image, a temporal service, a collection of other resources, or a non-virtual object (e.g., a person).
+
+The state of the resource, at any particular time, is known as the resource representation.
+
+The resource representations are consist of:
+
+the data
+the metadata describing the data
+and the hypermedia links that can help the clients in transition to the next desired state.
+A REST API consists of an assembly of interlinked resources. This set of resources is known as the REST API’s resource model.
+
+2.1. Resource Identifiers
+REST uses resource identifiers to identify each resource involved in the interactions between the client and the server components.
+
+2.2. Hypermedia
+The data format of a representation is known as a media type. The media type identifies a specification that defines how a representation is to be processed.
+
+A RESTful API looks like hypertext. Every addressable unit of information carries an address, either explicitly (e.g., link and id attributes) or implicitly (e.g., derived from the media type definition and representation structure).
+
+Hypertext (or hypermedia) means the simultaneous presentation of information and controls such that the information becomes the affordance through which the user (or automaton) obtains choices and selects actions.
+
+Remember that hypertext does not need to be HTML (or XML or JSON) on a browser. Machines can follow links when they understand the data format and relationship types.
+
+— Roy Fielding
+2.3. Self-Descriptive
+Further, resource representations shall be self-descriptive: the client does not need to know if a resource is an employee or a device. It should act based on the media type associated with the resource.
+
+So in practice, we will create lots of custom media types – usually one media type associated with one resource.
+
+Every media type defines a default processing model. For example, HTML defines a rendering process for hypertext and the browser behavior around each element.
+
+Media Types have no relation to the resource methods GET/PUT/POST/DELETE/… other than the fact that some media type elements will define a process model that goes like “anchor elements with an href attribute create a hypertext link that, when selected, invokes a retrieval request (GET) on the URI corresponding to the CDATA-encoded href attribute.”
+
+3. Resource Methods
+Another important thing associated with REST is resource methods. These resource methods are used to perform the desired transition between two states of any resource.
+
+A large number of people wrongly relate resource methods to HTTP methods (i.e., GET/PUT/POST/DELETE). Roy Fielding has never mentioned any recommendation around which method to be used in which condition. All he emphasizes is that it should be a uniform interface.
+
+For example, if we decide that the application APIs will use HTTP POST for updating a resource – rather than most people recommend HTTP PUT – it’s all right. Still, the application interface will be RESTful.
+
+Ideally, everything needed to transition the resource state shall be part of the resource representation – including all the supported methods and what form they will leave the representation.
+
+We should enter a REST API with no prior knowledge beyond the initial URI (a bookmark) and a set of standardized media types appropriate for the intended audience (i.e., expected to be understood by any client that might use the API).
+
+From that point on, all application state transitions must be driven by the client selection of server-provided choices present in the received representations or implied by the user’s manipulation of those representations.
+
+The transitions may be determined (or limited by) the client’s knowledge of media types and resource communication mechanisms, both of which may be improved on the fly (e.g., code-on-demand). [Failure here implies that out-of-band information is driving interaction instead of hypertext.]
+
+4. REST and HTTP are Not the Same
+Many people prefer to compare HTTP with REST. REST and HTTP are not the same.
+
+REST != HTTP
+
+Though REST also intends to make the web (internet) more streamlined and standard, Roy Fielding advocates using REST principles more strictly. And that’s from where people try to start comparing REST with the web.
+
+Roy Fielding, in his dissertation, has nowhere mentioned any implementation direction – including any protocol preference or even HTTP. Till the time, we are honoring the six guiding principles of REST, which we can call our interface – RESTful.
+
+5. Summary
+In simple words, in the REST architectural style, data and functionality are considered resources and are accessed using Uniform Resource Identifiers (URIs).
+
+The resources are acted upon by using a set of simple, well-defined operations. Also, the resources have to be decoupled from their representation so that clients can access the content in various formats, such as HTML, XML, plain text, PDF, JPEG, JSON, and others.
+
+The clients and servers exchange representations of resources by using a standardized interface and protocol. Typically HTTP is the most used protocol, but REST does not mandate it.
+
+Metadata about the resource is made available and used to control caching, detect transmission errors, negotiate the appropriate representation format, and perform authentication or access control.
+
+And most importantly, every interaction with the server must be stateless.
+
+All these principles help RESTful applications to be simple, lightweight, and fast.
+
+References:
+
+REST APIs must be hypertext-driven
+REST Arch Style
+=================================================
+REST Architectural Constraints
+
+REST stands for Representational State Transfer, a term coined by Roy Fielding in 2000. It is an architecture style for designing loosely coupled applications over the network, that is often used in the development of web services.
+
+REST does not enforce any rule regarding how it should be implemented at the lower level, it just put high-level design guidelines and leaves us to think of our own implementation.
+
+In my last employment, I designed RESTful APIs for a major telecom company for two good years. In this post, I will be sharing my thoughts apart from standard design practices. You may not agree with me on a few points, and that’s perfectly OK. I will be happy to discuss anything with you with an open mind.
+
+Let’s start with standard design-specific stuff to clear what ‘Roy Fielding’ wants us to build. Then we will discuss my thoughts, which will be more towards finer points while you design your RESTful APIs.
+
+Architectural Constraints
+REST defines 6 architectural constraints which make any web service – a truly RESTful API.
+
+Uniform interface
+Client–server
+Stateless
+Cacheable
+Layered system
+Code on demand (optional)
+
+1. Uniform interface
+As the constraint name itself applies, you MUST decide APIs interface for resources inside the system which are exposed to API consumers and follow religiously. A resource in the system should have only one logical URI, and that should provide a way to fetch related or additional data. It’s always better to synonymize a resource with a web page.
+
+Any single resource should not be too large and contain each and everything in its representation. Whenever relevant, a resource should contain links (HATEOAS) pointing to relative URIs to fetch related information.
+
+Also, the resource representations across the system should follow specific guidelines such as naming conventions, link formats, or data format (XML or/and JSON).
+
+All resources should be accessible through a common approach such as HTTP GET and similarly modified using a consistent approach.
+
+Once a developer becomes familiar with one of your APIs, he should be able to follow a similar approach for other APIs.
+
+2. Client–server
+This constraint essentially means that client applications and server applications MUST be able to evolve separately without any dependency on each other. A client should know only resource URIs, and that’s all. Today, this is standard practice in web development, so nothing fancy is required from your side. Keep it simple.
+
+Servers and clients may also be replaced and developed independently, as long as the interface between them is not altered.
+
+3. Stateless
+Roy fielding got inspiration from HTTP, so it reflects in this constraint. Make all client-server interactions stateless. The server will not store anything about the latest HTTP request the client made. It will treat every request as new. No session, no history.
+
+If the client application needs to be a stateful application for the end-user, where the user logs in once and does other authorized operations after that, then each request from the client should contain all the information necessary to service the request – including authentication and authorization details.
+
+No client context shall be stored on the server between requests. The client is responsible for managing the state of the application.
+
+4. Cacheable
+In today’s world, the caching of data and responses is of utmost importance wherever they are applicable/possible. The webpage you are reading here is also a cached version of the HTML page. Caching brings performance improvement for the client-side and better scope for scalability for a server because the load has been reduced.
+
+In REST, caching shall be applied to resources when applicable, and then these resources MUST declare themselves cacheable. Caching can be implemented on the server or client-side.
+
+Well-managed caching partially or completely eliminates some client-server interactions, further improving scalability and performance.
+
+5. Layered system
+REST allows you to use a layered system architecture where you deploy the APIs on server A, and store data on server B and authenticate requests in Server C, for example. A client cannot ordinarily tell whether it is connected directly to the end server or an intermediary along the way.
+
+
+6. Code on demand (optional)
+Well, this constraint is optional. Most of the time, you will be sending the static representations of resources in the form of XML or JSON. But when you need to, you are free to return executable code to support a part of your application, e.g., clients may call your API to get a UI widget rendering code. It is permitted.
+
+All the above constraints help you build a truly RESTful API, and you should follow them. Still, at times, you may find yourself violating one or two constraints. Do not worry; you are still making a RESTful API – but not “truly RESTful.”
+
+Notice that all the above constraints are most closely related to WWW (the web). Using RESTful APIs, you can do the same thing with your web services what you do to web pages.
+=================================================================
+1. What is a Resource?
+In REST, the primary data representation is called resource. Having a consistent and robust REST resource naming strategy – will prove one of the best design decisions in the long term.
+
+The key abstraction of information in REST is a resource. Any information that can be named can be a resource: a document or image, a temporal service (e.g. “today’s weather in Los Angeles”), a collection of other resources, a non-virtual object (e.g., a person), and so on.
+
+In other words, any concept that might be the target of an author’s hypertext reference must fit within the definition of a resource.
+
+A resource is a conceptual mapping to a set of entities, not the entity that corresponds to the mapping at any particular point in time.
+
+— Roy Fielding’s dissertation
+1.1. Singleton and Collection Resources
+A resource can be a singleton or a collection.
+
+For example, “customers” is a collection resource and “customer” is a singleton resource (in a banking domain).
+
+We can identify “customers” collection resource using the URI “/customers“. We can identify a single “customer” resource using the URI “/customers/{customerId}“.
+
+/customers			//is a collection resource
+
+/customers/{id}		// is a singleton resource
+1.2. Collection and Sub-collection Resources
+A resource may contain sub-collection resources also.
+
+For example, sub-collection resource “accounts” of a particular “customer” can be identified using the URN “/customers/{customerId}/accounts” (in a banking domain).
+
+Similarly, a singleton resource “account” inside the sub-collection resource “accounts” can be identified as follows: “/customers/{customerId}/accounts/{accountId}“.
+
+/customers						//is a collection resource
+
+/customers/{id}/accounts		// is a sub-collection resource
+1.3. URI
+REST APIs use Uniform Resource Identifiers (URIs) to address resources. REST API designers should create URIs that convey a REST API’s resource model to the potential clients of the API. When resources are named well, an API is intuitive and easy to use. If done poorly, that same API can be challenging to use and understand.
+
+The constraint of a uniform interface is partially addressed by the combination of URIs and HTTP verbs and using them in line with the standards and conventions.
+
+Below are a few tips to get you going when creating the resource URIs for your new API.
+
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. Best Practices
+2.1. Use nouns to represent resources
+RESTful URI should refer to a resource that is a thing (noun) instead of referring to an action (verb) because nouns have properties that verbs do not have – similarly, resources have attributes. Some examples of a resource are:
+
+Users of the system
+User Accounts
+Network Devices etc.
+and their resource URIs can be designed as below:
+
+/device-management/managed-devices 
+
+/device-management/managed-devices/{device-id} 
+
+/user-management/users
+
+/user-management/users/{id}
+For more clarity, let’s divide the resource archetypes into three categories (document, collection, and store). Then it would be best if you always targeted to put a resource into one archetype and then use its naming convention consistently.
+
+For uniformity’s sake, resist the temptation to design resources that are hybrids of more than one archetype.
+
+2.1.1. document
+A document resource is a singular concept that is akin to an object instance or database record.
+
+In REST, you can view it as a single resource inside a resource collection. A document’s state representation typically includes both fields with values and links to other related resources.
+
+Use the “singular” name to denote the document resource archetype.
+
+http://api.example.com/device-management/managed-devices/{device-id}
+http://api.example.com/user-management/users/{id}
+http://api.example.com/user-management/users/admin
+2.1.2. collection
+A collection resource is a server-managed directory of resources.
+
+Clients may propose new resources to be added to a collection. However, it is up to the collection resource to choose whether to create a new resource or not.
+
+A collection resource chooses what it wants to contain and also decides the URIs of each contained resource.
+
+Use the “plural” name to denote the collection resource archetype.
+
+/device-management/managed-devices
+/user-management/users
+/user-management/users/{id}/accounts
+2.1.3. store
+A store is a client-managed resource repository. A store resource lets an API client put resources in, get them back out, and decide when to delete them.
+
+A store never generates new URIs. Instead, each stored resource has a URI. The URI was chosen by a client when the resource was initially put into the store.
+
+Use “plural” name to denote store resource archetype.
+
+/song-management/users/{id}/playlists
+2.2. Consistency is the key
+Use consistent resource naming conventions and URI formatting for minimum ambiguity and maximum readability and maintainability. You may implement the below design hints to achieve consistency:
+
+2.2.1. Use forward slash (/) to indicate hierarchical relationships
+The forward-slash (/) character is used in the path portion of the URI to indicate a hierarchical relationship between resources. e.g.
+
+/device-management
+/device-management/managed-devices
+/device-management/managed-devices/{id}
+/device-management/managed-devices/{id}/scripts
+/device-management/managed-devices/{id}/scripts/{id}
+2.2.2. Do not use trailing forward slash (/) in URIs
+As the last character within a URI’s path, a forward slash (/) adds no semantic value and may confuse. It’s better to drop it from the URI.
+
+http://api.example.com/device-management/managed-devices/ 
+http://api.example.com/device-management/managed-devices         /*This is much better version*/
+2.2.3. Use hyphens (-) to improve the readability of URIs
+To make your URIs easy for people to scan and interpret, use the hyphen (-) character to improve the readability of names in long-path segments.
+
+http://api.example.com/devicemanagement/manageddevices/
+http://api.example.com/device-management/managed-devices 	/*This is much better version*/
+2.2.4. Do not use underscores ( _ )
+It’s possible to use an underscore in place of a hyphen to be used as a separator – But depending on the application’s font, it is possible that the underscore (_) character can either get partially obscured or completely hidden in some browsers or screens.
+
+To avoid this confusion, use hyphens (-) instead of underscores ( _ ).
+
+http://api.example.com/inventory-management/managed-entities/{id}/install-script-location  //More readable
+
+http://api.example.com/inventory-management/managedEntities/{id}/installScriptLocation  //Less readable
+2.2.5. Use lowercase letters in URIs
+When convenient, lowercase letters should be consistently preferred in URI paths.
+
+http://api.example.org/my-folder/my-doc       //1
+HTTP://API.EXAMPLE.ORG/my-folder/my-doc     //2
+http://api.example.org/My-Folder/my-doc       //3
+In the above examples, 1 and 2 are the same, but 3 is not as it uses My-Folder in capital letters.
+
+2.3. Do not use file extensions
+File extensions look bad and do not add any advantage. Removing them decreases the length of URIs as well. No reason to keep them.
+
+Apart from the above reason, if you want to highlight the media type of API using file extension, then you should rely on the media type, as communicated through the Content-Type header, to determine how to process the body’s content.
+
+/device-management/managed-devices.xml  /*Do not use it*/
+
+/device-management/managed-devices 	/*This is correct URI*/
+2.4. Never use CRUD function names in URIs
+We should not use URIs to indicate a CRUD function. URIs should only be used to identify the resources and not any action upon them uniquely.
+
+We should use HTTP request methods to indicate which CRUD function is performed.
+
+HTTP GET /device-management/managed-devices  			//Get all devices
+HTTP POST /device-management/managed-devices  			//Create new Device
+
+HTTP GET /device-management/managed-devices/{id}  		//Get device for given Id
+HTTP PUT /device-management/managed-devices/{id}  		//Update device for given Id
+HTTP DELETE /device-management/managed-devices/{id}  	//Delete device for given Id
+2.5. Use query component to filter URI collection
+Often, you will encounter requirements where you will need a collection of resources sorted, filtered, or limited based on some specific resource attribute.
+
+For this requirement, do not create new APIs – instead, enable sorting, filtering, and pagination capabilities in resource collection API and pass the input parameters as query parameters. e.g.
+
+/device-management/managed-devices
+/device-management/managed-devices?region=USA
+/device-management/managed-devices?region=USA&brand=XYZ
+/device-management/managed-devices?region=USA&brand=XYZ&sort=installation-date
+3. Do not Use Verbs in the URI
+It is not correct to put the verbs in REST URIs. REST uses nouns to represent resources, and HTTP methods (GET, POST, PUT, DELETE, etc.) are then used to perform actions on those resources, effectively acting as verbs.
+
+If we use verbs in the URI, we are most probably creating an RPC-style method call having a JSON or XML request/response format. It would be incorrect to call it REST.
+
+/device-management/managed-devices/{id}/scripts/{id}/execute    //It is RPC, and not REST
+In cases, where we need to perform some action that does not apply naturally to the definition of resources, we can create the custom URIs that can be considered nouns/resources and perform an action over them.
+
+For example, instead of invoking /scripts/{id}/execute , we can create a resource for all scripts currently executing and submit a script to it if we want to execute a script.
+
+/device-management/managed-devices/{id}/scripts/{id}/execute	//DON't DO THIS!
+
+/device-management/managed-devices/{id}/scripts/{id}/status		//POST request with action=execute
+You may also consider using the custom methods with colon(:) as described in custom methods by Google Cloud Docs, although many may find it in violation of REST principles.
+
+4. Conclusion
+In conclusion, we can say that resources are primarily nouns (objects) and we should avoid deviating from this principle. Anytime, we feel put verbs in the URI, we are creating an RPC call.
+===================================================================
+Caching
+Caching is the ability to store copies of frequently accessed data in several places along the request-response path.
+
+When a consumer requests a resource representation, the request goes through a cache or a series of caches (local cache, proxy cache, or reverse proxy) toward the service hosting the resource.
+
+If any of the caches along the request path has a fresh copy of the requested representation, it uses that copy to satisfy the request. If none of the caches can satisfy the request, the request travels to the service (or origin server as it is formally known).
+
+By using HTTP headers, an origin server indicates whether a response can be cached and, if so, by whom, and for how long.
+
+Caches along the response path can take a copy of a response, but only if the caching metadata allows them to do so.
+
+Optimizing the network using caching improves the overall quality-of-service in the following ways:
+
+Reduce bandwidth
+Reduce latency
+Reduce load on servers
+Hide network failures
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. Caching in REST APIs
+Being cacheable is one of the architectural constraints of REST.
+
+GET requests should be cachable by default – until a special condition arises. Usually, browsers treat all GET requests as cacheable.
+POST requests are not cacheable by default but can be made cacheable if either an Expires header or a Cache-Control header with a directive, to explicitly allows caching, is added to the response.
+Responses to PUT and DELETE requests are not cacheable at all.
+Please note that HTTP dates are always expressed in GMT, never in local time.
+
+3. Cache Control Headers
+Below given are main HTTP response headers that we can use to control caching behavior:
+
+3.1. Expires
+The Expires HTTP header specifies an absolute expiry time for a cached representation. Beyond that time, a cached representation is considered stale and must be re-validated with the origin server.
+
+To indicate that a representation never expires, a service can include a time up to one year in the future.
+
+Expires: Fri, 20 May 2016 19:20:49 GMT
+3.2. Cache-Control
+The header value comprises one or more comma-separated directives. These directives determine whether a response is cacheable, and if so, by whom, and for how long e.g. max-age or s-maxage directives.
+
+Cache-Control: max-age=3600
+Cacheable responses (whether to a GET or to a POST request) should also include a validator — either an ETag or a Last-Modified header.
+
+3.3. ETag
+An ETag value is an opaque string token that a server associates with a resource to uniquely identify the state of the resource over its lifetime.
+
+If the resource at a given URL changes, a new Etag value must be generated. A comparison of them can determine whether two representations of a resource are the same.
+
+While requesting a resource, client sends the ETag in If-None-Match header field to the server. The server matches the Etag of the requested resource and the value sent in If-None-Match header. If both values match the server sends back a 304 Not Modified status, without a body, which tells the client that the cached version of the response is still good to use (fresh).
+
+ETag: "abcd1234567n34jv"
+3.4. Last-Modified
+Whereas a response’s Date header indicates when the response was generated, the Last-Modified header indicates when the associated resource was last changed.
+
+This header is used as a validator to determine if the resource is the same as the previously stored one by the client’s cache. Less accurate than an ETag header, it is a fallback mechanism.
+
+The Last-Modified value cannot be greater than Date value. Note that Date header is listed in the forbidden header names.
+
+Last-Modified: Fri, 10 May 2016 09:17:49 GMT
+==================================================================
+REST APIs can return the resource representations in several formats such as XML, JSON, HTML, or even plain text. All such forms can be compressed to a lesser number of bytes to save bandwidth over the network.
+
+Different protocols use different techniques to enable compression and notify the clients about the compression scheme – so that the client can decompress it before consuming the representations.
+
+Compression, like encryption, is something that happens to the resource representation in transit and must be undone before the client can use the representation.
+
+HTTP is the most widely used protocol for REST – so we are taking the example of HTTP-specific response compression.
+
+1. Compression Related Request/Response Headers
+1.1. Accept-Encoding
+While requesting resource representations – along with an HTTP request, the client sends an Accept-Encoding header that says what kind of compression algorithms the client understands.
+
+The two standard values for Accept-Encoding are compress and gzip.
+
+A sample request with accept-encoding, the header looks like this :
+
+GET        /employees         HTTP/1.1
+Host:     www.domain.com
+Accept:     text/html
+Accept-Encoding:     gzip,compress
+Another possible usage of accept-encoding may be:
+
+Accept-Encoding: compress, gzip
+Accept-Encoding:
+Accept-Encoding: *
+Accept-Encoding: compress;q=0.5, gzip;q=1.0
+Accept-Encoding: gzip;q=1.0, identity; q=0.5, *;q=0
+If an Accept-Encoding the field is present in a request, and if the server cannot send a response that is acceptable according to the Accept-Encoding header, then the server SHOULD send an error response with the 406 (Not Acceptable) status code.
+
+1.2. Content-Encoding
+If the server understands one of the compression algorithms from Accept-Encoding, it can use that algorithm to compress the representation before serving it. When successfully compressed, the server lets know the client of encoding scheme by another HTTP header i.e. Content-Encoding.
+
+200 OK
+Content-Type:     text/html
+Content-Encoding:     gzip
+If the content-coding of an entity in a request message is not acceptable to the origin server, the server SHOULD respond with a status code of 415 (Unsupported Media Type). If multiple content encodings have been applied to an entity, all the encodings MUST be listed in the order in which they were used.
+
+Please note that the original media type for request and response are not impacted whether compression is requested or not.
+
+Compression can save a lot of bandwidth, with minimal cost without additional complexity. Also, you may know that most web browsers automatically request compressed representations from website host servers – using the above headers.
+=========================================================
+1. Content Negotiation
+Generally, the REST resources can have multiple presentations, mostly because there may be different clients expecting different representations. Asking for a suitable presentation by a client is referred to as content negotiation.
+
+HTTP has provisions for several mechanisms for “content negotiation” — the process of selecting the best representation for a given response when there are multiple representations available.
+
+— RFC 2616
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. Server-driven Vs Agent-driven Content Negotiation
+If the selection of the best representation for a response is made by an algorithm located at the server, it is called server-driven negotiation. If that selection is made at the agent or client-side, it is called agent-driven negotiation.
+
+Practically, we will NOT find much usage of server-side negotiations because, in that way, we have to make a lot of assumptions about the client’s expectations.
+
+Few things, like the client context or how the client will use the resource representation, are almost impossible to determine. Also, the server-driven negotiation makes the server-side code more complex, unnecessarily.
+
+So, most REST API implementations rely on agent-driven content negotiations. Agent-driven content negotiation depends on the usage of HTTP request headers or resource URI patterns.
+
+2.1. Using HTTP Headers
+At server side, an incoming request may have an entity attached to it. To determine it’s type, server uses the HTTP request header Content-Type. Some common examples of content types are “text/plain”, “application/xml”, “text/html”, “application/json”, “image/gif”, and “image/jpeg”.
+
+Content-Type: application/json
+Similarly, to determine what type of representation is desired on the client-side, an HTTP header ACCEPT is used. It will have one of the values mentioned for Content-Type above.
+
+Accept: application/json
+Generally, if no Accept header is present in the request, the server can send pre-configured default representation type.
+
+Implementing Accept header based content negotiation is most used and recommened way.
+
+2.2. Using URL Patterns
+Another way to pass content type information to the server, the client may use the specific extension in resource URIs. For example, a client can ask for details using:
+
+http://rest.api.com/v1/employees/20423.xml
+http://rest.api.com/v1/employees/20423.json
+In the above case, the first request URI will return an XML response whether the second request URI will return a JSON response.
+
+3. Defining Preferences
+It is possible to have multiple values in Accept header using the ‘q’ parameter i.e. relative quality factor.
+
+The client may want to provide multiple values in the accept header when the client is not sure if its desired representation is present or supported by the server at that time. [RFC 2296]
+
+For example,
+
+Accept: application/json,application/xml;q=0.9,*/*;q=0.8
+Above Accept header allows you to ask the server a JSON format (first choice). If it can’t, perhaps it could return XML format (the second choice). If it’s still not possible, let it return what it can.
+
+The preference order is defined through the q parameter with values from 0 to 1. When nothing is specified, the implicit default value is 1.
+====================================================
+1. What is HATEOAS
+HATEOAS (Hypermedia as the Engine of Application State) is a constraint of the REST application architecture. HATEOAS keeps the REST style architecture unique from most other network application architectures.
+
+The term “hypermedia” refers to any content that contains links to other forms of media such as images, movies, and text.
+
+REST architectural style lets us use the hypermedia links in the API response contents. It allows the client to dynamically navigate to the appropriate resources by traversing the hypermedia links.
+
+Navigating hypermedia links is conceptually the same as browsing through web pages by clicking the relevant hyperlinks to achieve a final goal.
+
+For example, the given below JSON response may be from an API like HTTP GET http://api.domain.com/management/departments/10
+
+{
+    "departmentId": 10,
+    "departmentName": "Administration",
+    "locationId": 1700,
+    "managerId": 200,
+    "links": [
+        {
+            "href": "10/employees",
+            "rel": "employees",
+            "type" : "GET"
+        }
+    ]
+}
+In the preceding example, the response returned by the server contains hypermedia links to employee resources 10/employees which can be traversed by the client to read employees belonging to the department.
+
+The advantage of the above approach is that hypermedia links returned from the server drive the application’s state and not the other way around.
+
+JSON does not have any universally accepted format for representing links between two resources. We may choose to send in the response body or decide to send links in HTTP response headers.
+
+HTTP/1.1 200 OK
+...
+Link: <10/employees>; rel="employees"
+Both are good solutions.
+
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. How to Implement HATEOAS
+In the real world, when we visit a website – we hit its homepage. The homepage presents some snapshots and links to other sections of websites. We click on the links and get more information and related links relevant to the context.
+
+Like a human’s interaction with a website, a REST client hits an initial API URI and uses the server-provided links to access the resources it needs and discover available actions dynamically.
+
+The client need not have prior knowledge of the service or the different steps involved in a workflow. Additionally, the clients no longer have to hardcode the URI structures for various resources. HATEOAS allows the server to make URI changes as the API evolves without breaking the clients.
+
+Above API interaction is possible using HATEOAS only.
+
+Each REST framework provides its way of creating the HATEOAS links using framework capabilities. For example, in Spring Boot HATEOAS tutorial, links are part of resource model classes that are transferred as the resource state to the client.
+
+3. HATEOAS References
+The following are the two popular formats for specifying JSON REST API hypermedia links:
+
+3.1. RFC 5988 (web linking)
+RFC 5988 puts forward a framework for building links that define the relationships between resources on the web. Each link in RFC 5988 contains the following properties:
+
+Target URI: Each link should contain a target Internationalized Resource Identifiers (IRIs). This is represented by the href attribute.
+Link relation type: The link relation type describes how the current context (source) is related to the target resource. This is represented by the rel attribute.
+Attributes for target IRI: The attributes for a link included hreflang, media, title, and type, and any extension link parameters.
+3.2. JSON Hypermedia API Language (HAL)
+JSON HAL is a promising proposal that sets the conventions for expressing hypermedia controls, such as links, with JSON or XML. It is in the draft stage at this time.
+
+The two associated MIME types are
+
+media type: application/hal+xml 
+media type: application/hal+json
+Each link in HAL may contain the following properties:
+
+Target URI: It indicates the target resource URI. This is represented by the href attribute.
+Link relation: The link relation type describes how the current context is related to the target resource. This is represented by the rel attribute.
+Type: This indicates the expected resource media type. This is represented by the type attribute.
+There is no right or wrong in choosing a hypermedia link format for our application. We should pick up a format that meets most of our use case requirements and stick to it.
+==================================================================
+1. What is an Idempotent API?
+In the context of REST APIs, when making multiple identical requests has the same effect as making a single request – then that REST API is called idempotent.
+
+When we design the REST APIs, we must realize that API consumers can make mistakes. Consumers can write the client code in such a way that there can be duplicate requests coming to the API.
+
+These duplicate requests may be unintentional as well as intentional sometimes (e.g. due to timeout or network issues). We have to make our APIs fault-tolerant, so that duplicate requests do not leave the system unstable.
+
+An idempotent HTTP method is a method that can be invoked many times without the different outcomes. It should not matter if the method has been called only once, or ten times over. The result should always be the same.
+
+Idempotency essentially means that the effect of a successfully performed request on a server resource is independent of the number of times it is executed.
+
+For example, in arithmetic, adding zero to a number is an idempotent operation.
+
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. Idempotency with HTTP Methods
+If we follow the REST principles in designing our APIs, we will have automatically idempotent REST APIs for GET, PUT, DELETE, HEAD, OPTIONS, and TRACE methods. Only POST APIs will not be idempotent.
+
+POST is NOT idempotent.
+GET, PUT, DELETE, HEAD, OPTIONS and TRACE are idempotent.
+Let’s analyze how the above HTTP methods end up being idempotent – and why POST is not.
+
+2.1. HTTP POST
+Generally – not necessarily – POST APIs are used to create a new resource on the server.
+
+So when we execute the same POST request N times, we will have N new resources on the server. So, POST is not idempotent.
+
+2.2. HTTP GET, HEAD, OPTIONS and TRACE
+GET, HEAD, OPTIONS and TRACE methods NEVER change the resource state on the server. They are purely for retrieving the resource representation or metadata at that point in time.
+
+So invoking multiple requests will not have any write operation on the server, so GET, HEAD, OPTIONS, and TRACE are idempotent.
+
+2.3. HTTP PUT
+Generally – not necessarily – PUT APIs are used to update the resource state. If you execute a PUT API N times, the very first request will update the resource; the other N-1 requests will just overwrite the same resource state again and again – effectively not changing anything.
+
+Hence, PUT is idempotent.
+
+2.4 HTTP DELETE
+2.4.1. Delete with the resource identifier
+When you execute N similar DELETE requests, the first request will delete the resource and the response will be 200 (OK) or 204 (No Content).
+
+Other N-1 requests will return 404 (Not Found).
+
+Clearly, the response is different from the first request, but there is no change of state for any resource on the server-side because the original resource is already deleted.
+
+So, DELETE is idempotent.
+
+2.4.1. Delete without the resource identifier
+Please keep in mind that some systems may have DELETE APIs like this:
+
+DELETE /item/last
+In the above case, calling operation N times will delete N resources – hence DELETE is not idempotent in this case. In this case, a good suggestion might be to change the above API to POST – because POST is not idempotent.
+
+POST /item/last
+Now, this is closer to HTTP spec – hence more REST compliant.
+===============================================================
+REST API Security Essentials
+
+REST API Security isn’t an afterthought. It has to be an integral part of any development project and also for REST APIs.
+
+There are multiple ways to secure a RESTful API e.g. basic auth, OAuth, etc. but one thing is sure that RESTful APIs should be stateless – so request authentication/authorization should not depend on sessions.
+
+Instead, each API request should come with some sort of authentication credentials that must be validated on the server for every request.
+
+1. REST Security Design Principles
+The paper “The Protection of Information in Computer Systems” by Jerome Saltzer and Michael Schroeder, put forth eight design principles for securing information in computer systems, as described in the following sections:
+
+Least Privilege: An entity should only have the required set of permissions to perform the actions for which they are authorized, and no more. Permissions can be added as needed and should be revoked when no longer in use.
+Fail-Safe Defaults: A user’s default access level to any resource in the system should be “denied” unless they’ve been granted a “permit” explicitly.
+The economy of Mechanism: The design should be as simple as possible. All the component interfaces and the interactions between them should be simple enough to understand.
+Complete Mediation: A system should validate access rights to all its resources to ensure that they’re allowed and should not rely on the cached permission matrix. If the access level to a given resource is being revoked, but that isn’t reflected in the permission matrix, it would violate the security.
+Open Design: This principle highlights the importance of building a system in an open manner—with no secret, confidential algorithms.
+Separation of Privilege: Granting permissions to an entity should not be purely based on a single condition, a combination of conditions based on the type of resource is a better idea.
+Least Common Mechanism: It concerns the risk of sharing state among different components. If one can corrupt the shared state, it can then corrupt all the other components that depend on it.
+Psychological Acceptability: It states that security mechanisms should not make the resource more difficult to access than if the security mechanisms were not present. In short, security should not make worse the user experience.
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. Best Practices to Secure REST APIs
+Below given points may serve as a checklist for designing the security mechanism for REST APIs.
+
+2.1. Keep it Simple
+Secure an API/System – just how secure it needs to be. Every time you make the solution more complex “unnecessarily,” you are also likely to leave a hole.
+
+2.2. Always Use HTTPS
+By always using SSL, the authentication credentials can be simplified to a randomly generated access token. The token is delivered in the username field of HTTP Basic Auth. It’s relatively simple to use, and you get a lot of security features for free.
+
+If you use HTTP 2, to improve performance – you can even send multiple requests over a single connection, that way you avoid the complete TCP and SSL handshake overhead on later requests.
+
+2.3. Use Password Hash
+Passwords must always be hashed to protect the system (or minimize the damage) even if it is compromised in some hacking attempts. There are many such hashing algorithms that can prove really effective for password security e.g. PBKDF2, bcrypt, and scrypt algorithms.
+
+2.4. Never expose information on URLs
+Usernames, passwords, session tokens, and API keys should not appear in the URL, as this can be captured in web server logs, which makes them easily exploitable.
+
+https://api.domain.com/user-management/users/{id}/someAction?apiKey=abcd123456789  //Very BAD !!
+The above URL exposes the API key. So, never use this form of security.
+
+2.5. Consider OAuth
+Though basic auth is good enough for most of the APIs and if implemented correctly, it’s secure as well – yet you may want to consider OAuth as well.
+
+The OAuth 2.0 authorization framework enables a third-party application to obtain limited access to an HTTP service, either on behalf of a resource owner by orchestrating an approval interaction between the resource owner and the HTTP service, or by allowing the third-party application to obtain access on its behalf.
+
+2.6. Consider Adding Timestamp in Request
+Along with other request parameters, you may add a request timestamp as an HTTP custom header in API requests.
+
+The server will compare the current timestamp to the request timestamp and only accepts the request if it is after a reasonable timeframe (30 seconds, perhaps).
+
+This will prevent very basic replay attacks from people who are trying to brute force your system without changing this timestamp.
+
+2.7. Input Parameter Validation
+Validate request parameters on the very first step, before it reaches application logic. Put strong validation checks and reject the request immediately if validation fails.
+
+In API response, send relevant error messages and examples of correct input format to improve user experience.
+========================================================
+How to Version a REST API?
+
+1. When to version?
+APIs only need to be up-versioned when a breaking change is made.
+
+Breaking changes include:
+
+a change in the format of the response data for one or more calls
+a change in the request or response type (i.e. changing an integer to a float)
+removing any part of the API.
+Breaking changes should always result in a change to the major version number for an API or content response type.
+
+Non-breaking changes, such as adding new endpoints or new response parameters, do not require a change to the major version number.
+
+However, it can be helpful to track the minor versions of APIs when changes are made to support customers who may be receiving cached versions of data or might be experiencing other API issues.
+
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. How to version a REST API?
+REST doesn’t provide for any specific versioning guidelines, but the more commonly used approaches fall into three categories:
+
+2.1. URI Versioning
+Using the URI is the most straightforward approach (and most commonly used as well) though it does violate the principle that a URI should refer to a unique resource. You are also guaranteed to break client integration when a version is updated.
+
+http://api.example.com/v1
+http://apiv1.example.com
+The version need not be numeric, nor specified using the “v[x]” syntax.
+
+Alternatives include dates, project names, seasons, or other identifiers that are meaningful enough to the team producing the APIs and flexible enough to change as the versions change.
+
+2.2. Versioning using Custom Request Header
+A custom header (e.g. Accept-version) allows you to preserve your URIs between versions though it is effectively a duplicate of the content negotiation behavior implemented by the existing Accept header.
+
+Accept-version: v1
+Accept-version: v2
+2.3. Versioning using “Accept” header
+Content negotiation may let you preserve a clean set of URLs, but you still have to deal with the complexity of serving different versions of content somewhere.
+
+This burden tends to be moved up the stack to your API controllers which become responsible for figuring out which version of a resource to send.
+
+The result tends to be a more complex API as clients have to know which headers to specify before requesting a resource.
+
+Accept: application/vnd.example.v1+json
+Accept: application/vnd.example+json;version=1.0
+In the real world, an API is never going to be completely stable. So it’s important how this change is managed.
+
+A well-documented and gradual deprecation of API can be an acceptable practice for most APIs.
+===============================================================
+1. Statelessness
+As per the REST (REpresentational “State” Transfer) architecture, the server does not store any state about the client session on the server-side. This restriction is called Statelessness.
+
+Each request from the client to the server must contain all of the necessary information to understand the request. The server cannot take advantage of any stored context on the server.
+
+The application’s session state is therefore kept entirely on the client. The client is responsible for storing and handling the session related information on its own side.
+
+This also means that the client is responsible for sending any state information to the server whenever it is needed. There should not be any session affinity or sticky session between the client and the server.
+
+Statelessness means that every HTTP request happens in complete isolation. When the client makes an HTTP request, it includes all information necessary for the server to fulfill the request.
+
+The server never relies on information from previous requests from the client. If any such information is important then the client will send that as part of the current request.
+
+To enable clients to access these stateless APIs, it is necessary that servers also should include every piece of information that the client may need to create/maintain the state on its side.
+
+For becoming stateless, do not store even authentication/authorization details of the client. Provide authentication credentials with each request.
+
+Thus each request MUST be stand alone and should not be affected by the previous conversation that happened with the same client in past.
+
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. Application State vs Resource State
+It is important to understand the between the application state and the resource state. Both are completely different things.
+
+Application state is server-side data that servers store to identify incoming client requests, their previous interaction details, and current context information.
+
+Resource state is the current state of a resource on a server at any point in time – and it has nothing to do with the interaction between client and server. It is what we get as a response from the server as the API response. We refer to it as resource representation.
+
+REST statelessness means being free from the application state.
+
+3. Advantages of Stateless APIs
+There are some very noticeable advantages of having REST APIs stateless.
+
+Statelessness helps in scaling the APIs to millions of concurrent users by deploying it to multiple servers. Any server can handle any request because there is no session related dependency.
+Being stateless makes REST APIs less complex – by removing all server-side state synchronization logic.
+A stateless API is also easy to cache as well. Specific softwares can decide whether or not to cache the result of an HTTP request just by looking at that one request. There’s no nagging uncertainty that state from a previous request might affect the cacheability of this one. It improves the performance of applications.
+The server never loses track of “where” each client is in the application because the client sends all necessary information with each request.
+=======================================================================
+RESTful API Design — Step By Step Guide
+
+Principles of Designing RESTful APIs
+Now let’s understand the principles we should follow while designing the RESTful APIs.
+
+Keep it simple
+We need to make sure that the base URL of the API is simple. For example, if we want to design APIs for products, they should be designed like:
+
+/products
+/products/12345
+The first API is to get all products and the second one is to get a specific product.
+
+Use nouns and not the verbs
+A lot of developers make this mistake. They generally forget that we have HTTP methods with us to describe the APIs better and end up using verbs in the API URLs. For instance, API to get all products should be:
+
+/products
+and not as shown below
+
+/getAllProducts
+Some common URL patterns I have seen so far.
+
+Use of the right HTTP methods
+RESTful APIs have various methods to indicate the type of operation we are going to perform with this API.
+
+GET — To get a resource or collection of resources.
+POST — To create a resource or collection of resources.
+PUT/PATCH — To update the existing resource or collection of resources.
+DELETE — To delete the existing resource or the collection of resources.
+We need to make sure we use the right HTTP method for a given operation.
+
+Use plurals
+This topic is a bit debatable. Some people like to keep the resource URL with plural names, while others like to keep it singular. For instance —
+
+/products
+/product
+I like to keep it plural since it avoids confusion about whether we are talking about getting a single resource or a collection. It also avoids adding additional things like attaching all to the base URL e.g. /product/all
+
+Some people might not like this, but my only suggestion is to keep it uniform across the project.
+
+Use parameters
+Sometimes we need to have an API that should be telling more stories than just by id. Here we should make use of query parameters to design the API.
+
+/products?name=’ABC’ should be preferred over /getProductsByName
+/products?type=’xyz’ should be preferred over /getProductsByType
+This way, you can avoid long URLs with simplicity in design.
+
+Use proper HTTP codes
+We have plenty of HTTP codes. Most of us only end up using two — 200 and 500! This is certainly not good practice. Following are some commonly used HTTP codes.
+
+200 OK — This is the most commonly used HTTP code to show that the operation performed is successful.
+201 CREATED — This can be used when you use the POST method to create a new resource.
+202 ACCEPTED — This can be used to acknowledge the request sent to the server.
+400 BAD REQUEST — This can be used when client-side input validation fails.
+401 UNAUTHORIZED / 403 FORBIDDEN— This can be used if the user or the system is not authorized to perform a certain operation.
+404 NOT FOUND— This can be used if you are looking for a certain resource and it is not available in the system.
+500 INTERNAL SERVER ERROR — This should never be thrown explicitly but might occur if the system fails.
+502 BAD GATEWAY — This can be used if the server receives an invalid response from the upstream server.
+Versioning
+Versioning of APIs is very important. Many different companies use versions in different ways. Some use versions as dates, while some use versions as query parameters. I generally like to keep it prefixed to the resource. For instance:
+
+/v1/products
+/v2/products
+I would also like to avoid using /v1.2/products, as it implies, the API would frequently be changing. Also, dots (.) might not be easily visible in the URLs. So keep it simple.
+
+It is always good practice to keep backward compatibility so that if you change the API version, consumers get enough time to move to the next version.
+
+Use pagination
+Use of pagination is a must when you expose an API that might return huge data, and if proper load balancing is not done, the consumer might end up bringing down the service. We need to always keep in mind that the API design should be full proof and fool proof.
+
+Use of limit and offset is recommended here. For example, /products?limit=25&offset=50. It is also advised to keep a default limit and default offset.
+
+Supported formats
+It is also important to choose how your API responds. Most modern-day applications should return JSON responses unless you have a legacy app that still needs to get an XML response.
+
+Use proper error messages
+It is always good practice to keep a set of error messages the application sends and respond to that with the proper id. For example, if you use Facebook graph APIs, in case of errors, it returns a message like this:
+
+{
+  "error": {
+    "message": "(#803) Some of the aliases you requested do not exist: products",
+    "type": "OAuthException",
+    "code": 803,
+    "fbtrace_id": "FOXX2AhLh80"
+  }
+}
+I have also seen some examples in which people return a URL with an error message, which tells you more about the error message and how to handle it as well.
+
+Use of OpenAPI specifications
+In order to keep all teams in your company abiding by certain principles, the use of OpenAPI specifications can be useful. OpenAPI allows you to design your APIs first and share that with the consumers in an easier manner.
+
+============================================================
+What is an API?
+
+An API (the full form is Application Programming Interface) is a contract (or specification) promised by the software which it will honor if other software wants to interact with it for performing business operations.
+
+API allows two or more software applications to talk to each other through a well-defined computing interface.
+
+1. API Example in Real Life
+Mobile apps can be one of the very familiar examples of APIs. Mobile applications generally contain all the UI related parts of the application.
+
+All the real-time data displayed in the mobile apps is fetched through the APIs. All the weather information, emails, game scores, live telecasts, and many more such real-time data is fetched from APIs deployed on the server.
+
+Similarly, many modern websites fetch the on-demand data (which is fetched from the server exactly when it is needed) using technologies such as AJAX, Web Sockets, etc. This kind of interaction happens through an API.
+
+Another example you can see on this page is the Social sharing buttons. When you click on them, a popup appears for confirmation about your action. Once you confirm, the post is shared with the selected social media website through an API. The social sharing buttons use the API provided by those websites to share any URL on the internet.
+
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+
+2. How to use API
+We are not required to know how an API works internally for serving a specific business goal or any task. All we will need to know is how to interact with the API.
+
+For example, all airline ticket booking applications will use an API exposed by the airline company. Anytime a customer uses any such application and books a flight ticket, the application passes the passenger and flight booking information to the API.
+
+The booking API will process the data and book the ticket for the customer and the application will get a successful response with booking details in return.
+
+The booking applications do not know and need not know how the API works internally. All they are required to do is pass the booking information in a well-defined format to the API and wait for the response.
+
+Similarly, any application/mobile app can use an API or expose an API to other software.
+
+3. What is the purpose of an API
+The software applications are developed in pieces. To avoid writing a piece of software multiple times in different places, it is written as a reusable component.
+
+Such a reusable component is then exposed to other components and applications via an interface i.e. API.
+
+The API helps in making the component standard, reusable, easily understood by the users, and abstract. The abstraction helps in exposing only minimum relevant information to other entities and protect the business logic to perform an action.
+
+Making reusable APIs not only benefits the users, but it also makes easy the developer’s life as well. The defined scope of API helps in the designing, testing, building, managing, and versioning of the component.
+
+4. How to develop an API
+4.1. API Specification
+As we already said, API is a reusable abstract component that exposes its programming interface without exposing how it works internally. To achieve this goal, the very first thing is a standard, clean, well documented, and easy to use API specification.
+
+The specification should clearly tell the followings:
+
+A very clear business operation it will perform
+The API URL or interface
+HTTP protocal and methods
+Request structure and individual fields
+Response structure and individual fields
+Valid values for fields in request, where it is applicable
+Any mechanism for filering and sorting the data
+Any authentication/authorization information
+The possible success and error codes
+And, any other relevant information it should
+4.2. API Security
+The information is of the utmost importance in any application, especially the user’s nonpublic personal information (NPI data). To protect this information, API must be secured from unauthorized access.
+
+Only authorized users with secure credentials should be able to access the API.
+
+4.3. Audit Logging
+A publicly exposed API will be used by thousands of users every day. To understand how the API is used or abused by its user, it is necessary to log the critical information related to API usages.
+
+A proper monitoring system will trigger the alerts in case of somebody misuses the API interface or make an unauthorized entry into the application.
+
+4.4. Performance
+API performance is very essential to make it usable in the first place. No application would like to block its users while a request is being processed in the server. Only certain applications are expected to block where they perform operations in real-time. For example, money transfer and bill payments.
+
+A poorly performing API will not be used by its consumers and thus will cause a loss to the business.
+
+Let me know your thoughts on designing an API and its best practices.
+=======================================
+Difference between SOAP an REST APIs
+
+SOAP – Simple Object Access Protocol – defines a very strongly typed messaging framework that relies heavily on XML and schemas.
+
+REST – REpresentational State Transfer – is an architectural style that makes use of existing and widely adopted technologies, specifically HTTP, and does not create any new standards. REST can structure data into XML, YAML, or any other machine-readable format, but usually, JSON is preferred.
+
+SOAP and REST – both provide support for building SOA-based applications. The choice of which one to use – largely depends on what really is required, from the business and an architectural point of view.
+
+By looking at both their strengths and weakness in certain environments, as well as understanding your own project scope, you can make the most informed decision.
+
+Comparison of SOAP and REST APIs
+1. Underlying Protocol
+The SOAP itself is a protocol (over HTTP) for developing SOAP-based APIs.
+
+REST is almost synonymous with HTTP, though REST specification does not mandate it.
+
+2. Data Format
+SOAP relies exclusively on XML to provide messaging services, which can become extremely complex in some cases, e.g., accessing web service via javascript.
+
+REST can use the data in Comma Separated Value (CSV), JavaScript Object Notation (JSON), and Really Simple Syndication (RSS).
+
+The point is that you can obtain the output you need in a form that’s easy to parse within the language you need for your application.
+
+3. Statefulness
+RESTful Web services are completely stateless. Managing the state of conversation is the complete responsibility of the client itself. The server does not help you with this.
+
+Normally, SOAP Web services are stateless – but you can easily make SOAP API stateful by changing the code on the server.
+
+4. Caching
+REST provides a good caching infrastructure over HTTP GETmethods thus enabling response data to be marked as cacheable or not-cachable. The ETag header is a good way to implement caching providing you’ve got a cheap way to compute what the value should be.
+
+SOAP, when using HTTP as the transfer mechanism, is sent via HTTP POST requests. As HTTP POST is non-idempotent, it can not be cached at the HTTP level. So, SOAP responses should be cached using information given in Response Caching Optimization Module.
+
+5. HTTP Verbs Used
+REST is primarily used over HTTP and it makes use of HTTP GET, POST, PUT, DELETE, and PATCH methods for different CRUD operations.
+
+SOAP also defines a binding to the HTTP protocol. When binding to HTTP, all SOAP requests are sent through HTTP POST.
+
+6. Security
+REST is based on HTTP – which itself is a very unsecure protocol. It supports basic authentication and communication encryption through TLS. Any further security should be additionally implemented at the server.
+
+SOAP security is well standardized through WS-SECURITY, which is very much feature-rich and easy to implement into application code.
+
+7. Asynchronous Processing
+Asynchronous request processing may be required when creating/updating a resource is time-consuming. In this case, REST suggests returning the HTTP response code 202 and send the location of the queue where the status of task completion will be updated on a frequent interval. REST got a pretty good support for async APIs in JAX-RS itself.
+
+If your application needs a guaranteed level of reliability and security, then SOAP 1.2 offers additional standards to ensure this type of operation. Things like WSRM – WS-Reliable Messaging.
+
+
+Summary
+Overall, REST is simpler to develop because it leverages the web, which is already in place, and the degree of freedom is limited (fewer choices to make, so simpler). SOAP offers several alternatives and is also slightly more difficult to develop, but offers more alternatives and areas to work.
+=================================================================
+HTTP Methods
+
+REST APIs enable you to develop all kinds of web applications having all possible CRUD (create, retrieve, update, delete) operations.
+
+REST guidelines suggest using a specific HTTP method on a particular type of call made to the server (though technically it is possible to violate this guideline, yet it is highly discouraged).
+
+Use the below-given information to find a suitable HTTP method for the action performed by API.
+
+Table of Contents
+
+HTTP GET
+HTTP POST
+HTTP PUT
+HTTP DELETE
+HTTP PATCH
+Summary
+Glossary
+1. HTTP GET
+Use GET requests to retrieve resource representation/information only – and not modify it in any way. As GET requests do not change the resource’s state, these are said to be safe methods.
+
+Additionally, GET APIs should be idempotent. Making multiple identical requests must produce the same result every time until another API (POST or PUT) has changed the state of the resource on the server.
+
+If the Request-URI refers to a data-producing process, it is the produced data that shall be returned as the entity in the response and not the source text of the process, unless that text happens to be the output of the process.
+
+1.1. GET API Response Codes
+For any given HTTP GET API, if the resource is found on the server, then it must return HTTP response code 200 (OK) – along with the response body, which is usually either XML or JSON content (due to their platform-independent nature).
+In case the resource is NOT found on the server then API must return HTTP response code 404 (NOT FOUND).
+Similarly, if it is determined that the GET request itself is not correctly formed then the server will return the HTTP response code 400 (BAD REQUEST).
+1.2. Example URIs
+HTTP GET http://www.appdomain.com/users
+HTTP GET http://www.appdomain.com/users?size=20&page=5
+HTTP GET http://www.appdomain.com/users/123
+HTTP GET http://www.appdomain.com/users/123/address
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2. HTTP POST
+Use POST APIs to create new subordinate resources, e.g., a file is subordinate to a directory containing it or a row is subordinate to a database table.
+
+When talking strictly about REST, POST methods are used to create a new resource into the collection of resources.
+
+Responses to this method are not cacheable unless the response includes appropriate Cache-Control or Expires header fields.
+
+Please note that POST is neither safe nor idempotent, and invoking two identical POST requests will result in two different resources containing the same information (except resource ids).
+
+2.1. POST API Response Codes
+Ideally, if a resource has been created on the origin server, the response SHOULD be HTTP response code 201 (Created) and contain an entity that describes the status of the request and refers to the new resource, and a Location header.
+Many times, the action performed by the POST method might not result in a resource that can be identified by a URI. In this case, either HTTP response code 200 (OK) or 204 (No Content) is the appropriate response status.
+2.2. Example URIs
+HTTP POST http://www.appdomain.com/users
+HTTP POST http://www.appdomain.com/users/123/accounts
+3. HTTP PUT
+Use PUT APIs primarily to update an existing resource (if the resource does not exist, then API may decide to create a new resource or not).
+
+If the request passes through a cache and the Request-URI identifies one or more currently cached entities, those entries SHOULD be treated as stale. Responses to PUT method are not cacheable.
+
+3.1. PUT API Response Codes
+If a new resource has been created by the PUT API, the origin server MUST inform the user agent via the HTTP response code 201 (Created) response.
+If an existing resource is modified, either the 200 (OK) or 204 (No Content) response codes SHOULD be sent to indicate successful completion of the request.
+3.2. Example URIs
+HTTP PUT http://www.appdomain.com/users/123
+HTTP PUT http://www.appdomain.com/users/123/accounts/456
+The difference between the POST and PUT APIs can be observed in request URIs. POST requests are made on resource collections, whereas PUT requests are made on a single resource.
+
+4. HTTP DELETE
+As the name applies, DELETE APIs delete the resources (identified by the Request-URI).
+
+DELETE operations are idempotent. If you DELETE a resource, it’s removed from the collection of resources.
+
+Some may argue that it makes the DELETE method non-idempotent. It’s a matter of discussion and personal opinion.
+
+If the request passes through a cache and the Request-URI identifies one or more currently cached entities, those entries SHOULD be treated as stale. Responses to this method are not cacheable.
+
+4.1. DELETE API Response Codes
+A successful response of DELETE requests SHOULD be an HTTP response code 200 (OK) if the response includes an entity describing the status.
+The status should be 202 (Accepted) if the action has been queued.
+The status should be 204 (No Content) if the action has been performed but the response does not include an entity.
+Repeatedly calling DELETE API on that resource will not change the outcome – however, calling DELETE on a resource a second time will return a 404 (NOT FOUND) since it was already removed.
+4.2. Example URIs
+HTTP DELETE http://www.appdomain.com/users/123
+HTTP DELETE http://www.appdomain.com/users/123/accounts/456
+5. HTTP PATCH
+HTTP PATCH requests are to make a partial update on a resource.
+
+If you see PUT requests modify a resource entity too. So to make it more precise – the PATCH method is the correct choice for partially updating an existing resource, and you should only use PUT if you’re replacing a resource in its entirety.
+
+Please note that there are some challenges if you decide to use PATCH APIs in your application:
+
+Support for PATCH in browsers, servers, and web application frameworks is not universal. IE8, PHP, Tomcat, Django, and lots of other software have missing or broken support for it.
+
+Request payload of a PATCH request is not straightforward as it is for a PUT request. e.g.
+
+HTTP GET /users/1
+produces below response:
+
+{ "id": 1, "username": "admin", "email": "email@example.org"}
+A sample patch request to update the email will be like this:
+
+HTTP PATCH /users/1
+[{ "op": "replace", "path": "/email", "value": "new.email@example.org" }]
+There may be the following possible operations are per the HTTP specification.
+
+[
+ { "op": "test",  "path": "/a/b/c",  "value": "foo"  },
+ { "op": "remove",  "path": "/a/b/c"  },
+ { "op": "add",  "path": "/a/b/c",  "value": [ "foo", "bar" ] },
+ { "op": "replace", "path": "/a/b/c",  "value": 42 },
+ { "op": "move",  "from": "/a/b/c",  "path": "/a/b/d" },
+ { "op": "copy", "from": "/a/b/d",  "path": "/a/b/e" }
+ ]
+The PATCH method is not a replacement for the POST or PUT methods. It applies a delta (diff) rather than replacing the entire resource.
+
+6. Summary of HTTP Methods
+The below table summarises the use of HTTP methods discussed above.
+
+HTTP Method
+CRUD
+Collection Resource (e.g. /users)
+Single Resouce (e.g. /users/123)
+POST
+Create
+201 (Created), ‘Location’ header with link to /users/{id} containing new ID
+Avoid using POST on a single resource
+GET
+Read
+200 (OK), list of users. Use pagination, sorting, and filtering to navigate big lists
+200 (OK), single user. 404 (Not Found), if ID not found or invalid
+PUT
+Update/Replace
+405 (Method not allowed), unless you want to update every resource in the entire collection of resource
+200 (OK) or 204 (No Content). Use 404 (Not Found), if ID is not found or invalid
+PATCH
+Partial Update/Modify
+405 (Method not allowed), unless you want to modify the collection itself
+200 (OK) or 204 (No Content). Use 404 (Not Found), if ID is not found or invalid
+DELETE
+Delete
+405 (Method not allowed), unless you want to delete the whole collection — use with caution
+200 (OK). 404 (Not Found), if ID not found or invalid
+7. Glossary
+7.1. Safe Methods
+Request methods are considered safe if their defined semantics are essentially read-only. The client does not request, and does not expect, any state change on the origin server as a result of applying a safe method to a target resource.
+
+The GET, HEAD, OPTIONS, and TRACE methods are considered safe methods. As per HTTP specification, the GET and HEAD methods should be used only for retrieval of resource representations – and they do not update/delete the resource on the server.
+
+The purpose of distinguishing between safe and unsafe methods is to allow automated retrieval processes (spiders) and cache performance optimization (pre-fetching) to work without fear of causing harm.
+
+Safe methods allow user agents to represent other methods, such as POST, PUT and DELETE, in a unique way so that the user is made aware of the fact that a possibly unsafe action is being requested – and they can update/delete the resource on the server and so should be used carefully.
+
+7.2. Idempotent Methods
+The term idempotent is used more comprehensively to describe an operation that will produce the same results if executed once or multiple times.
+
+In HTTP specification, the PUT, DELETE and safe methods (GET, HEAD, OPTIONS, TRACE) are idempotent methods.
+
+Idempotence is a handy property in many situations, as it means that an operation can be repeated or retried as often as necessary without causing unintended effects.
+
+With non-idempotent operations, the algorithm may have to keep track of whether the operation was already performed or not.
+
+Like the definition of safe methods, the idempotent property only applies to what has been requested by the user; a server is free to log each request separately or retain a revision control history.
+==============================================================
+1. What is Richardson Maturity Model
+Leonard Richardson analyzed a hundred different web service designs and divided these designs into four categories. These categories are based on how much the web services are REST compliant.
+
+This model of division of REST services to identify their maturity level – is called Richardson Maturity Model.
+
+The levels of maturity according to Richardson’s model
+Richardson used three main factors to decide the maturity of a service. These factors are
+
+URI,
+HTTP Methods,
+HATEOAS (Hypermedia)
+The more a service employs these factors – the more mature it shall be considered.
+
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+
+2. Maturity Levels
+In his analysis, Richardson described total 4 maturity levels as given below:
+
+Richardson Maturity Model
+Level Zero
+Level One
+Level Two
+Level Three
+Note that Roy Fielding has already made it very clear that level 3 RMM is a pre-condition of REST.
+
+2.1. Level Zero
+Level zero of maturity does not make use of any of URI, HTTP Methods, and HATEOAS capabilities.
+
+The services at zero maturity level have a single URI and use a single HTTP method (typically POST).
+
+For example, most SOAP Web Services use a single URI to identify an endpoint, and HTTP POST to transfer SOAP-based payloads, effectively ignoring the rest of the HTTP verbs.
+
+Similarly, XML-RPC-based services send data as Plain Old XML (POX).
+
+These are the most primitive ways of building SOA applications with a single POST method endpoint and using XML to communicate between the client and the server.
+
+2.2. Level One
+Level one of maturity makes use of URIs, but does not use the HTTP Methods, and HATEOAS.
+
+The services at maturity level one employ many URIs but only a single HTTP verb – generally HTTP POST.
+
+These services will give each resource, available in the system, a unique URI. A unique URI separately identifies one unique resource – and that makes these services better than level zero.
+
+2.3. Level Two
+Level two of maturity makes use of URIs and HTTP Methods, but does not use the HATEOAS.
+
+The level two services generally host numerous URIs i.e. addressable resources.
+
+Such services support several of the HTTP verbs on each exposed resource – Create, Read, Update and Delete (CRUD) services. Here the state of resources, typically representing business entities, can be manipulated over the network.
+
+The designers of the level two services expect people to put some effort into mastering the APIs – generally by reading the supplied documentation.
+
+Maturity level 2 is the most popular usecase of REST principles, which advocate using different verbs based on the HTTP request methods, while the system can have multiple resources.
+
+2.4. Level Three
+Level three of maturity makes use of all three, i.e. URIs and HTTP, and HATEOAS.
+
+Level three is the most mature level of Richardson’s model, which encourages easy discoverability. This level makes it easy for the responses to be self-descriptive by using HATEOAS.
+
+Level three services lead the service consumers through a trail of resources, causing application state transitions as a result.
+
+References:
+
+Act Three: The Maturity Heuristic
+===============================================================
+HTTP Status Codes:
+
+REST APIs use the Status-Line part of an HTTP response message to inform clients of their request’s overarching result. RFC 2616 defines the Status-Line syntax as shown below:
+
+Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
+
+HTTP defines these standard status codes that can be used to convey the results of a client’s request. The status codes are divided into five categories.
+
+1xx: Informational – Communicates transfer protocol-level information.
+2xx: Success – Indicates that the client’s request was accepted successfully.
+3xx: Redirection – Indicates that the client must take some additional action in order to complete their request.
+4xx: Client Error – This category of error status codes points the finger at clients.
+5xx: Server Error – The server takes responsibility for these error status codes.
+1xx Status Codes [Informational]
+Status Code
+Description
+100 Continue
+An interim response. Indicates to the client that the initial part of the request has been received and has not yet been rejected by the server. The client SHOULD continue by sending the remainder of the request or, if the request has already been completed, ignore this response. The server MUST send a final response after the request has been completed.
+101 Switching Protocol
+Sent in response to an Upgrade request header from the client, and indicates the protocol the server is switching to.
+102 Processing (WebDAV)
+Indicates that the server has received and is processing the request, but no response is available yet.
+103 Early Hints
+Primarily intended to be used with the Link header. It suggests the user agent start preloading the resources while the server prepares a final response.
+Play
+
+Next
+Unmute
+Current Time 
+0:00
+/
+Duration 
+1:45
+ 
+Fullscreen
+
+Backward Skip 10s
+
+Play Video
+
+Forward Skip 10s
+2xx Status Codes [Success]
+Status Code
+Description
+200 OK
+Indicates that the request has succeeded.
+201 Created
+Indicates that the request has succeeded and a new resource has been created as a result.
+202 Accepted
+Indicates that the request has been received but not completed yet. It is typically used in log running requests and batch processing.
+203 Non-Authoritative Information
+Indicates that the returned metainformation in the entity-header is not the definitive set as available from the origin server, but is gathered from a local or a third-party copy. The set presented MAY be a subset or superset of the original version.
+204 No Content
+The server has fulfilled the request but does not need to return a response body. The server may return the updated meta information.
+205 Reset Content
+Indicates the client to reset the document which sent this request.
+206 Partial Content
+It is used when the Range header is sent from the client to request only part of a resource.
+207 Multi-Status (WebDAV)
+An indicator to a client that multiple operations happened, and that the status for each operation can be found in the body of the response.
+208 Already Reported (WebDAV)
+Allows a client to tell the server that the same resource (with the same binding) was mentioned earlier. It never appears as a true HTTP response code in the status line, and only appears in bodies.
+226 IM Used
+The server has fulfilled a GET request for the resource, and the response is a representation of the result of one or more instance-manipulations applied to the current instance.
+3xx Status Codes [Redirection]
+Status Code
+Description
+300 Multiple Choices
+The request has more than one possible response. The user-agent or user should choose one of them.
+301 Moved Permanently
+The URL of the requested resource has been changed permanently. The new URL is given by the Location header field in the response. This response is cacheable unless indicated otherwise.
+302 Found
+The URL of the requested resource has been changed temporarily. The new URL is given by the Location field in the response. This response is only cacheable if indicated by a Cache-Control or Expires header field.
+303 See Other
+The response can be found under a different URI and SHOULD be retrieved using a GET method on that resource.
+304 Not Modified
+Indicates the client that the response has not been modified, so the client can continue to use the same cached version of the response.
+305 Use Proxy (Deprecated)
+Indicates that a requested response must be accessed by a proxy.
+306 (Unused)
+It is a reserved status code and is not used anymore.
+307 Temporary Redirect
+Indicates the client to get the requested resource at another URI with same method that was used in the prior request. It is similar to 302 Found with one exception that the same HTTP method will be used that was used in the prior request.
+308 Permanent Redirect (experimental)
+Indicates that the resource is now permanently located at another URI, specified by the Location header. It is similar to 301 Moved Permanently with one exception that the same HTTP method will be used that was used in the prior request.
+4xx Status Codes (Client Error)
+Status Code
+Description
+400 Bad Request
+The request could not be understood by the server due to incorrect syntax. The client SHOULD NOT repeat the request without modifications.
+401 Unauthorized
+Indicates that the request requires user authentication information. The client MAY repeat the request with a suitable Authorization header field
+402 Payment Required (Experimental)
+Reserved for future use. It is aimed for using in the digital payment systems.
+403 Forbidden
+Unauthorized request. The client does not have access rights to the content. Unlike 401, the client’s identity is known to the server.
+404 Not Found
+The server can not find the requested resource.
+405 Method Not Allowed
+The request HTTP method is known by the server but has been disabled and cannot be used for that resource.
+406 Not Acceptable
+The server doesn’t find any content that conforms to the criteria given by the user agent in the Accept header sent in the request.
+407 Proxy Authentication Required
+Indicates that the client must first authenticate itself with the proxy.
+408 Request Timeout
+Indicates that the server did not receive a complete request from the client within the server’s allotted timeout period.
+409 Conflict
+The request could not be completed due to a conflict with the current state of the resource.
+410 Gone
+The requested resource is no longer available at the server.
+411 Length Required
+The server refuses to accept the request without a defined Content- Length. The client MAY repeat the request if it adds a valid Content-Length header field.
+412 Precondition Failed
+The client has indicated preconditions in its headers which the server does not meet.
+413 Request Entity Too Large
+Request entity is larger than limits defined by server.
+414 Request-URI Too Long
+The URI requested by the client is longer than the server can interpret.
+415 Unsupported Media Type
+The media-type in Content-type of the request is not supported by the server.
+416 Requested Range Not Satisfiable
+The range specified by the Range header field in the request can’t be fulfilled.
+417 Expectation Failed
+The expectation indicated by the Expect request header field can’t be met by the server.
+418 I’m a teapot (RFC 2324)
+It was defined as April’s lool joke and is not expected to be implemented by actual HTTP servers. (RFC 2324)
+420 Enhance Your Calm (Twitter)
+Returned by the Twitter Search and Trends API when the client is being rate limited.
+422 Unprocessable Entity (WebDAV)
+The server understands the content type and syntax of the request entity, but still server is unable to process the request for some reason.
+423 Locked (WebDAV)
+The resource that is being accessed is locked.
+424 Failed Dependency (WebDAV)
+The request failed due to failure of a previous request.
+425 Too Early (WebDAV)
+Indicates that the server is unwilling to risk processing a request that might be replayed.
+426 Upgrade Required
+The server refuses to perform the request. The server will process the request after the client upgrades to a different protocol.
+428 Precondition Required
+The origin server requires the request to be conditional.
+429 Too Many Requests
+The user has sent too many requests in a given amount of time (“rate limiting”).
+431 Request Header Fields Too Large
+The server is unwilling to process the request because its header fields are too large.
+444 No Response (Nginx)
+The Nginx server returns no information to the client and closes the connection.
+449 Retry With (Microsoft)
+The request should be retried after performing the appropriate action.
+450 Blocked by Windows Parental Controls (Microsoft)
+Windows Parental Controls are turned on and are blocking access to the given webpage.
+451 Unavailable For Legal Reasons
+The user-agent requested a resource that cannot legally be provided.
+499 Client Closed Request (Nginx)
+The connection is closed by the client while HTTP server is processing its request, making the server unable to send the HTTP header back.
+5xx Status Codes (Server Error)
+Status Code
+Description
+500 Internal Server Error
+The server encountered an unexpected condition that prevented it from fulfilling the request.
+501 Not Implemented
+The HTTP method is not supported by the server and cannot be handled.
+502 Bad Gateway
+The server got an invalid response while working as a gateway to get the response needed to handle the request.
+503 Service Unavailable
+The server is not ready to handle the request.
+504 Gateway Timeout
+The server is acting as a gateway and cannot get a response in time for a request.
+505 HTTP Version Not Supported (Experimental)
+The HTTP version used in the request is not supported by the server.
+506 Variant Also Negotiates (Experimental)
+Indicates that the server has an internal configuration error: the chosen variant resource is configured to engage in transparent content negotiation itself, and is therefore not a proper endpoint in the negotiation process.
+507 Insufficient Storage (WebDAV)
+The method could not be performed on the resource because the server is unable to store the representation needed to successfully complete the request.
+508 Loop Detected (WebDAV)
+The server detected an infinite loop while processing the request.
+510 Not Extended
+Further extensions to the request are required for the server to fulfill it.
+511 Network Authentication Required
+Indicates that the client needs to authenticate to gain network access.
+6. REST Specific HTTP Status Codes
+200 (OK)
+It indicates that the REST API successfully carried out whatever action the client requested and that no more specific code in the 2xx series is appropriate.
+
+Unlike the 204 status code, a 200 response should include a response body. The information returned with the response is dependent on the method used in the request, for example:
+
+GET an entity corresponding to the requested resource is sent in the response;
+HEAD the entity-header fields corresponding to the requested resource are sent in the response without any message-body;
+POST an entity describing or containing the result of the action;
+TRACE an entity containing the request message as received by the end server.
+201 (Created)
+A REST API responds with the 201 status code whenever a resource is created inside a collection. There may also be times when a new resource is created as a result of some controller action, in which case 201 would also be an appropriate response.
+
+The newly created resource can be referenced by the URI(s) returned in the entity of the response, with the most specific URI for the resource given by a Location header field.
+
+The origin server MUST create the resource before returning the 201 status code. If the action cannot be carried out immediately, the server SHOULD respond with a 202 (Accepted) response instead.
+
+202 (Accepted)
+A 202 response is typically used for actions that take a long while to process. It indicates that the request has been accepted for processing, but the processing has not been completed. The request might or might not be eventually acted upon, or even maybe disallowed when processing occurs.
+
+Its purpose is to allow a server to accept a request for some other process (perhaps a batch-oriented process that is only run once per day) without requiring that the user agent’s connection to the server persist until the process is completed.
+
+The entity returned with this response SHOULD include an indication of the request’s current status and either a pointer to a status monitor (job queue location) or some estimate of when the user can expect the request to be fulfilled.
+
+204 (No Content)
+The 204 status code is usually sent out in response to a PUT, POST, or DELETE request when the REST API declines to send back any status message or representation in the response message’s body.
+
+An API may also send 204 in conjunction with a GET request to indicate that the requested resource exists, but has no state representation to include in the body.
+
+If the client is a user agent, it SHOULD NOT change its document view from that which caused the request to be sent. This response is primarily intended to allow input for actions to take place without causing a change to the user agent’s active document view. However, any new or updated metainformation SHOULD be applied to the document currently in the user agent’s dynamic view.
+
+The 204 response MUST NOT include a message-body and thus is always terminated by the first empty line after the header fields.
+
+301 (Moved Permanently)
+The 301 status code indicates that the REST API’s resource model has been significantly redesigned, and a new permanent URI has been assigned to the client’s requested resource. The REST API should specify the new URI in the response’s Location header, and all future requests should be directed to the given URI.
+
+You will hardly use this response code in your API as you can always use the API versioning for the new API while retaining the old one.
+
+302 (Found)
+The HTTP response status code 302 Found is a common way of performing URL redirection. An HTTP response with this status code will additionally provide a URL in the Location header field. The user agent (e.g., a web browser) is invited by a response with this code to make a second. Otherwise identical, request to the new URL specified in the location field.
+
+Many web browsers implemented this code in a manner that violated this standard, changing the request type of the new request to GET, regardless of the type employed in the original request (e.g., POST). RFC 1945 and RFC 2068 specify that the client is not allowed to change the method on the redirected request. The status codes 303 and 307 have been added for servers that wish to make unambiguously clear which kind of reaction is expected of the client.
+
+303 (See Other)
+A 303 response indicates that a controller resource has finished its work, but instead of sending a potentially unwanted response body, it sends the client the URI of a response resource. The response can be the URI of the temporary status message, or the URI to some already existing, more permanent, resource.
+
+Generally speaking, the 303 status code allows a REST API to send a reference to a resource without forcing the client to download its state. Instead, the client may send a GET request to the value of the Location header.
+
+The 303 response MUST NOT be cached, but the response to the second (redirected) request might be cacheable.
+
+304 (Not Modified)
+This status code is similar to 204 (“No Content”) in that the response body must be empty. The critical distinction is that 204 is used when there is nothing to send in the body, whereas 304 is used when the resource has not been modified since the version specified by the request headers If-Modified-Since or If-None-Match.
+
+In such a case, there is no need to retransmit the resource since the client still has a previously-downloaded copy.
+
+Using this saves bandwidth and reprocessing on both the server and client, as only the header data must be sent and received in comparison to the entirety of the page being re-processed by the server, then sent again using more bandwidth of the server and client.
+
+307 (Temporary Redirect)
+A 307 response indicates that the REST API is not going to process the client’s request. Instead, the client should resubmit the request to the URI specified by the response message’s Location header. However, future requests should still use the original URI.
+
+A REST API can use this status code to assign a temporary URI to the client’s requested resource. For example, a 307 response can be used to shift a client request over to another host.
+
+The temporary URI SHOULD be given by the Location field in the response. Unless the request method was HEAD, the entity of the response SHOULD contain a short hypertext note with a hyperlink to the new URI(s). If the 307 status code is received in response to a request other than GET or HEAD, the user agent MUST NOT automatically redirect the request unless it can be confirmed by the user, since this might change the conditions under which the request was issued.
+
+400 (Bad Request)
+400 is the generic client-side error status, used when no other 4xx error code is appropriate. Errors can be like malformed request syntax, invalid request message parameters, or deceptive request routing etc.
+
+The client SHOULD NOT repeat the request without modifications.
+
+401 (Unauthorized)
+A 401 error response indicates that the client tried to operate on a protected resource without providing the proper authorization. It may have provided the wrong credentials or none at all. The response must include a WWW-Authenticate header field containing a challenge applicable to the requested resource.
+
+The client MAY repeat the request with a suitable Authorization header field. If the request already included Authorization credentials, then the 401 response indicates that authorization has been refused for those credentials. If the 401 response contains the same challenge as the prior response, and the user agent has already attempted authentication at least once, then the user SHOULD be presented the entity that was given in the response, since that entity might include relevant diagnostic information.
+
+403 (Forbidden)
+A 403 error response indicates that the client’s request is formed correctly, but the REST API refuses to honor it, i.e., the user does not have the necessary permissions for the resource. A 403 response is not a case of insufficient client credentials; that would be 401 (“Unauthorized”).
+
+Authentication will not help, and the request SHOULD NOT be repeated. Unlike a 401 Unauthorized response, authenticating will make no difference.
+
+404 (Not Found)
+The 404 error status code indicates that the REST API can’t map the client’s URI to a resource but may be available in the future. Subsequent requests by the client are permissible.
+
+No indication is given of whether the condition is temporary or permanent. The 410 (Gone) status code SHOULD be used if the server knows, through some internally configurable mechanism, that an old resource is permanently unavailable and has no forwarding address. This status code is commonly used when the server does not wish to reveal exactly why the request has been refused, or when no other response is applicable.
+
+405 (Method Not Allowed)
+The API responds with a 405 error to indicate that the client tried to use an HTTP method that the resource does not allow. For instance, a read-only resource could support only GET and HEAD, while a controller resource might allow GET and POST, but not PUT or DELETE.
+
+A 405 response must include the Allow header, which lists the HTTP methods that the resource supports. For example:
+
+Allow: GET, POST
+406 (Not Acceptable)
+The 406 error response indicates that the API is not able to generate any of the client’s preferred media types, as indicated by the Accept request header. For example, a client request for data formatted as application/xml will receive a 406 response if the API is only willing to format data as application/json.
+
+If the response could be unacceptable, a user agent SHOULD temporarily stop receipt of more data and query the user for a decision on further actions.
+
+412 (Precondition Failed)
+The 412 error response indicates that the client specified one or more preconditions in its request headers, effectively telling the REST API to carry out its request only if certain conditions were met. A 412 response indicates that those conditions were not met, so instead of carrying out the request, the API sends this status code.
+
+415 (Unsupported Media Type)
+The 415 error response indicates that the API is not able to process the client’s supplied media type, as indicated by the Content-Type request header. For example, a client request including data formatted as application/xml will receive a 415 response if the API is only willing to process data formatted as application/json.
+
+For example, the client uploads an image as image/svg+xml, but the server requires that images use a different format.
+
+500 (Internal Server Error)
+500 is the generic REST API error response. Most web frameworks automatically respond with this response status code whenever they execute some request handler code that raises an exception.
+
+A 500 error is never the client’s fault, and therefore, it is reasonable for the client to retry the same request that triggered this response and hope to get a different response.
+
+The API response is the generic error message, given when an unexpected condition was encountered and no more specific message is suitable.
+
+501 (Not Implemented)
+The server either does not recognize the request method, or it cannot fulfill the request. Usually, this implies future availability (e.g., a new feature of a web-service API).
+====================================================================================
+1. Difference between PUT and POST
+PUT
+POST
+RFC-2616 clearly mention that PUT method requests for the attached entity (in the request body) to be stored into the server which hosts the supplied Request-URI.
+
+If the Request-URI refers to an already existing resource – an update operation will happen, otherwise create operation should happen if Request-URI is a valid resource URI (assuming the client is allowed to determine resource identifier).
+PUT /questions/{question-id}
+The POST method is used to request that the origin server accept the entity attached in the request as a new subordinate of the resource identified by the Request-URI in the Request-Line.
+
+It essentially means that POST request-URI should be of a collection URI.
+POST /questions
+PUT method is idempotent. So if we retry a request multiple times, that should be equivalent to a single request invocation.
+POST is NOT idempotent. So if we retry the request N times, we will end up having N resources with N different URIs created on the server.
+Use PUT when we want to modify a singular resource that is already a part of resources collection.
+
+PUT replaces the resource in its entirety. Use PATCH if request updates part of the resource.
+Use POST when you want to add a child resource under resources collection.
+Though PUT is idempotent, we should not cache its response.
+Responses to this method are not cacheable, unless the response includes appropriate Cache-Control or Expires header fields.
+
+However, the 303 (See Other) response can be used to direct the user agent to retrieve a cacheable resource.
+Generally, in practice, use PUT for UPDATE operations.
+Always use POST for CREATE operations.
+
+2. PUT vs POST with Example
+Let’s say we are designing a network application. Let’s list down a few URIs and their purpose to get a better understanding of when to use POST and when to use PUT operations.
+
+GET 	/device-management/devices       : Get all devices
+POST 	/device-management/devices       : Create a new device
+
+GET 	/device-management/devices/{id}   : Get the device information identified by "id"
+PUT 	/device-management/devices/{id}   : Update the device information identified by "id"
+DELETE	/device-management/devices/{id}   : Delete device by "id"
+=================================================================================
+
+

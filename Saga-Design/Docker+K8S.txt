@@ -1,0 +1,132 @@
+🐳 Docker Syllabus
+1. Introduction to Containerization
+What is a container?
+Virtual Machines vs Containers
+Why Docker? Use cases & benefits
+
+2. Docker Basics
+Installing Docker (Linux, Windows, Mac)
+Docker architecture (Client, Daemon, Images, Containers, Registry)
+Docker commands (docker run, docker ps, docker stop, docker rm, etc.)
+
+3. Docker Images
+Understanding Docker Images & Layers
+Pulling images from Docker Hub
+Creating custom images with Dockerfile
+Best practices for writing Dockerfiles (multi-stage builds, caching)
+
+4. Docker Containers
+Running containers in detached & interactive mode
+Environment variables & ports (-e, -p)
+Volumes & Mounts (persistent storage)
+Networking (bridge, host, overlay networks)
+
+5. Docker Compose
+Introduction to multi-container apps
+docker-compose.yml structure
+Defining services, volumes, and networks
+Running docker-compose up/down
+Example: running Spring Boot + PostgreSQL + Angular with Compose
+
+6. Docker Registry
+Docker Hub basics
+Private Docker registry
+Pushing & pulling custom images
+
+7. Docker Advanced Concepts
+Docker Swarm basics (vs Kubernetes)
+Logging & monitoring containers
+Security best practices (least privilege, image scanning)
+Optimizing image size & performance
+
+8. Hands-On Projects (Docker)
+Run a full-stack app (Angular + Spring Boot + PostgreSQL)
+Deploy WordPress + MySQL using Docker Compose
+Create your own custom base image
+
+☸️ Kubernetes Syllabus:
+
+1. Introduction to Kubernetes
+
+What is Kubernetes & why it’s needed
+Kubernetes architecture (Master vs Worker nodes)
+Key components: API Server, etcd, Scheduler, Controller Manager, Kubelet, Kube Proxy
+Kubernetes vs Docker Swarm
+
+2. Setting Up Kubernetes
+
+Installing Minikube or Kind (local cluster)
+Accessing cluster with kubectl
+Understanding YAML manifests
+
+3. Kubernetes Core Concepts
+
+Pods (basic unit of deployment)
+ReplicaSets (ensuring pod availability)
+Deployments (managing rollouts & rollbacks)
+Namespaces (logical cluster isolation)
+
+4. Kubernetes Networking
+
+Services (ClusterIP, NodePort, LoadBalancer)
+Ingress & Ingress Controller
+DNS in Kubernetes
+Service discovery
+
+5. Kubernetes Storage
+
+Volumes & Persistent Volumes (PV)
+Persistent Volume Claims (PVC)
+Storage Classes & Dynamic Provisioning
+
+6. Config & Secrets
+
+ConfigMaps (externalizing configuration)
+Secrets (managing sensitive data)
+Environment variables in pods
+
+7. Kubernetes Advanced Workloads
+
+StatefulSets (for databases like PostgreSQL, MongoDB)
+DaemonSets (running system-level pods)
+Jobs & CronJobs (batch & scheduled tasks)
+
+8. Scaling & Updates
+
+Horizontal Pod Autoscaling (HPA)
+Vertical Pod Autoscaling
+Cluster Autoscaler
+Rolling updates & Canary deployments
+Blue-Green deployments
+
+9. Monitoring & Logging
+Metrics Server & kubectl top
+Prometheus & Grafana setup
+Logging with Fluentd / ELK stack
+
+10. Security in Kubernetes
+Role-Based Access Control (RBAC)
+Network Policies
+Pod Security Standards
+Secrets encryption
+
+11. Helm (Package Manager)
+Introduction to Helm
+Charts & Templates
+Installing apps with Helm
+Creating your own Helm charts
+
+12. Kubernetes in Cloud
+Managed services: GKE (Google), EKS (AWS), AKS (Azure)
+Deploying apps to cloud clusters
+CI/CD integration with Kubernetes
+
+13. Hands-On Projects (Kubernetes
+
+Deploy Spring Boot + Angular + PostgreSQL app in Kubernetes
+Deploy WordPress + MySQL with Persistent Volumes
+Implement a Blue-Green deployment using Kubernetes
+Autoscale an app using HPA
+
+✅ This covers beginner → advanced Docker & Kubernetes.
+

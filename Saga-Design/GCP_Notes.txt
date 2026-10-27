@@ -1,0 +1,6056 @@
+
+Q:: Can you explain cloud run with complete code and example?Google Cloud Run?
+
+ Serverless – fully managed
+ Containerized App
+ Best of App Engine Standard + Container
+ App versioning – canary deployment (Traffic splitting)
+
+☁️ Google Cloud Run – Complete Explanation with Example
+Google Cloud Run is a fully managed serverless platform that allows you to run containerized applications without managing servers.
+
+It combines the simplicity of serverless with the flexibility of containers.
+
+It is part of Google Cloud Platform.
+
+1️⃣ What is Google Cloud Run?
+Cloud Run allows you to:
+
+Deploy Docker containers
+
+Automatically scale to zero
+
+Pay only when requests are processed
+
+Run stateless HTTP services
+
+Key Features
+Feature	Description
+Serverless	No infrastructure management
+Containerized	Deploy Docker containers
+Auto Scaling	Scale from 0 → thousands
+Traffic Splitting	Canary deployment
+Versioning	Multiple revisions
+HTTPS	Automatic secure endpoints
+
+2️⃣ Architecture
+Client
+   │
+   │ HTTP Request
+   ▼
+Cloud Run Endpoint
+   │
+   │
+Load Balancer
+   │
+   ▼
+Container Instance
+(Spring Boot / Node / Python)
+   │
+   ▼
+Database / APIs
+Cloud Run simply runs your Docker container.
+
+3️⃣ Why Cloud Run (Best of Two Worlds)
+Cloud Run combines features from:
+
+Platform	Benefit
+Google App Engine	Serverless simplicity
+Docker	Container flexibility
+So you get:
+
+Serverless + Containers = Cloud Run
+
+4️⃣ Example Application (Spring Boot)
+We will create:
+
+Spring Boot REST API
+→ Dockerize
+→ Deploy to Cloud Run
+
+5️⃣ Step 1 — Create Spring Boot Application
+Maven Dependency
+<dependencies>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+</dependencies>
+6️⃣ Step 2 — Create Controller
+package com.example.demo.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HelloController {
+
+    @GetMapping("/hello")
+    public String hello() {
+        return "Hello from Cloud Run!";
+    }
+
+}
+7️⃣ Step 3 — Application Main Class
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class CloudRunApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(CloudRunApplication.class, args);
+    }
+
+}
+8️⃣ Step 4 — Create Dockerfile
+Cloud Run runs containers, so we must package our app in Docker.
+
+# Use Java base image
+FROM openjdk:17-jdk-slim
+
+# Copy jar file
+COPY target/demo.jar app.jar
+
+# Expose port
+EXPOSE 8080
+
+# Run application
+ENTRYPOINT ["java","-jar","/app.jar"]
+9️⃣ Step 5 — Build Docker Image
+Install Docker.
+
+Then run:
+
+mvn clean package
+Build container:
+
+docker build -t cloudrun-demo .
+
+🔟 Step 6 — Push Image to Container Registry
+Login to Google Artifact Registry.
+
+gcloud auth login
+Tag image:
+
+docker tag cloudrun-demo gcr.io/PROJECT-ID/cloudrun-demo
+Push image:
+
+docker push gcr.io/PROJECT-ID/cloudrun-demo
+
+1️⃣1️⃣ Step 7 — Deploy to Cloud Run
+Use Google Cloud SDK
+
+Deploy command:
+
+gcloud run deploy cloudrun-demo \
+  --image gcr.io/PROJECT-ID/cloudrun-demo \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+Cloud Run will create:
+
+Service URL
+https://cloudrun-demo-abc.a.run.app
+
+1️⃣2️⃣ Test API
+Open browser:
+
+https://cloudrun-demo-abc.a.run.app/hello
+Output:
+
+Hello from Cloud Run!
+
+1️⃣3️⃣ Cloud Run Auto Scaling
+Cloud Run automatically scales.
+
+Example:
+
+Requests	Instances
+1	1
+100	10
+0	0
+When idle → scales to zero.
+
+we pay nothing.
+
+1️⃣4️⃣ Cloud Run Versioning (Revisions)
+Every deployment creates a revision.
+
+Example:
+
+Revision 1 → v1
+Revision 2 → v2
+Revision 3 → v3
+Benefits:
+
+✔ rollback
+✔ canary deployment
+✔ traffic control
+
+1️⃣5️⃣ Canary Deployment (Traffic Splitting)
+Example:
+
+Version	Traffic
+v1	90%
+v2	10%
+Gradual rollout.
+
+Command example:
+
+gcloud run services update-traffic cloudrun-demo \
+  --to-revisions v1=90,v2=10
+  
+1️⃣6️⃣ Request Flow
+User Request
+     │
+     ▼
+Cloud Run URL
+     │
+     ▼
+Load Balancer
+     │
+     ▼
+Container Instance
+(Spring Boot App)
+     │
+     ▼
+Response
+
+1️⃣7️⃣ Cloud Run Pricing
+You pay for:
+
+CPU usage
+Memory usage
+Request count
+Execution time
+Free tier available.
+
+1️⃣8️⃣ When to Use Cloud Run
+Best for:
+
+✔ Microservices
+✔ REST APIs
+✔ Event-driven apps
+✔ Background jobs
+✔ ML inference APIs
+
+1️⃣9️⃣ Cloud Run vs Other GCP Compute
+
+Service	Use Case
+Google Cloud Run	Container apps
+Google Kubernetes Engine	Large container orchestration
+Google App Engine	Simple web apps
+Google Compute Engine	Full VM control
+
+2️⃣0️⃣ Real Production Architecture
+Internet
+   │
+   ▼
+Cloud Load Balancer
+   │
+   ▼
+Cloud Run Service
+   │
+   ├── Auth Service
+   ├── Order Service
+   └── Payment Service
+   │
+   ▼
+Cloud SQL / Firestore
+
+2️⃣1️⃣ Real Microservice Example
+User Service → Cloud Run
+Order Service → Cloud Run
+Payment Service → Cloud Run
+Notification Service → Cloud Run
+All services run independently.
+
+🚀 Advantages
+✔ No infrastructure management
+✔ Auto scaling
+✔ Pay per use
+✔ Container flexibility
+✔ Fast deployments
+
+⚠ Limitations
+Limitation	Detail
+Cold start	First request may take time
+Stateless	No persistent storage
+Timeout	Max request timeout
+🎯 Summary
+Cloud Run =
+
+Serverless + Docker Containers + Auto Scaling
+Key capabilities:
+
+✔ Serverless
+✔ Container based
+✔ Versioning
+✔ Canary deployment
+✔ Traffic splitting
+
+If you want, I can also explain:
+1️⃣ Cloud Run Internal Architecture (Deep Dive)
+2️⃣ Cloud Run + Kafka + Spring Boot Microservices
+3️⃣ Cloud Run CI/CD using GitHub Actions
+4️⃣ Cloud Run vs Kubernetes (Real Architecture)
+5️⃣ Production Spring Boot Microservices deployed on Cloud Run
+
+=================================================================================
+
+Q::Can you also explain Google Cloud Function with complete code and example with complete expanation step wise step with topics 1.Http, 
+2.Cloud Storage,3.Pubsub?
+
+Google Cloud Function
+ Single purpose micro services
+ Event based trigger
+ Http
+ Pub sub
+ object upload in Cloud storage
+ Deploy code as function
+
+☁️ Google Cloud Functions — Complete Explanation with Examples
+Google Cloud Functions is a serverless platform from Google Cloud Platform used to run small single-purpose microservices that execute when an event occurs.
+
+It is different from Google Cloud Run because:
+
+Cloud Run	Cloud Functions
+Container based	Function based
+Run full applications	Run small functions
+HTTP microservices	Event driven triggers
+
+1️⃣ What is Google Cloud Functions?
+Cloud Functions lets you deploy small pieces of code (functions) that automatically execute when triggered.
+
+Example triggers:
+
+HTTP request
+
+File upload to Google Cloud Storage
+
+Message published to Google Cloud Pub/Sub
+
+Firebase events
+
+Database changes
+
+2️⃣ Key Characteristics
+Feature	Description
+Serverless	No server management
+Event Driven	Runs when events occur
+Single Purpose	Small microservice
+Auto Scaling	Automatically scales
+Pay Per Use	Pay only when executed
+
+3️⃣ Cloud Functions Architecture
+Event Source
+   │
+   ▼
+Trigger
+   │
+   ▼
+Cloud Function
+   │
+   ▼
+Business Logic
+   │
+   ▼
+Response / Processing
+Example:
+
+File Upload → Cloud Storage → Trigger → Cloud Function → Process File
+
+4️⃣ Supported Languages
+Cloud Functions supports:
+
+Java
+
+Python
+
+Node.js
+
+Go
+
+C#
+
+Example here will use Java.
+
+5️⃣ Types of Triggers (Important)
+
+Trigger	Description
+HTTP	API request
+Pub/Sub	Message queue
+Cloud Storage	File upload
+Firebase	Database event
+We will cover all three major ones.
+
+1️⃣ HTTP Trigger Cloud Function
+
+Use Case
+Create serverless REST API
+
+Example:
+
+GET /hello
+Step 1 — Project Structure
+cloud-function-http
+ ├── pom.xml
+ └── src
+      └── HelloHttpFunction.java
+Step 2 — Maven Dependency
+<dependency>
+  <groupId>com.google.cloud.functions</groupId>
+  <artifactId>functions-framework-api</artifactId>
+  <version>1.0.4</version>
+</dependency>
+Step 3 — Create HTTP Function
+package com.example;
+
+import com.google.cloud.functions.HttpFunction;
+import com.google.cloud.functions.HttpRequest;
+import com.google.cloud.functions.HttpResponse;
+
+import java.io.BufferedWriter;
+
+public class HelloHttpFunction implements HttpFunction {
+
+    @Override
+    public void service(HttpRequest request, HttpResponse response) throws Exception {
+
+        String name = request.getFirstQueryParameter("name").orElse("World");
+
+        BufferedWriter writer = response.getWriter();
+        writer.write("Hello " + name + " from Google Cloud Function!");
+
+    }
+}
+Step 4 — Deploy Function
+Install Google Cloud SDK
+
+Deploy:
+
+gcloud functions deploy helloHttp \
+--runtime java17 \
+--trigger-http \
+--entry-point com.example.HelloHttpFunction \
+--allow-unauthenticated
+Step 5 — Test API
+URL:
+
+https://region-project.cloudfunctions.net/helloHttp
+Example request:
+
+https://region-project.cloudfunctions.net/helloHttp?name=Rakesh
+Response:
+
+Hello Rakesh from Google Cloud Function!
+2️⃣ Cloud Storage Trigger Function
+Now the function runs when a file is uploaded.
+
+Trigger source:
+
+Google Cloud Storage
+
+Use Case Example
+When a file uploads:
+
+Upload Image → Process → Generate Thumbnail
+Step 1 — Java Function Code
+package com.example;
+
+import com.google.cloud.functions.BackgroundFunction;
+import com.google.cloud.functions.Context;
+
+public class StorageFunction implements BackgroundFunction<StorageEvent> {
+
+    @Override
+    public void accept(StorageEvent event, Context context) {
+
+        System.out.println("File: " + event.name);
+        System.out.println("Bucket: " + event.bucket);
+
+        System.out.println("File uploaded successfully!");
+
+    }
+}
+Step 2 — Storage Event Model
+package com.example;
+
+public class StorageEvent {
+
+    public String bucket;
+    public String name;
+    public String contentType;
+    public String timeCreated;
+    public String updated;
+
+}
+Step 3 — Deploy Function
+gcloud functions deploy storage-function \
+--runtime java17 \
+--trigger-resource my-bucket \
+--trigger-event google.storage.object.finalize \
+--entry-point com.example.StorageFunction
+Step 4 — Test
+Upload file to bucket:
+
+gsutil cp test.txt gs://my-bucket
+Function runs automatically.
+
+Logs show:
+
+File: test.txt
+Bucket: my-bucket
+File uploaded successfully!
+
+3️⃣ Pub/Sub Trigger Function
+Trigger source:
+
+Google Cloud Pub/Sub
+
+Pub/Sub is a message queue.
+
+Pub/Sub Architecture
+Publisher
+   │
+   ▼
+Pub/Sub Topic
+   │
+   ▼
+Subscription
+   │
+   ▼
+Cloud Function
+Step 1 — Create Topic
+gcloud pubsub topics create order-topic
+Step 2 — Java Function Code
+package com.example;
+
+import com.google.cloud.functions.BackgroundFunction;
+import com.google.cloud.functions.Context;
+
+import java.util.Base64;
+
+public class PubSubFunction implements BackgroundFunction<PubSubMessage> {
+
+    @Override
+    public void accept(PubSubMessage message, Context context) {
+
+        String data = new String(Base64.getDecoder().decode(message.data));
+
+        System.out.println("Received message: " + data);
+
+    }
+}
+Step 3 — PubSub Message Model
+package com.example;
+
+import java.util.Map;
+
+public class PubSubMessage {
+
+    public String data;
+    public Map<String, String> attributes;
+
+}
+Step 4 — Deploy Function
+gcloud functions deploy pubsub-function \
+--runtime java17 \
+--trigger-topic order-topic \
+--entry-point com.example.PubSubFunction
+Step 5 — Publish Message
+gcloud pubsub topics publish order-topic \
+--message "Order Created"
+Function logs show:
+
+Received message: Order Created
+
+6️⃣ Real Microservice Example
+Example system:
+
+User Uploads Image
+        │
+        ▼
+Cloud Storage
+        │
+        ▼
+Cloud Function
+        │
+        ▼
+Resize Image
+        │
+        ▼
+Save to Bucket
+Another example:
+
+Order Service
+      │
+      ▼
+Pub/Sub Topic
+      │
+      ▼
+Cloud Function
+      │
+      ▼
+Send Email Notification
+
+7️⃣ Cloud Function Execution Flow
+Example Pub/Sub flow:
+
+Producer publishes message
+        │
+        ▼
+Pub/Sub Topic
+        │
+        ▼
+Trigger fires
+        │
+        ▼
+Cloud Function starts
+        │
+        ▼
+Business Logic executes
+        │
+        ▼
+Logs / Database / API call
+
+8️⃣ Deployment Model
+Cloud Functions deployment:
+
+Write Function
+      │
+      ▼
+Deploy with gcloud
+      │
+      ▼
+Trigger configured
+      │
+      ▼
+Function automatically executes
+
+9️⃣ When to Use Cloud Functions
+Best for:
+
+Use Case	Example
+Event processing	File upload
+Automation	Image processing
+Messaging	Pub/Sub processing
+Backend APIs	Lightweight HTTP API
+🔟 Cloud Functions vs Cloud Run
+Feature	Cloud Functions	Cloud Run
+Architecture	Function	Container
+Code size	Small	Full apps
+Execution	Event driven	HTTP services
+Use case	automation	microservices
+
+1️⃣1️⃣ Real Production Architecture
+User Uploads File
+        │
+        ▼
+Cloud Storage
+        │
+        ▼
+Cloud Function
+        │
+        ▼
+Process Image
+        │
+        ▼
+Save Metadata
+        │
+        ▼
+Cloud SQL
+Another example:
+
+Order Service
+      │
+      ▼
+Pub/Sub
+      │
+      ▼
+Cloud Function
+      │
+      ▼
+Send Email
+
+1️⃣2️⃣ Advantages
+✔ Serverless
+✔ Auto scaling
+✔ Pay per execution
+✔ Event driven
+✔ Easy deployment
+
+1️⃣3️⃣ Limitations
+Limitation	Explanation
+Cold start	First execution delay
+Execution timeout	Max runtime
+Stateless	No local persistence
+🎯 Summary
+Google Cloud Functions =
+
+Event Driven Serverless Microservices
+Triggers:
+
+HTTP
+Pub/Sub
+Cloud Storage
+Deploy code as function and execute when events happen.
+
+✅ If you want, I can also explain next (very useful for interviews and real systems):
+
+1️⃣ Cloud Functions Internal Architecture (deep dive)
+2️⃣ Cloud Functions + Spring Boot Microservices Architecture
+3️⃣ Cloud Functions vs AWS Lambda vs Cloud Run
+4️⃣ Complete Event Driven Architecture in GCP (PubSub + Cloud Run + Functions)
+5️⃣ Real Production System Design using Cloud Functions
+
+Just tell me — I can explain them with architecture diagrams + complete code. 🚀
+
+
+1️⃣ Cloud Functions Internal Architecture (deep dive)
+2️⃣ Cloud Functions + Spring Boot Microservices Architecture
+
+Below is a deep-dive explanation of Cloud Functions internal architecture and how it integrates with Spring Boot microservices. I will explain it like a real production architecture used in enterprises.
+
+1️⃣ Cloud Functions Internal Architecture (Deep Dive)
+Google Cloud Functions runs event-driven serverless code without managing infrastructure.
+
+Internally it is built on top of container technology similar to Google Cloud Run.
+
+1.1 Internal High Level Architecture
+Event Source
+   │
+   ▼
+Event Router
+(Eventarc)
+   │
+   ▼
+Function Trigger
+   │
+   ▼
+Container Runtime
+   │
+   ▼
+User Function Code
+   │
+   ▼
+Logging / Monitoring
+Key internal components:
+
+Component	Purpose
+Event Source	Generates events
+Event Router	Routes event
+Function Runtime	Executes function
+Container Sandbox	Isolated execution
+Monitoring	Logging & metrics
+
+1.2 Event Sources
+Events can come from many services in Google Cloud Platform.
+
+Examples:
+
+Event Source	Example
+HTTP	API call
+Storage	File upload
+Pub/Sub	Message publish
+Firebase	Database change
+Scheduler	Cron jobs
+Example event:
+
+File Uploaded → Storage Event
+1.3 Event Routing Layer
+Event routing is handled using Eventarc.
+
+Eventarc responsibilities:
+
+Detect event
+
+Convert event format
+
+Deliver event to function
+
+Example flow:
+
+Cloud Storage
+     │
+     ▼
+Eventarc
+     │
+     ▼
+Cloud Function Trigger
+1.4 Function Runtime Layer
+Cloud Functions supports multiple runtimes:
+
+Runtime	Language
+Java	JVM
+NodeJS	V8
+Python	CPython
+Go	Go runtime
+Example Java runtime:
+
+Java 17 Runtime
+The runtime loads your function class.
+
+Example:
+
+HelloHttpFunction
+1.5 Container Execution
+Internally every function runs inside a container sandbox similar to Docker.
+
+Steps:
+
+1 Request arrives
+2 Container created
+3 Runtime loads function
+4 Code executes
+5 Response returned
+If traffic increases:
+
+1 request → 1 container
+100 requests → many containers
+Auto scaling happens automatically.
+
+1.6 Cold Start Process
+Cold start occurs when no container exists.
+
+Flow:
+
+Request
+   │
+   ▼
+Create container
+   │
+   ▼
+Load runtime
+   │
+   ▼
+Load user code
+   │
+   ▼
+Execute function
+Cold start time depends on:
+
+Factor	Impact
+Runtime	Java slower
+Memory	Higher memory faster
+Dependencies	Larger app slower
+1.7 Logging & Monitoring
+Monitoring handled by:
+
+Google Cloud Logging
+
+Google Cloud Monitoring
+
+Example log:
+
+Received message: Order Created
+Logs appear automatically.
+
+1.8 Full Internal Request Flow
+Client Request
+     │
+     ▼
+Google Frontend
+     │
+     ▼
+Load Balancer
+     │
+     ▼
+Eventarc
+     │
+     ▼
+Function Trigger
+     │
+     ▼
+Container Runtime
+     │
+     ▼
+User Function Code
+     │
+     ▼
+Response
+
+==========================================================
+
+2️⃣ Cloud Functions + Spring Boot Microservices Architecture
+Now let's see how enterprises use Cloud Functions with microservices.
+
+2.1 Problem Scenario
+Example system:
+
+E-commerce platform
+Microservices:
+
+User Service
+Order Service
+Payment Service
+Notification Service
+We will use:
+
+Spring Boot
+
+Google Cloud Functions
+
+Google Cloud Pub/Sub
+
+2.2 Microservice Architecture
+Client
+   │
+   ▼
+API Gateway
+   │
+   ▼
+Spring Boot Microservices
+   │
+   ├── User Service
+   ├── Order Service
+   └── Payment Service
+   │
+   ▼
+Pub/Sub Topic
+   │
+   ▼
+Cloud Function
+   │
+   ▼
+Notification / Email
+2.3 Example Use Case
+Scenario:
+
+User places order
+Steps:
+
+1 Order Service creates order
+2 Event published to PubSub
+3 Cloud Function triggered
+4 Send email notification
+2.4 Spring Boot Order Service Example
+Dependency:
+
+spring-cloud-gcp-starter-pubsub
+Maven dependency:
+
+<dependency>
+ <groupId>com.google.cloud</groupId>
+ <artifactId>spring-cloud-gcp-starter-pubsub</artifactId>
+</dependency>
+2.5 Order Publisher Code
+@Service
+public class OrderPublisher {
+
+    @Autowired
+    private PubSubTemplate pubSubTemplate;
+
+    public void publishOrder(String order) {
+
+        pubSubTemplate.publish("order-topic", order);
+
+        System.out.println("Order event published");
+
+    }
+}
+Controller:
+
+@RestController
+public class OrderController {
+
+    @Autowired
+    private OrderPublisher publisher;
+
+    @PostMapping("/order")
+    public String createOrder() {
+
+        publisher.publishOrder("Order Created");
+
+        return "Order Created";
+
+    }
+}
+2.6 Pub/Sub Event
+Topic:
+
+order-topic
+Message:
+
+Order Created
+2.7 Cloud Function Consumer
+public class OrderEventFunction implements BackgroundFunction<PubSubMessage> {
+
+    @Override
+    public void accept(PubSubMessage message, Context context) {
+
+        String data = new String(Base64.getDecoder().decode(message.data));
+
+        System.out.println("Processing Order Event: " + data);
+
+        sendEmail(data);
+
+    }
+
+    private void sendEmail(String order) {
+
+        System.out.println("Sending email for: " + order);
+
+    }
+
+}
+2.8 End-to-End Flow
+Client
+  │
+  ▼
+Spring Boot API
+  │
+  ▼
+Order Service
+  │
+  ▼
+Pub/Sub Topic
+  │
+  ▼
+Cloud Function Trigger
+  │
+  ▼
+Email Service
+2.9 Event Driven Microservices
+Advantages:
+
+Benefit	Explanation
+Loose coupling	Services independent
+Scalable	Functions scale automatically
+Async processing	No blocking calls
+Cost efficient	Pay per execution
+2.10 Real Enterprise Architecture
+Client
+   │
+   ▼
+API Gateway
+   │
+   ▼
+Cloud Run Microservices
+(Spring Boot)
+   │
+   ▼
+Pub/Sub Event Bus
+   │
+   ▼
+Cloud Functions
+   │
+   ├── Send Email
+   ├── Send SMS
+   └── Analytics Processing
+2.11 Why Companies Combine Them
+Microservices	Cloud Functions
+Business logic	Event processing
+REST APIs	Background tasks
+Long running services	Small event handlers
+2.12 Example Production Flow
+Upload Image
+   │
+   ▼
+Spring Boot API
+   │
+   ▼
+Store File
+   │
+   ▼
+Cloud Storage Event
+   │
+   ▼
+Cloud Function
+   │
+   ▼
+Resize Image
+🎯 Summary
+Cloud Functions
+
+Event Driven
+Serverless
+Single Purpose Functions
+Best used with
+
+Pub/Sub events
+
+File processing
+
+Notifications
+
+automation tasks
+
+Microservices architecture
+
+Spring Boot → Pub/Sub → Cloud Functions
+
+1️⃣ Cloud Run + Cloud Functions + PubSub complete event-driven architecture
+2️⃣ Cloud Functions vs Cloud Run vs Kubernetes (deep architecture)
+3️⃣ Spring Boot Microservices deployed on Cloud Run with PubSub event bus
+4️⃣ Complete GCP microservices system design (interview level)
+5️⃣ Cloud Functions CI/CD pipeline using GitHub Actions
+
+=================================================================================
+1️⃣ Cloud Run + Cloud Functions + PubSub complete event-driven architecture and code example with step wise step explanation with diagram and proper comments?
+
+Below is a complete event-driven architecture using Cloud Run + Pub/Sub + Cloud Functions with step-by-step explanation, diagrams, and code examples. This type of architecture is commonly used in production systems on Google Cloud Platform.
+
+We will use:
+
+Google Cloud Run → Spring Boot microservice
+
+Google Cloud Pub/Sub → Event bus
+
+Google Cloud Functions → Background processing
+
+1️⃣ Problem Statement (Real Example)
+Build an Order Processing System.
+
+When a user places an order:
+
+Order API receives request
+
+Order service stores order
+
+Event published to Pub/Sub
+
+Cloud Function processes event
+
+Email notification sent
+
+This architecture is asynchronous and scalable.
+
+2️⃣ High-Level Architecture
+Client
+   │
+   ▼
+Cloud Run (Spring Boot Order Service)
+   │
+   ▼
+Pub/Sub Topic (order-topic)
+   │
+   ▼
+Cloud Function (Order Event Processor)
+   │
+   ▼
+Send Email / Notification / Analytics
+3️⃣ Full Production Architecture
+Client
+   │
+   ▼
+API Gateway
+   │
+   ▼
+Cloud Run Microservice
+(Spring Boot Order Service)
+   │
+   │ Publish Event
+   ▼
+Pub/Sub Topic
+(order-created-topic)
+   │
+   ▼
+Subscription
+   │
+   ▼
+Cloud Function
+   │
+   ▼
+Email / SMS / Logging / Analytics
+Benefits:
+
+✔ asynchronous
+✔ loosely coupled
+✔ scalable
+✔ event-driven
+
+4️⃣ Step 1 — Create Pub/Sub Topic
+Create topic in Google Cloud Pub/Sub.
+
+gcloud pubsub topics create order-topic
+Create subscription:
+
+gcloud pubsub subscriptions create order-sub --topic=order-topic
+Now Pub/Sub is ready.
+
+5️⃣ Step 2 — Create Spring Boot Order Service (Cloud Run)
+This service runs on Google Cloud Run.
+
+Project structure:
+
+order-service
+ ├── controller
+ ├── service
+ ├── config
+ └── application.properties
+6️⃣ Maven Dependencies
+Add Pub/Sub dependency.
+
+<dependency>
+ <groupId>com.google.cloud</groupId>
+ <artifactId>spring-cloud-gcp-starter-pubsub</artifactId>
+ <version>3.4.0</version>
+</dependency>
+Also add web starter.
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+7️⃣ Order Model
+public class Order {
+
+    private String orderId;
+    private String product;
+    private int quantity;
+
+    // getters and setters
+}
+8️⃣ Order Event Publisher Service
+This publishes events to Pub/Sub topic.
+
+@Service
+public class OrderPublisher {
+
+    @Autowired
+    private PubSubTemplate pubSubTemplate;
+
+    // Publish event to PubSub
+    public void publishOrder(Order order) {
+
+        pubSubTemplate.publish("order-topic", order.toString());
+
+        System.out.println("Order event published to PubSub");
+
+    }
+}
+Explanation:
+
+Order Service
+      │
+      ▼
+PubSubTemplate.publish()
+      │
+      ▼
+Pub/Sub Topic
+9️⃣ Order Controller
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+    @Autowired
+    private OrderPublisher publisher;
+
+    @PostMapping
+    public String createOrder(@RequestBody Order order) {
+
+        // Save order (database logic omitted)
+
+        // Publish event
+        publisher.publishOrder(order);
+
+        return "Order created successfully";
+
+    }
+}
+API request:
+
+POST /orders
+{
+ "orderId": "101",
+ "product": "Laptop",
+ "quantity": 1
+}
+🔟 Dockerize Spring Boot App
+Cloud Run runs containers.
+
+Dockerfile:
+
+FROM openjdk:17-jdk-slim
+
+COPY target/order-service.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-jar","/app.jar"]
+Build image:
+
+mvn clean package
+docker build -t order-service .
+Push image to Google Artifact Registry.
+
+1️⃣1️⃣ Deploy Service to Cloud Run
+Deploy:
+
+gcloud run deploy order-service \
+--image gcr.io/PROJECT-ID/order-service \
+--platform managed \
+--region us-central1 \
+--allow-unauthenticated
+Now the API is available.
+
+Example endpoint:
+
+https://order-service.a.run.app/orders
+
+1️⃣2️⃣ Cloud Function Event Processor
+Now create a function that consumes events from Pub/Sub.
+
+This runs on Google Cloud Functions.
+
+1️⃣3️⃣ PubSub Message Model
+public class PubSubMessage {
+
+    public String data;
+}
+
+1️⃣4️⃣ Cloud Function Code
+import com.google.cloud.functions.BackgroundFunction;
+import com.google.cloud.functions.Context;
+
+import java.util.Base64;
+
+public class OrderProcessorFunction implements BackgroundFunction<PubSubMessage> {
+
+    @Override
+    public void accept(PubSubMessage message, Context context) {
+
+        // Decode PubSub message
+        String data = new String(Base64.getDecoder().decode(message.data));
+
+        System.out.println("Received Order Event: " + data);
+
+        // Business logic
+        sendEmail(data);
+    }
+
+    private void sendEmail(String order) {
+
+        // Simulate email sending
+        System.out.println("Sending confirmation email for order: " + order);
+
+    }
+}
+
+1️⃣5️⃣ Deploy Cloud Function
+Deploy function:
+
+gcloud functions deploy orderProcessor \
+--runtime java17 \
+--trigger-topic order-topic \
+--entry-point OrderProcessorFunction
+Now function is connected to Pub/Sub topic.
+
+1️⃣6️⃣ End-to-End Flow
+Full event flow:
+
+User
+ │
+ ▼
+HTTP Request
+ │
+ ▼
+Cloud Run (Spring Boot Order Service)
+ │
+ │ Publish Event
+ ▼
+Pub/Sub Topic
+ │
+ ▼
+Cloud Function Trigger
+ │
+ ▼
+Order Processor
+ │
+ ▼
+Send Email
+========================================================
+1️⃣7️⃣ Sequence Diagram
+Client → Cloud Run : POST /orders
+Cloud Run → Database : Save order
+Cloud Run → Pub/Sub : Publish event
+Pub/Sub → Cloud Function : Deliver event
+Cloud Function → Email Service : Send notification
+Cloud Function → Logging : Log result
+
+1️⃣8️⃣ Advantages of This Architecture
+Feature	Benefit
+Loose coupling	Services independent
+Auto scaling	Cloud Run + Functions scale automatically
+Async processing	No blocking
+High throughput	Pub/Sub handles millions of messages
+
+1️⃣9️⃣ Real Enterprise Architecture
+Users
+  │
+  ▼
+Cloud Run APIs
+(Spring Boot Microservices)
+  │
+  ▼
+Pub/Sub Event Bus
+  │
+  ├── Cloud Function (Email)
+  ├── Cloud Function (Analytics)
+  └── Cloud Function (Billing)
+One event can trigger multiple consumers.
+
+2️⃣0️⃣ Production Use Cases
+Example events:
+
+OrderCreated
+PaymentCompleted
+UserRegistered
+FileUploaded
+Each event triggers different Cloud Functions.
+
+🎯 Final Architecture Summary
+Spring Boot (Cloud Run)
+        │
+        ▼
+Event Published
+        │
+        ▼
+Pub/Sub Topic
+        │
+        ▼
+Cloud Function
+        │
+        ▼
+Background Processing
+This pattern is called:
+
+Event Driven Microservices Architecture
+
+1️⃣ Transactional Outbox Pattern with Cloud Run + Pub/Sub (avoids message loss)
+2️⃣ Complete Saga Pattern using Cloud Run + Pub/Sub for distributed transactions
+
+These are very important for microservices interviews and real production systems.
+
+===================================================================================
+
+Provide one - one code example for each? Google Cloud Function (Hands-on) 
+1.Http 
+2.Cloud Storage 
+3.Pubsub
+
+Below are three simple hands-on examples for Google Cloud Functions using Java.
+Each example shows one function for one trigger type:
+
+1️⃣ HTTP Trigger
+2️⃣ Cloud Storage Trigger
+3️⃣ Pub/Sub Trigger
+
+All examples run on Google Cloud Platform and can be deployed using Google Cloud SDK.
+
+1️⃣ HTTP Trigger Cloud Function
+This function works like a serverless REST API.
+
+Use Case
+A client calls an HTTP endpoint and the function returns a response.
+
+Example request:
+
+GET /hello?name=Rakesh
+Step 1 — Maven Dependency
+<dependency>
+  <groupId>com.google.cloud.functions</groupId>
+  <artifactId>functions-framework-api</artifactId>
+  <version>1.0.4</version>
+</dependency>
+This dependency provides:
+
+HttpFunction
+HttpRequest
+HttpResponse
+
+Step 2 — HTTP Function Code
+package com.example;
+
+import com.google.cloud.functions.HttpFunction;
+import com.google.cloud.functions.HttpRequest;
+import com.google.cloud.functions.HttpResponse;
+
+import java.io.BufferedWriter;
+
+/**
+ * HTTP Cloud Function
+ * Triggered when HTTP request is received
+ */
+public class HelloHttpFunction implements HttpFunction {
+
+    @Override
+    public void service(HttpRequest request, HttpResponse response) throws Exception {
+
+        // Read query parameter
+        String name = request.getFirstQueryParameter("name").orElse("World");
+
+        // Prepare response
+        BufferedWriter writer = response.getWriter();
+        writer.write("Hello " + name + " from Google Cloud Function!");
+
+    }
+}
+
+Step 3 — Deploy Function
+gcloud functions deploy helloHttp \
+--runtime java17 \
+--trigger-http \
+--entry-point com.example.HelloHttpFunction \
+--allow-unauthenticated
+
+Step 4 — Test
+Request:
+
+https://region-project.cloudfunctions.net/helloHttp?name=Rakesh
+Response:
+
+Hello Rakesh from Google Cloud Function!
+====================================================================
+2️⃣ Cloud Storage Trigger Cloud Function
+This function runs when a file is uploaded to Google Cloud Storage.
+
+Use Case
+When a file uploads:
+
+Upload file → trigger function → process file
+Example:
+
+Upload image → resize image
+Upload csv → process data
+
+Step 1 — Event Model Class
+Cloud Storage sends metadata about the file.
+
+package com.example;
+
+/**
+ * Event model representing Cloud Storage object
+ */
+public class StorageEvent {
+
+    public String bucket;
+    public String name;
+    public String contentType;
+    public String timeCreated;
+    public String updated;
+
+}
+
+Step 2 — Cloud Storage Function
+package com.example;
+
+import com.google.cloud.functions.BackgroundFunction;
+import com.google.cloud.functions.Context;
+
+/**
+ * Function triggered when object uploaded in Cloud Storage
+ */
+public class StorageFunction implements BackgroundFunction<StorageEvent> {
+
+    @Override
+    public void accept(StorageEvent event, Context context) {
+
+        // File information
+        System.out.println("File Name: " + event.name);
+        System.out.println("Bucket: " + event.bucket);
+        System.out.println("Content Type: " + event.contentType);
+
+        // Business logic example
+        System.out.println("Processing uploaded file...");
+
+    }
+}
+
+Step 3 — Deploy Function
+
+gcloud functions deploy storage-function \
+--runtime java17 \
+--trigger-resource my-bucket \
+--trigger-event google.storage.object.finalize \
+--entry-point com.example.StorageFunction
+
+Step 4 — Test
+Upload file:
+
+gsutil cp test.txt gs://my-bucket
+Logs show:
+
+File Name: test.txt
+Bucket: my-bucket
+Processing uploaded file...
+==================================================================
+3️⃣ Pub/Sub Trigger Cloud Function
+This function triggers when a message is published to Google Cloud Pub/Sub.
+
+Use Case
+Event-driven microservices.
+
+Example:
+
+Order Service → Publish Event → Function Processes Event
+
+Step 1 — Create Pub/Sub Topic
+gcloud pubsub topics create order-topic
+
+Step 2 — PubSub Message Model
+Pub/Sub sends message encoded in Base64.
+
+package com.example;
+
+import java.util.Map;
+
+/**
+ * PubSub message model
+ */
+public class PubSubMessage {
+
+    public String data;
+    public Map<String, String> attributes;
+
+}
+
+Step 3 — Pub/Sub Function Code
+package com.example;
+
+import com.google.cloud.functions.BackgroundFunction;
+import com.google.cloud.functions.Context;
+
+import java.util.Base64;
+
+/**
+ * Function triggered when message published to PubSub
+ */
+public class PubSubFunction implements BackgroundFunction<PubSubMessage> {
+
+    @Override
+    public void accept(PubSubMessage message, Context context) {
+
+        // Decode base64 message
+        String decodedMessage =
+                new String(Base64.getDecoder().decode(message.data));
+
+        System.out.println("Received message: " + decodedMessage);
+
+        // Example business logic
+        processOrder(decodedMessage);
+    }
+
+    private void processOrder(String order) {
+
+        System.out.println("Processing order: " + order);
+
+    }
+}
+
+Step 4 — Deploy Function
+gcloud functions deploy pubsub-function \
+--runtime java17 \
+--trigger-topic order-topic \
+--entry-point com.example.PubSubFunction
+
+Step 5 — Publish Message
+gcloud pubsub topics publish order-topic \
+--message "Order Created"
+Logs show:
+
+Received message: Order Created
+Processing order: Order Created
+
+🧠 Event Flow Comparison
+Trigger	Event Source	Example
+HTTP	API request	REST endpoint
+Cloud Storage	File upload	image processing
+Pub/Sub	message queue	microservices events
+
+🧩 Architecture View
+Client
+ │
+ ▼
+HTTP Function
+ │
+ ▼
+Response
+File Upload
+ │
+ ▼
+Cloud Storage
+ │
+ ▼
+Storage Function
+Microservice
+ │
+ ▼
+Pub/Sub Topic
+ │
+ ▼
+PubSub Function
+
+🎯 Summary
+Google Cloud Functions allows you to deploy small event-driven code.
+
+Main trigger types:
+
+1 HTTP → API processing
+2 Cloud Storage → file events
+3 Pub/Sub → message events
+
+Each function:
+
+Event → Trigger → Function → Business Logic
+
+Cloud Functions + Cloud Run + Pub/Sub + Cloud Storage complete event-driven system with diagram and code (used in real companies).
+
+=====================================================================
+Google Cloud Storage (Hands-on)
+Create Bucket & upload object
+
+☁️ Google Cloud Storage (Hands-on): Create Bucket & Upload Object
+Google Cloud Storage is a highly scalable object storage service in Google Cloud Platform used to store files such as images, videos, backups, logs, and datasets.
+
+In Cloud Storage:
+
+Bucket → Container that stores objects
+
+Object → Actual file (image, pdf, video, etc.)
+
+Example structure:
+
+Bucket
+ ├── image1.jpg
+ ├── data.csv
+ └── backup.zip
+1️⃣ Architecture
+User / Application
+        │
+        ▼
+Google Cloud Storage
+        │
+        ▼
+Bucket
+        │
+        ▼
+Objects (files)
+Example:
+
+Bucket: my-company-data
+Objects:
+   report.pdf
+   image.png
+   backup.sql
+   
+2️⃣ Step 1 — Open Cloud Storage Console
+Go to Google Cloud Console
+
+Navigate to
+
+Storage → Buckets
+
+3️⃣ Step 2 — Create Bucket
+Click Create Bucket
+
+Provide details:
+
+Field	Example
+Bucket Name	my-demo-bucket-123
+Region	us-central1
+Storage Class	Standard
+Access Control	Uniform
+Example configuration:
+
+Bucket Name : my-demo-bucket-123
+Location    : us-central1
+Storage     : Standard
+Access      : Uniform
+Click Create.
+
+Now the bucket is ready.
+
+4️⃣ Bucket Structure
+After creation:
+
+my-demo-bucket-123
+   │
+   └── (empty)
+   
+5️⃣ Step 3 — Upload Object (Using Console)
+Open the bucket.
+
+Click:
+
+Upload Files
+Select file:
+
+test.txt
+Now bucket looks like:
+
+my-demo-bucket-123
+   │
+   └── test.txt
+   
+6️⃣ Upload Using CLI (Hands-on)
+Using Google Cloud SDK.
+
+First authenticate:
+
+gcloud auth login
+Create Bucket Using CLI
+gsutil mb gs://my-demo-bucket-123
+Explanation:
+
+gsutil → Cloud Storage command tool
+mb → make bucket
+
+7️⃣ Upload File Using CLI
+Upload object:
+
+gsutil cp test.txt gs://my-demo-bucket-123
+Explanation:
+
+cp → copy
+test.txt → local file
+gs://bucket → cloud bucket
+Bucket now contains:
+
+my-demo-bucket-123
+   │
+   └── test.txt
+   
+8️⃣ List Objects in Bucket
+gsutil ls gs://my-demo-bucket-123
+Output:
+
+gs://my-demo-bucket-123/test.txt
+
+9️⃣ Download Object
+Download file:
+
+gsutil cp gs://my-demo-bucket-123/test.txt .
+This downloads file to local system.
+
+🔟 Delete Object
+gsutil rm gs://my-demo-bucket-123/test.txt
+
+1️⃣1️⃣ Delete Bucket
+gsutil rb gs://my-demo-bucket-123
+
+1️⃣2️⃣ Access Object via URL
+Public object URL:
+
+https://storage.googleapis.com/my-demo-bucket-123/test.txt
+If object is public, it can be accessed via browser.
+
+1️⃣3️⃣ Storage Classes
+Storage Class	Use Case
+Standard	Frequently accessed
+Nearline	Monthly access
+Coldline	Rare access
+Archive	Long-term backup
+Example:
+
+Archive → 10 year backup
+Coldline → disaster recovery
+
+1️⃣4️⃣ Cloud Storage Event Architecture
+Cloud Storage can trigger Google Cloud Functions.
+
+Example:
+
+File Upload
+    │
+    ▼
+Cloud Storage
+    │
+    ▼
+Cloud Function Trigger
+    │
+    ▼
+Image Processing
+
+1️⃣5️⃣ Real Production Example
+Example architecture:
+
+User Uploads Image
+       │
+       ▼
+Cloud Storage Bucket
+       │
+       ▼
+Cloud Function Trigger
+       │
+       ▼
+Resize Image
+       │
+       ▼
+Save to Another Bucket
+Used for:
+
+image processing
+
+video transcoding
+
+file ingestion pipelines
+
+🎯 Summary
+Google Cloud Storage stores files in buckets.
+
+Basic operations:
+
+Create Bucket
+Upload Object
+Download Object
+List Objects
+Delete Objects
+CLI commands:
+
+gsutil mb → create bucket
+gsutil cp → upload file
+gsutil ls → list files
+gsutil rm → delete file
+✅ If you'd like, I can also show the next important hands-on labs (very useful for interviews and real projects):
+
+1️⃣ Cloud Storage + Cloud Function (Auto Image Processing)
+2️⃣ Upload file using Spring Boot API → store in Cloud Storage
+3️⃣ Secure file upload using Signed URL
+4️⃣ Cloud Storage + Pub/Sub event pipeline
+
+==================================================================
+
+Google Cloud Storage (Hands-on)
+Object Lifecycle:
+
+☁️ Google Cloud Storage (Hands-on): Object Lifecycle
+Google Cloud Storage provides Object Lifecycle Management to automatically manage objects in a bucket based on conditions such as age, storage class, or version.
+
+This feature helps:
+
+Reduce storage cost 💰
+
+Automatically delete old files
+
+Move objects to cheaper storage classes
+
+All lifecycle rules are configured on a bucket in Google Cloud Platform.
+
+1️⃣ What is Object Lifecycle?
+Object lifecycle means automatically performing actions on objects when certain conditions are met.
+
+Example:
+
+If file age > 30 days → Move to Nearline storage
+If file age > 365 days → Delete object
+So instead of manually managing files, Cloud Storage automatically handles it.
+
+2️⃣ Lifecycle Architecture
+Bucket
+ │
+ ├── image1.jpg (5 days)
+ ├── image2.jpg (40 days)
+ └── image3.jpg (400 days)
+Lifecycle rules:
+
+Age > 30 days → Change storage class
+Age > 365 days → Delete object
+Result:
+
+image1.jpg → Standard
+image2.jpg → Nearline
+image3.jpg → Deleted
+3️⃣ Lifecycle Rule Components
+Lifecycle rules contain two parts:
+
+Part	Purpose
+Action	What to do
+Condition	When to do it
+Example rule:
+
+Condition → age = 30 days
+Action → change storage class to Nearline
+4️⃣ Supported Lifecycle Actions
+Action	Description
+Delete	Remove object
+SetStorageClass	Change storage class
+Example:
+
+Standard → Nearline → Coldline → Archive
+5️⃣ Supported Lifecycle Conditions
+Condition	Meaning
+age	object age in days
+createdBefore	object created before date
+matchesStorageClass	current storage class
+numNewerVersions	number of newer versions
+isLive	live object
+Example:
+
+Delete objects older than 365 days
+6️⃣ Step-by-Step Hands-on (Using Console)
+Open Google Cloud Console.
+
+Navigate:
+
+Storage → Buckets
+Select bucket.
+
+Go to:
+
+Lifecycle → Add rule
+7️⃣ Example Lifecycle Rule
+Rule example:
+
+Condition:
+Age = 30 days
+
+Action:
+Set storage class = Nearline
+Meaning:
+
+Objects older than 30 days
+→ moved to Nearline storage
+8️⃣ Example Rule for Deleting Objects
+Example:
+
+Condition:
+Age = 365 days
+
+Action:
+Delete
+Meaning:
+
+Files older than 1 year
+→ automatically deleted
+9️⃣ Lifecycle JSON Configuration
+Lifecycle rules are stored as JSON configuration.
+
+Example:
+
+{
+  "rule": [
+    {
+      "action": {
+        "type": "SetStorageClass",
+        "storageClass": "NEARLINE"
+      },
+      "condition": {
+        "age": 30
+      }
+    },
+    {
+      "action": {
+        "type": "Delete"
+      },
+      "condition": {
+        "age": 365
+      }
+    }
+  ]
+}
+Explanation:
+
+After 30 days → move to Nearline
+After 365 days → delete
+
+🔟 Apply Lifecycle Rule Using CLI
+Using Google Cloud SDK and gsutil.
+
+Save rule file:
+
+lifecycle.json
+Apply rule:
+
+gsutil lifecycle set lifecycle.json gs://my-demo-bucket
+Verify rule:
+
+gsutil lifecycle get gs://my-demo-bucket
+
+1️⃣1️⃣ Lifecycle Processing Flow
+Object Uploaded
+     │
+     ▼
+Stored in Bucket
+     │
+     ▼
+Lifecycle Engine Checks Conditions
+     │
+     ▼
+Condition Matched?
+     │
+     ├── No → Keep Object
+     │
+     └── Yes
+          │
+          ▼
+Execute Action
+(Change Storage Class / Delete)
+
+1️⃣2️⃣ Real Production Example
+Example log storage system:
+
+Application Logs → Cloud Storage Bucket
+Lifecycle policy:
+
+0-30 days → Standard
+30-90 days → Nearline
+90-365 days → Coldline
+>365 days → Delete
+Architecture:
+
+Application
+   │
+   ▼
+Cloud Storage Bucket
+   │
+   ▼
+Lifecycle Policy Engine
+   │
+   ├── Move to cheaper storage
+   └── Delete old logs
+This helps reduce storage cost dramatically.
+
+1️⃣3️⃣ Storage Class Transition Flow
+Standard
+   │
+   ▼
+Nearline
+   │
+   ▼
+Coldline
+   │
+   ▼
+Archive
+Lifecycle rules automatically move objects through this pipeline.
+
+1️⃣4️⃣ Cost Optimization Example
+Without lifecycle:
+
+1TB stored in Standard
+High cost
+With lifecycle:
+
+1TB (0-30 days) → Standard
+1TB (30-90 days) → Nearline
+1TB (90-365 days) → Coldline
+Result:
+
+Huge cost reduction
+
+🎯 Summary
+Object Lifecycle in Google Cloud Storage automatically manages objects.
+
+Key concepts:
+
+Condition → When rule applies
+Action → What happens
+Common lifecycle rules:
+
+Move objects to cheaper storage
+Delete old files
+Manage object versions
+CLI commands:
+
+gsutil lifecycle set lifecycle.json bucket
+gsutil lifecycle get bucket
+
+1️⃣ Signed URLs (secure file upload/download)
+2️⃣ Upload file from Spring Boot to Cloud Storage
+3️⃣ Cloud Storage + Cloud Functions (automatic image processing)
+4️⃣ Cloud Storage versioning & retention policies
+==================================================================
+
+Google Cloud Storage (Hands-on)
+Access control
+
+☁️ Google Cloud Storage (Hands-on): Access Control
+Google Cloud Storage allows you to control who can access buckets and objects and what actions they can perform (read, write, delete, etc.).
+
+Access control is managed in Google Cloud Platform mainly using:
+
+1️⃣ IAM (Identity and Access Management)
+2️⃣ ACL (Access Control Lists)
+
+Most modern systems use IAM.
+
+1️⃣ Why Access Control is Needed
+Example bucket:
+
+Bucket: company-data
+ ├── finance-report.pdf
+ ├── employee-data.csv
+ └── logs.txt
+Without access control:
+
+Anyone could read or delete files
+With access control:
+
+Admin → full access
+Developer → upload files
+User → read files only
+2️⃣ Access Control Methods
+Method	Description
+IAM	Recommended modern method
+ACL	Object-level permissions
+Most organizations use IAM with uniform bucket-level access.
+
+3️⃣ IAM (Identity and Access Management)
+Google Cloud IAM allows assigning roles to users, groups, or service accounts.
+
+Example:
+
+User → Role → Bucket
+4️⃣ Common IAM Roles for Cloud Storage
+Role	Permissions
+Storage Admin	Full access
+Storage Object Admin	Manage objects
+Storage Object Creator	Upload objects
+Storage Object Viewer	Read objects
+Example:
+
+Developer → Storage Object Creator
+User → Storage Object Viewer
+5️⃣ Architecture
+User
+ │
+ ▼
+IAM Policy
+ │
+ ▼
+Bucket
+ │
+ ▼
+Objects
+Access is granted based on IAM roles.
+
+6️⃣ Step-by-Step Hands-on (Console)
+Open Google Cloud Console.
+
+Navigate:
+
+Storage → Buckets
+Select your bucket.
+
+Go to:
+
+Permissions → Grant Access
+7️⃣ Grant Access Example
+Add user:
+
+user@example.com
+Assign role:
+
+Storage Object Viewer
+Result:
+
+User can read files but cannot upload or delete
+8️⃣ Example Permission Scenarios
+Scenario 1 — Read-only user
+Role: Storage Object Viewer
+Allowed actions:
+
+Download files
+List objects
+Not allowed:
+
+Upload
+Delete
+Scenario 2 — Upload-only user
+Role: Storage Object Creator
+Allowed:
+
+Upload objects
+Not allowed:
+
+Delete objects
+Scenario 3 — Admin
+Role: Storage Admin
+Allowed:
+
+Create buckets
+Upload objects
+Delete objects
+Manage permissions
+9️⃣ Grant Access Using CLI
+Using Google Cloud SDK.
+
+Grant viewer role:
+
+gsutil iam ch user:user@example.com:objectViewer gs://my-demo-bucket
+Explanation:
+
+iam ch → change IAM
+objectViewer → read access
+🔟 Check IAM Policy
+gsutil iam get gs://my-demo-bucket
+Output example:
+
+{
+ "bindings": [
+  {
+   "role": "roles/storage.objectViewer",
+   "members": [
+    "user:user@example.com"
+   ]
+  }
+ ]
+}
+
+1️⃣1️⃣ Make Object Public
+You can allow public read access.
+
+Example:
+
+gsutil acl ch -u AllUsers:R gs://my-demo-bucket/image.jpg
+Now file accessible via:
+
+https://storage.googleapis.com/my-demo-bucket/image.jpg
+
+1️⃣2️⃣ Uniform vs Fine-Grained Access
+Access Mode	Description
+Uniform	IAM only
+Fine-grained	IAM + ACL
+Recommended:
+
+Uniform bucket-level access
+Because:
+
+Simpler
+More secure
+Enterprise standard
+
+1️⃣3️⃣ Access Control Flow
+
+User Request
+     │
+     ▼
+IAM Policy Check
+     │
+     ├── Allowed → Access object
+     │
+     └── Denied → Permission error
+	 
+1️⃣4️⃣ Real Production Example
+Example company architecture:
+
+Data Scientists
+        │
+        ▼
+IAM Role: Storage Object Viewer
+        │
+        ▼
+Cloud Storage Bucket
+        │
+        ├── training-data.csv
+        ├── images.zip
+        └── models
+Another example:
+
+Application Service Account
+        │
+        ▼
+Role: Storage Object Creator
+        │
+        ▼
+Upload user files
+
+1️⃣5️⃣ Best Practices
+✔ Use IAM roles instead of ACL
+✔ Use service accounts for applications
+✔ Enable uniform bucket-level access
+✔ Follow least privilege principle
+
+Example:
+
+Grant minimum required permissions
+🎯 Summary
+Access control in Google Cloud Storage controls who can access buckets and objects.
+
+Main mechanisms:
+
+IAM → recommended
+ACL → legacy
+Common roles:
+
+Storage Admin
+Storage Object Admin
+Storage Object Creator
+Storage Object Viewer
+CLI commands:
+
+gsutil iam ch → grant access
+gsutil iam get → view permissions
+
+
+1️⃣ Signed URLs (secure temporary access)
+2️⃣ Upload files to Cloud Storage using Spring Boot API
+3️⃣ Cloud Storage + Pub/Sub event notifications
+4️⃣ Cloud Storage versioning & retention policies
+
+================================================================
+
+Google Cloud Storage (Hands-on)
+Access control
+
+☁️ Google Cloud Storage (Hands-on): Access Control
+Google Cloud Storage allows you to control who can access buckets and objects and what actions they can perform (read, write, delete, etc.).
+Access control is managed through permissions and roles in Google Cloud Platform.
+
+There are two main mechanisms:
+
+1️⃣ Google Cloud IAM (recommended)
+2️⃣ ACL (Access Control Lists) (legacy / fine-grained control)
+
+Most modern systems use IAM with uniform bucket-level access.
+
+1️⃣ Basic Concepts
+Bucket
+Container that stores files.
+
+Bucket
+ ├── image.png
+ ├── report.pdf
+ └── logs.txt
+Object
+Actual file stored in bucket.
+
+Access Control
+Defines:
+
+WHO can access
+WHAT they can do
+Example:
+
+User A → Read files
+User B → Upload files
+Admin → Full access
+
+2️⃣ IAM Architecture
+Access flow using Google Cloud IAM.
+
+User / Service Account
+        │
+        ▼
+IAM Policy
+        │
+        ▼
+Bucket
+        │
+        ▼
+Objects
+IAM checks permissions before allowing access.
+
+3️⃣ Common Storage IAM Roles
+Role	Permissions
+Storage Admin	Full bucket access
+Storage Object Admin	Manage objects
+Storage Object Creator	Upload objects only
+Storage Object Viewer	Read objects
+Example:
+
+Developer → Object Creator
+Analyst → Object Viewer
+Admin → Storage Admin
+
+4️⃣ Hands-on: Grant Access Using Console
+Open Google Cloud Console.
+
+Step 1
+Navigate:
+
+Storage → Buckets
+Step 2
+Select your bucket.
+
+Example:
+
+my-demo-bucket
+Step 3
+Click:
+
+Permissions
+Step 4
+Click:
+
+Grant Access
+Step 5
+Enter user email.
+
+Example:
+
+developer@company.com
+Step 6
+Assign role:
+
+Storage Object Viewer
+Now the user can read objects in the bucket.
+
+5️⃣ Grant Access Using CLI
+Using Google Cloud SDK.
+
+Grant read permission:
+
+gsutil iam ch user:developer@company.com:objectViewer gs://my-demo-bucket
+Explanation:
+
+gsutil → storage CLI
+iam ch → change IAM
+objectViewer → read permission
+
+6️⃣ Check Bucket Permissions
+Run:
+
+gsutil iam get gs://my-demo-bucket
+Example output:
+
+{
+ "bindings": [
+  {
+   "role": "roles/storage.objectViewer",
+   "members": [
+    "user:developer@company.com"
+   ]
+  }
+ ]
+}
+This means:
+
+developer@company.com → read access
+
+7️⃣ Make Object Public
+Sometimes files must be publicly accessible (example: website images).
+
+Command:
+
+gsutil acl ch -u AllUsers:R gs://my-demo-bucket/logo.png
+Public URL:
+
+https://storage.googleapis.com/my-demo-bucket/logo.png
+Now anyone can access the file.
+
+8️⃣ Uniform Bucket-Level Access
+Two access models exist.
+
+Mode	Description
+Uniform	IAM only
+Fine-grained	IAM + ACL
+Recommended setting:
+
+Uniform bucket-level access
+Benefits:
+
+Simpler
+More secure
+Enterprise standard
+
+9️⃣ Example Access Scenarios
+Scenario 1 — Data Analyst
+Role:
+
+Storage Object Viewer
+Allowed:
+
+Download files
+List objects
+Not allowed:
+
+Upload files
+Delete files
+Scenario 2 — Application Upload Service
+Role:
+
+Storage Object Creator
+Allowed:
+
+Upload files
+Not allowed:
+
+Delete files
+Scenario 3 — Administrator
+Role:
+
+Storage Admin
+Allowed:
+
+Create bucket
+Delete objects
+Manage permissions
+🔟 Access Control Flow
+User Request
+     │
+     ▼
+IAM Policy Check
+     │
+     ├── Allowed → Access granted
+     │
+     └── Denied → Permission error
+	 
+1️⃣1️⃣ Real Production Example
+Example architecture:
+
+Web Application
+       │
+       ▼
+Service Account
+       │
+       ▼
+IAM Role: Storage Object Creator
+       │
+       ▼
+Cloud Storage Bucket
+       │
+       ├── user-uploads
+       ├── profile-images
+       └── documents
+Another example:
+
+Data Analysts
+      │
+      ▼
+IAM Role: Storage Object Viewer
+      │
+      ▼
+Analytics Data Bucket
+
+1️⃣2️⃣ Best Practices
+✔ Use IAM roles instead of ACL
+✔ Enable uniform bucket-level access
+✔ Use service accounts for applications
+✔ Follow least privilege principle
+
+Example:
+
+Give only the permissions needed
+
+🎯 Summary
+Access control in Google Cloud Storage determines who can access buckets and objects.
+
+Main mechanisms:
+
+IAM → Recommended
+ACL → Legacy
+Common roles:
+
+Storage Admin
+Storage Object Admin
+Storage Object Creator
+Storage Object Viewer
+CLI commands:
+
+gsutil iam ch → grant access
+gsutil iam get → check permissions
+
+
+1️⃣ Signed URLs (secure temporary file access)
+2️⃣ Cloud Storage Versioning
+3️⃣ Cloud Storage + Pub/Sub event notifications
+4️⃣ Upload files to Cloud Storage using Spring Boot
+
+====================================================================
+
+Google Cloud Storage (Hands-on)
+Signed URL
+
+☁️ Google Cloud Storage (Hands-on): Signed URL
+A Signed URL allows temporary secure access to a private object in Google Cloud Storage without making the object public.
+
+It is commonly used when an application needs to allow temporary download or upload access.
+
+Example use cases:
+
+User downloads a private file
+User uploads a file directly from browser
+Temporary access to private media
+
+1️⃣ What is a Signed URL?
+A Signed URL is a URL that includes a cryptographic signature and expiration time.
+
+Signed URL = Resource URL + Signature + Expiration
+Example:
+
+https://storage.googleapis.com/my-bucket/report.pdf
+?X-Goog-Algorithm=GOOG4-RSA-SHA256
+&X-Goog-Credential=service-account
+&X-Goog-Date=20260308T100000Z
+&X-Goog-Expires=900
+&X-Goog-SignedHeaders=host
+&X-Goog-Signature=abc123xyz...
+Meaning:
+
+File: report.pdf
+Access: allowed
+Duration: 15 minutes
+Authentication: signature
+
+2️⃣ Signed URL Architecture
+User
+ │
+ │ Request file
+ ▼
+Application Server
+(Spring Boot / Node / Python)
+ │
+ │ Generate Signed URL
+ ▼
+Cloud Storage
+ │
+ │ Temporary access
+ ▼
+User downloads directly
+Benefits:
+
+No server load
+Secure
+Temporary access
+
+3️⃣ Hands-on Example (Using CLI)
+Using Google Cloud SDK
+
+Step 1: Create Bucket
+gsutil mb gs://signed-url-demo-bucket
+Step 2: Upload File
+gsutil cp report.pdf gs://signed-url-demo-bucket
+Step 3: Generate Signed URL
+gsutil signurl -d 10m key.json gs://signed-url-demo-bucket/report.pdf
+Explanation:
+
+-d 10m → valid for 10 minutes
+key.json → service account key
+report.pdf → object
+Output:
+
+URL    HTTP Method   Expiration
+https://storage.googleapis.com/...  GET   2026-03-08
+
+4️⃣ Download File Using Signed URL
+Simply open the URL in browser:
+
+https://storage.googleapis.com/signed-url-demo-bucket/report.pdf?signature=...
+Even if the bucket is private, the file will download.
+
+5️⃣ Generate Signed URL Using Java (Spring Boot Example)
+Dependencies:
+
+<dependency>
+  <groupId>com.google.cloud</groupId>
+  <artifactId>google-cloud-storage</artifactId>
+</dependency>
+Java Code Example
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
+import java.net.URL;
+import java.util.concurrent.TimeUnit;
+
+public class SignedUrlExample {
+
+    public static void main(String[] args) {
+
+        String bucketName = "signed-url-demo-bucket";
+        String objectName = "report.pdf";
+
+        // Create storage client
+        Storage storage = StorageOptions.getDefaultInstance().getService();
+
+        BlobInfo blobInfo = BlobInfo.newBuilder(bucketName, objectName).build();
+
+        // Generate signed URL valid for 15 minutes
+        URL url = storage.signUrl(
+                blobInfo,
+                15,
+                TimeUnit.MINUTES,
+                Storage.SignUrlOption.withV4Signature()
+        );
+
+        System.out.println("Signed URL: " + url);
+    }
+}
+Explanation:
+
+Storage client → connects to GCP
+BlobInfo → defines file
+signUrl() → generates temporary access link
+
+6️⃣ Upload Using Signed URL
+Signed URLs can also allow uploads.
+
+Example method:
+
+PUT
+Generate upload URL:
+
+gsutil signurl -m PUT -d 10m key.json gs://my-bucket/upload-file.txt
+User uploads using:
+
+curl -X PUT -T file.txt "SIGNED_URL"
+Architecture:
+
+Client
+ │
+ │ Upload file
+ ▼
+Signed URL
+ │
+ ▼
+Cloud Storage
+
+7️⃣ Signed URL Security
+Important security properties:
+
+Temporary
+Cryptographically signed
+Object specific
+HTTP method specific
+Example restrictions:
+
+GET → download only
+PUT → upload only
+Expiration example:
+
+1 minute
+10 minutes
+1 hour
+
+8️⃣ Real Production Architecture
+Example architecture with Cloud Run.
+
+Client
+ │
+ │ Request upload link
+ ▼
+Cloud Run API
+ │
+ │ Generate Signed URL
+ ▼
+Cloud Storage
+ │
+ │ Upload file directly
+ ▼
+Object Stored
+Benefits:
+
+Server does NOT handle file upload
+Scalable
+Secure
+Fast
+
+9️⃣ Signed URL vs Public Access
+Feature	Signed URL	Public Object
+Security	Secure	Not secure
+Expiration	Yes	No
+Temporary	Yes	No
+Authentication	Signature	None
+Example:
+
+Public URL → Anyone forever
+Signed URL → Anyone for 10 minutes
+🔟 Signed URL Flow Diagram
+User
+ │
+ │ Request secure file
+ ▼
+Backend Service
+ │
+ │ Generate signed URL
+ ▼
+Cloud Storage
+ │
+ │ Temporary access
+ ▼
+User downloads file:
+
+🎯 Summary
+Signed URLs in Google Cloud Storage allow temporary secure access to private objects.
+
+Key benefits:
+
+Temporary access
+Secure
+No need to make objects public
+Reduces backend load
+Common use cases:
+
+Secure downloads
+Client-side uploads
+Private media streaming
+Temporary file sharing
+
+
+1️⃣ Cloud Storage Event Notifications (trigger Cloud Function)
+2️⃣ Upload file from Spring Boot → Cloud Storage
+3️⃣ Cloud Storage + Pub/Sub + Cloud Run architecture
+
+=======================================================================
+
+Google Cloud SQL (Hands-on)
+
+☁️ Google Cloud SQL (Hands-on)
+Google Cloud SQL is a managed database service on Google Cloud Platform that lets you run relational databases like:
+
+MySQL
+
+PostgreSQL
+
+SQL Server
+
+Google manages:
+
+Server provisioning
+Backups
+Replication
+Patching
+Scaling
+You focus only on database and queries.
+
+1️⃣ Cloud SQL Architecture
+Application
+   │
+   │ JDBC / TCP connection
+   ▼
+Cloud SQL Instance
+   │
+   ├── Database
+   ├── Tables
+   └── Storage
+Example architecture with Cloud Run:
+
+Client
+  │
+  ▼
+Cloud Run API
+  │
+  ▼
+Cloud SQL Instance
+  │
+  ▼
+Database Tables
+
+2️⃣ Supported Database Engines
+Engine	Use Case
+MySQL	Web applications
+PostgreSQL	Analytics + enterprise apps
+SQL Server	.NET enterprise apps
+Example:
+
+E-commerce → MySQL
+Data analytics → PostgreSQL
+Enterprise ERP → SQL Server
+
+3️⃣ Hands-on: Create Cloud SQL Instance
+Open Google Cloud Console.
+
+Step 1
+Navigate:
+
+SQL → Create Instance
+Step 2
+Choose database engine:
+
+MySQL
+Step 3
+Configure instance:
+
+Instance ID: my-sql-instance
+Region: asia-south1
+Database version: MySQL 8
+Step 4
+Set credentials:
+
+Username: root
+Password: ********
+Step 5
+Click:
+
+Create
+Deployment takes 2–5 minutes.
+
+4️⃣ Create Database
+After instance creation:
+
+SQL → my-sql-instance → Databases
+Click:
+
+Create Database
+Example:
+
+Database Name: ecommerce_db
+
+5️⃣ Create Table (SQL Example)
+Connect to the instance and run:
+
+CREATE TABLE users (
+   id INT AUTO_INCREMENT PRIMARY KEY,
+   name VARCHAR(100),
+   email VARCHAR(150),
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+Insert data:
+
+INSERT INTO users(name,email)
+VALUES('John','john@email.com');
+Query data:
+
+SELECT * FROM users;
+
+6️⃣ Connect Using Cloud Shell
+Open Cloud Shell.
+
+Run:
+
+gcloud sql connect my-sql-instance --user=root
+Enter password.
+
+You will see:
+
+mysql>
+Run SQL commands.
+
+7️⃣ Connect From Application (Java Example)
+Dependency:
+
+<dependency>
+  <groupId>mysql</groupId>
+  <artifactId>mysql-connector-java</artifactId>
+</dependency>
+Java example:
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+public class CloudSQLExample {
+
+    public static void main(String[] args) throws Exception {
+
+        String url = "jdbc:mysql://34.120.10.1:3306/ecommerce_db";
+        String user = "root";
+        String password = "password";
+
+        Connection conn = DriverManager.getConnection(url, user, password);
+
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT * FROM users");
+
+        while (rs.next()) {
+            System.out.println(rs.getString("name"));
+        }
+
+        conn.close();
+    }
+}
+Explanation:
+
+JDBC → connect to database
+Statement → run SQL query
+ResultSet → retrieve results
+
+8️⃣ Secure Connection Using Cloud SQL Auth Proxy
+Recommended method.
+
+Use Cloud SQL Auth Proxy.
+
+Architecture:
+
+Application
+   │
+   ▼
+Cloud SQL Auth Proxy
+   │
+   ▼
+Cloud SQL Instance
+Start proxy:
+
+./cloud-sql-proxy my-project:asia-south1:my-sql-instance
+Connect using:
+
+localhost:3306
+Benefits:
+
+Encrypted connection
+No public IP needed
+Secure authentication
+
+9️⃣ Backup & Recovery
+Cloud SQL supports:
+
+Automatic backups
+Point-in-time recovery
+Manual backups
+Example:
+
+SQL → Backups → Enable automatic backups
+You can restore database if something fails.
+
+🔟 High Availability Architecture
+Primary Instance
+      │
+      │ replication
+      ▼
+Standby Instance
+Benefits:
+
+Automatic failover
+High availability
+Production reliability
+
+1️⃣1️⃣ Real Production Architecture
+Example microservices architecture:
+
+Frontend
+   │
+   ▼
+API Gateway
+   │
+   ▼
+Cloud Run Microservice
+   │
+   ▼
+Cloud SQL
+   │
+   ├── users table
+   ├── orders table
+   └── products table
+Example services:
+
+User Service → users table
+Order Service → orders table
+Inventory Service → products table
+
+1️⃣2️⃣ Best Practices
+✔ Use private IP connection
+✔ Use Cloud SQL Auth Proxy
+✔ Enable automatic backups
+✔ Use read replicas for scaling
+
+Example scaling architecture:
+
+Application
+   │
+   ▼
+Primary Cloud SQL
+   │
+   ├── Read Replica 1
+   └── Read Replica 2
+🎯 Summary
+Google Cloud SQL provides managed relational databases on Google Cloud Platform.
+
+Supported databases:
+
+MySQL
+PostgreSQL
+SQL Server
+Core capabilities:
+
+Managed database
+Automatic backups
+High availability
+Secure connections
+Typical architecture:
+
+Cloud Run / VM / App Engine
+           │
+           ▼
+        Cloud SQL
+           │
+           ▼
+       Relational Data
+
+
+1️⃣ Cloud Run + Cloud SQL connection (Spring Boot)
+2️⃣ Cloud SQL + Pub/Sub event processing
+3️⃣ Cloud SQL read replica architecture
+4️⃣ Complete GCP microservices architecture (Cloud Run + SQL + Pub/Sub + Storage)
+
+==========================================================================
+
+Cloud Spanner (Hands-on)
+
+☁️ Cloud Spanner (Hands-on)
+Cloud Spanner is a fully managed, horizontally scalable relational database provided by Google Cloud Platform.
+
+It combines:
+
+Relational database features (SQL)
+
+Global horizontal scaling
+
+Strong consistency
+
+Unlike traditional databases like MySQL or PostgreSQL, Spanner can scale across multiple regions worldwide while keeping transactions consistent.
+
+1️⃣ Cloud Spanner Architecture
+Application
+     │
+     ▼
+Cloud Spanner
+     │
+     ├── Region 1
+     ├── Region 2
+     └── Region 3
+Key components:
+
+Instance
+   │
+   ▼
+Database
+   │
+   ▼
+Tables
+Example:
+
+Instance: ecommerce-instance
+Database: ecommerce-db
+Tables: users, orders, products
+2️⃣ When to Use Cloud Spanner
+Use Case	Example
+Global applications	worldwide SaaS
+Financial systems	banking transactions
+High-scale applications	millions of users
+Multi-region data	global apps
+Example companies using Spanner-like architecture:
+
+Large SaaS platforms
+Global fintech systems
+Massive gaming platforms
+3️⃣ Create Cloud Spanner Instance (Hands-on)
+Open Google Cloud Console
+
+Step 1
+Navigate to:
+
+Spanner → Create Instance
+Step 2
+Configure instance:
+
+Instance ID: ecommerce-instance
+Display Name: Ecommerce Spanner
+Configuration: Regional
+Example region:
+
+asia-south1
+Step 3
+Set compute capacity:
+
+Processing Units: 100
+Click:
+
+Create
+4️⃣ Create Database
+Inside the instance:
+
+Create Database
+Example:
+
+Database ID: ecommerce-db
+DDL statements:
+
+CREATE TABLE Users (
+  UserId STRING(36) NOT NULL,
+  Name STRING(100),
+  Email STRING(150)
+) PRIMARY KEY (UserId);
+Explanation:
+
+UserId → primary key
+STRING → Spanner datatype
+PRIMARY KEY → distributed storage key
+
+5️⃣ Create Another Table
+CREATE TABLE Orders (
+  OrderId STRING(36) NOT NULL,
+  UserId STRING(36),
+  Amount FLOAT64,
+  CreatedAt TIMESTAMP
+) PRIMARY KEY (OrderId);
+
+6️⃣ Insert Data
+Insert using SQL:
+
+INSERT INTO Users (UserId, Name, Email)
+VALUES ('u1', 'John', 'john@email.com');
+Insert order:
+
+INSERT INTO Orders (OrderId, UserId, Amount, CreatedAt)
+VALUES ('o1', 'u1', 100.50, CURRENT_TIMESTAMP());
+
+7️⃣ Query Data
+SELECT * FROM Users;
+Join example:
+
+SELECT Users.Name, Orders.Amount
+FROM Users
+JOIN Orders
+ON Users.UserId = Orders.UserId;
+
+8️⃣ Cloud Spanner Scaling Model
+Traditional database scaling:
+
+Vertical scaling
+More CPU
+More RAM
+Spanner scaling:
+
+Horizontal scaling
+Add nodes
+Increase throughput
+Architecture:
+
+Application
+     │
+     ▼
+Cloud Spanner
+     │
+     ├── Node 1
+     ├── Node 2
+     └── Node 3
+More nodes = more performance.
+
+9️⃣ Multi-Region Replication
+Spanner automatically replicates data.
+
+Example:
+
+Region 1 → Asia
+Region 2 → Europe
+Region 3 → US
+Architecture:
+
+Client
+ │
+ ▼
+Nearest Spanner region
+ │
+ ▼
+Global replication
+Benefits:
+
+High availability
+Low latency
+Disaster recovery
+🔟 Java Example (Connecting to Cloud Spanner)
+Dependency:
+
+<dependency>
+  <groupId>com.google.cloud</groupId>
+  <artifactId>google-cloud-spanner</artifactId>
+</dependency>
+Java code:
+
+import com.google.cloud.spanner.*;
+
+public class SpannerExample {
+
+    public static void main(String[] args) {
+
+        String projectId = "my-project";
+        String instanceId = "ecommerce-instance";
+        String databaseId = "ecommerce-db";
+
+        SpannerOptions options = SpannerOptions.newBuilder()
+                .setProjectId(projectId)
+                .build();
+
+        Spanner spanner = options.getService();
+
+        DatabaseClient dbClient = spanner
+                .getDatabaseClient(DatabaseId.of(projectId, instanceId, databaseId));
+
+        ResultSet resultSet =
+                dbClient.singleUse().executeQuery(
+                        Statement.of("SELECT * FROM Users"));
+
+        while (resultSet.next()) {
+            System.out.println(resultSet.getString("Name"));
+        }
+    }
+}
+Explanation:
+
+SpannerOptions → connect to project
+DatabaseClient → interact with database
+executeQuery → run SQL query
+
+1️⃣1️⃣ Cloud Spanner vs Cloud SQL
+Feature	Cloud SQL	Cloud Spanner
+Scaling	Vertical	Horizontal
+Global	No	Yes
+Transactions	Strong	Strong
+Max scale	Medium	Extremely large
+Use Google Cloud SQL for normal applications.
+
+Use Cloud Spanner for massive global systems.
+
+1️⃣2️⃣ Real Production Architecture
+Example enterprise architecture:
+
+Client
+  │
+  ▼
+API Gateway
+  │
+  ▼
+Cloud Run Microservices
+  │
+  ▼
+Cloud Spanner
+  │
+  ├── Users table
+  ├── Orders table
+  └── Payments table
+Event-driven integration:
+
+Cloud Run
+   │
+   ▼
+Pub/Sub
+   │
+   ▼
+Cloud Spanner updates
+
+🎯 Summary
+Cloud Spanner is a globally scalable relational database designed for high-scale distributed applications.
+
+Key features:
+
+Global replication
+Horizontal scaling
+Strong consistency
+SQL support
+Best use cases:
+
+Global SaaS platforms
+Fintech systems
+Massive enterprise apps
+
+
+1️⃣ Cloud Spanner internal architecture (TrueTime, shards, Paxos)
+2️⃣ Spanner vs Bigtable vs BigQuery
+3️⃣ Complete GCP distributed architecture (Spanner + Pub/Sub + Cloud Run)
+4️⃣ High-scale fintech architecture using Spanner
+
+======================================================================
+
+Cloud Memorystore (Hands-on)
+
+☁️ Cloud Memorystore (Hands-on)
+Cloud Memorystore is a fully managed in-memory cache service provided by Google Cloud Platform.
+
+It supports:
+
+Redis
+
+Memcached
+
+Because the data is stored in memory (RAM), it is extremely fast and commonly used for caching.
+
+1️⃣ Cloud Memorystore Architecture
+Typical architecture:
+
+Application
+     │
+     ▼
+Cloud Memorystore (Redis)
+     │
+     ▼
+Cloud SQL / Database
+Flow:
+
+User request
+     │
+     ▼
+Check Cache (Memorystore)
+     │
+ ┌── Yes → Return cached data
+ │
+ └── No → Query database → Store result in cache
+This improves performance and scalability.
+
+2️⃣ When to Use Cloud Memorystore
+Use Case	Example
+Caching	API responses
+Session storage	login sessions
+Leaderboard	gaming apps
+Rate limiting	API protection
+Example systems:
+
+E-commerce
+Social media
+Gaming platforms
+High-traffic APIs
+
+3️⃣ Create Cloud Memorystore Instance (Hands-on)
+Open Google Cloud Console.
+
+Step 1
+Navigate:
+
+Memorystore → Redis
+Step 2
+Click:
+
+Create Instance
+Step 3
+Configure instance:
+
+Instance ID: redis-cache
+Region: asia-south1
+Tier: Basic
+Memory: 1 GB
+Step 4
+Click:
+
+Create
+Deployment usually takes 2–4 minutes.
+
+4️⃣ Connect to Redis Instance
+Once created, you will see:
+
+IP Address
+Port
+Example:
+
+10.0.0.5:6379
+Your application connects using this internal IP.
+
+5️⃣ Redis Basic Commands
+Common commands in Redis.
+
+Set value:
+
+SET user:1 "John"
+Get value:
+
+GET user:1
+Set with expiration:
+
+SET session:123 "active" EX 300
+Meaning:
+
+EX 300 → expires after 5 minutes
+Delete key:
+
+DEL user:1
+
+6️⃣ Java Example (Spring Boot + Redis)
+Dependency:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+Configuration:
+
+spring.redis.host=10.0.0.5
+spring.redis.port=6379
+Service example:
+
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CacheService {
+
+    private final StringRedisTemplate redisTemplate;
+
+    public CacheService(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    public void saveUser(String id, String name) {
+        redisTemplate.opsForValue().set("user:" + id, name);
+    }
+
+    public String getUser(String id) {
+        return redisTemplate.opsForValue().get("user:" + id);
+    }
+}
+Explanation:
+
+StringRedisTemplate → Redis client
+set() → store value
+get() → retrieve value
+
+7️⃣ Cache Pattern (Read Through)
+Example workflow:
+
+User requests product
+        │
+        ▼
+Check Redis Cache
+        │
+   ┌── Cache hit → return result
+   │
+   └── Cache miss
+           │
+           ▼
+       Query Database
+           │
+           ▼
+       Store in Redis
+           │
+           ▼
+       Return to user
+This pattern reduces database load.
+
+8️⃣ Example Architecture with Cloud Run
+Using Cloud Run.
+
+Client
+   │
+   ▼
+Cloud Run API
+   │
+   ▼
+Cloud Memorystore (Redis)
+   │
+   ▼
+Cloud SQL Database
+Benefits:
+
+Fast responses
+Reduced DB load
+Better scalability
+
+9️⃣ High Availability Redis
+Cloud Memorystore offers:
+
+Tier	Description
+Basic	single node
+Standard	replication + failover
+Standard architecture:
+
+Primary Redis
+     │
+     ▼
+Replica Redis
+Benefits:
+
+Automatic failover
+High availability
+Data protection
+🔟 Real Production Use Case
+Example e-commerce architecture:
+
+Frontend
+   │
+   ▼
+API Gateway
+   │
+   ▼
+Cloud Run Microservices
+   │
+   ├── Redis (Cloud Memorystore)
+   │
+   ▼
+Cloud SQL
+Example caching:
+
+Product catalog
+User sessions
+Shopping cart
+
+1️⃣1️⃣ Performance Benefits
+Without cache:
+
+Application → Database → Response
+With cache:
+
+Application → Redis → Response
+Performance difference:
+
+Database query → ~50 ms
+Redis query → ~1 ms
+Much faster.
+
+🎯 Summary
+Cloud Memorystore is a fully managed caching service on Google Cloud Platform.
+
+Supported engines:
+
+Redis
+Memcached
+Main benefits:
+
+Ultra-fast access
+Reduced database load
+Better scalability
+Session storage
+Typical architecture:
+
+Application
+   │
+   ▼
+Memorystore (Redis)
+   │
+   ▼
+Database
+
+1️⃣ Cloud Run + Cloud SQL + Redis caching architecture
+2️⃣ Distributed caching patterns (Cache Aside, Write Through, Write Back)
+3️⃣ Complete GCP microservices architecture (Cloud Run + Pub/Sub + Redis + SQL)
+4️⃣ High-traffic system design using Redis (used by companies like Netflix/Uber).
+
+===============================================================================
+
+Cloud Firestore (Hands-on)
+
+☁️ Cloud Firestore (Hands-on)
+Cloud Firestore is a fully managed NoSQL document database offered by Google Cloud Platform.
+
+It is designed for:
+
+Real-time applications
+
+Mobile and web apps
+
+Serverless architectures
+
+Firestore is the successor to Firebase Realtime Database and is part of the Firebase ecosystem.
+
+1️⃣ Firestore Data Model
+Firestore stores data in a document-based structure.
+
+Collection
+   │
+   ▼
+Document
+   │
+   ▼
+Fields
+Example:
+
+users (collection)
+   │
+   ├── user1 (document)
+   │      ├── name: John
+   │      ├── email: john@email.com
+   │
+   └── user2 (document)
+          ├── name: Alice
+          ├── email: alice@email.com
+Hierarchy example:
+
+users
+   └── user1
+        └── orders
+             └── order1
+2️⃣ Firestore Architecture
+Typical architecture:
+
+Client App
+     │
+     ▼
+Backend API (Cloud Run / Functions)
+     │
+     ▼
+Cloud Firestore
+Example using Cloud Functions:
+
+User action
+     │
+     ▼
+Cloud Function
+     │
+     ▼
+Firestore database
+
+3️⃣ Create Firestore Database (Hands-on)
+Open Google Cloud Console.
+
+Step 1
+Navigate to:
+
+Firestore → Create Database
+Step 2
+Choose mode:
+
+Native mode (recommended)
+Other option:
+
+Datastore mode
+Step 3
+Choose location:
+
+Example:
+
+asia-south1
+Click:
+
+Create
+
+4️⃣ Create Collection and Document
+Inside Firestore console:
+
+Click:
+
+Start Collection
+Example:
+
+Collection ID: users
+Add document:
+
+Document ID: user1
+Fields:
+
+name: John
+email: john@email.com
+age: 30
+Firestore structure becomes:
+
+users
+ └── user1
+      ├── name
+      ├── email
+      └── age
+	  
+5️⃣ Query Data
+Example query:
+
+SELECT users WHERE age > 25
+Firestore equivalent:
+
+users
+   filter: age > 25
+   
+6️⃣ Java Example (Firestore)
+Dependency:
+
+<dependency>
+ <groupId>com.google.cloud</groupId>
+ <artifactId>google-cloud-firestore</artifactId>
+</dependency>
+Java code:
+
+import com.google.cloud.firestore.*;
+import com.google.cloud.firestore.FirestoreOptions;
+
+public class FirestoreExample {
+
+    public static void main(String[] args) throws Exception {
+
+        Firestore db = FirestoreOptions.getDefaultInstance().getService();
+
+        // Add document
+        DocumentReference docRef = db.collection("users").document("user1");
+
+        docRef.set(
+            Map.of(
+                "name", "John",
+                "email", "john@email.com"
+            )
+        );
+
+        System.out.println("Document written");
+    }
+}
+
+7️⃣ Read Document Example
+DocumentReference docRef = db.collection("users").document("user1");
+
+DocumentSnapshot document = docRef.get().get();
+
+if (document.exists()) {
+    System.out.println(document.getString("name"));
+}
+Explanation:
+
+DocumentReference → reference to document
+get() → fetch data
+getString() → read field
+
+8️⃣ Query Example
+Query all users older than 25:
+
+Query query = db.collection("users").whereGreaterThan("age", 25);
+
+QuerySnapshot querySnapshot = query.get().get();
+
+for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+    System.out.println(doc.getId());
+}
+
+9️⃣ Real-time Updates
+One of Firestore’s most powerful features is real-time updates.
+
+Example flow:
+
+User updates profile
+       │
+       ▼
+Firestore updates document
+       │
+       ▼
+All connected clients receive update instantly
+This is useful for:
+
+Chat apps
+Live dashboards
+Collaborative apps
+
+🔟 Firestore vs Cloud SQL
+Feature	Firestore	Cloud SQL
+Type	NoSQL	Relational
+Schema	Flexible	Fixed
+Scaling	Automatic	Vertical
+Best for	mobile/web apps	enterprise apps
+Use Cloud SQL for structured relational data.
+
+Use Cloud Firestore for flexible document-based apps.
+
+1️⃣1️⃣ Real Production Architecture
+Example serverless architecture:
+
+Client (Web / Mobile)
+      │
+      ▼
+Firebase Authentication
+      │
+      ▼
+Cloud Functions
+      │
+      ▼
+Cloud Firestore
+Or microservices architecture:
+
+Frontend
+   │
+   ▼
+Cloud Run API
+   │
+   ▼
+Firestore Database
+Example collections:
+
+users
+orders
+messages
+notifications
+
+1️⃣2️⃣ Best Practices
+✔ Use small documents
+✔ Avoid deeply nested collections
+✔ Use indexes for queries
+✔ Structure collections for scalability
+
+Example:
+
+users/{userId}
+orders/{orderId}
+products/{productId}
+🎯 Summary
+Cloud Firestore is a serverless NoSQL database in Google Cloud Platform designed for real-time applications.
+
+Key features:
+
+Document-based database
+Automatic scaling
+Real-time synchronization
+Serverless architecture
+Common use cases:
+
+Mobile apps
+Chat applications
+Realtime dashboards
+Serverless APIs
+
+1️⃣ Firestore internal architecture (indexes, shards, replication)
+2️⃣ Firestore vs Bigtable vs Spanner
+3️⃣ Event-driven architecture (Firestore + Cloud Functions + Pub/Sub)
+4️⃣ Real-time chat application architecture using Firestore.
+
+====================================================================
+
+Cloud Datastore (Hands-on)
+
+☁️ Cloud Datastore (Hands-on)
+Cloud Datastore is a fully managed NoSQL database provided by Google Cloud Platform.
+
+Today, it is integrated into Cloud Firestore as Firestore in Datastore mode.
+
+It is designed for:
+
+Highly scalable applications
+
+Automatic scaling
+
+Schema-less data storage
+
+1️⃣ Datastore Data Model
+Datastore stores data using Entities and Properties.
+
+Structure:
+
+Kind
+  │
+  ▼
+Entity
+  │
+  ▼
+Properties
+Example:
+
+Kind: User
+   │
+   ├── Entity: user1
+   │       ├── name: John
+   │       ├── email: john@email.com
+   │
+   └── Entity: user2
+           ├── name: Alice
+           ├── email: alice@email.com
+Comparison with relational DB:
+
+SQL	Datastore
+Table	Kind
+Row	Entity
+Column	Property
+
+2️⃣ Datastore Architecture
+Typical architecture:
+
+Application
+     │
+     ▼
+API / Microservice
+     │
+     ▼
+Cloud Datastore
+     │
+     ▼
+Distributed storage
+Example serverless architecture:
+
+Client
+   │
+   ▼
+Cloud Run
+   │
+   ▼
+Cloud Datastore
+Using Cloud Run.
+
+3️⃣ Create Datastore Database (Hands-on)
+Open Google Cloud Console.
+
+Step 1
+Navigate to:
+
+Firestore
+Step 2
+Choose:
+
+Datastore mode
+Step 3
+Select region:
+
+Example:
+
+asia-south1
+Click:
+
+Create
+Your Datastore database is now ready.
+
+4️⃣ Insert Entity (Console)
+Navigate to:
+
+Datastore → Entities
+Click:
+
+Create Entity
+Example:
+
+Kind: User
+Add properties:
+
+name: John
+email: john@email.com
+age: 30
+Datastore will create:
+
+User
+  └── Entity ID: auto-generated
+  
+5️⃣ Query Entities
+Example query:
+
+SELECT * FROM User WHERE age > 25
+Datastore equivalent:
+
+Kind: User
+Filter: age > 25
+
+6️⃣ Java Example (Datastore)
+Dependency:
+
+<dependency>
+ <groupId>com.google.cloud</groupId>
+ <artifactId>google-cloud-datastore</artifactId>
+</dependency>
+Java example:
+
+import com.google.cloud.datastore.*;
+
+public class DatastoreExample {
+
+    public static void main(String[] args) {
+
+        Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
+
+        KeyFactory keyFactory = datastore.newKeyFactory().setKind("User");
+
+        Key key = keyFactory.newKey("user1");
+
+        Entity entity = Entity.newBuilder(key)
+                .set("name", "John")
+                .set("email", "john@email.com")
+                .build();
+
+        datastore.put(entity);
+
+        System.out.println("Entity saved");
+    }
+}
+Explanation:
+
+KeyFactory → create entity key
+Entity → data object
+datastore.put() → save entity
+
+7️⃣ Read Entity Example
+Key key = datastore.newKeyFactory()
+        .setKind("User")
+        .newKey("user1");
+
+Entity entity = datastore.get(key);
+
+System.out.println(entity.getString("name"));
+
+8️⃣ Query Example
+Query<Entity> query =
+    Query.newEntityQueryBuilder()
+        .setKind("User")
+        .setFilter(
+            StructuredQuery.PropertyFilter.gt("age", 25))
+        .build();
+
+QueryResults<Entity> results = datastore.run(query);
+
+while (results.hasNext()) {
+    Entity entity = results.next();
+    System.out.println(entity.getString("name"));
+}
+
+9️⃣ Datastore Indexing
+Datastore automatically creates indexes for queries.
+
+Example indexed query:
+
+Find all users with age > 25
+Architecture:
+
+Datastore
+   │
+   ├── Data storage
+   └── Index storage
+Indexes allow fast queries across billions of entities.
+
+🔟 Real Production Architecture
+Example architecture:
+
+Frontend
+   │
+   ▼
+Cloud Run API
+   │
+   ▼
+Cloud Datastore
+Example entities:
+
+Users
+Orders
+Products
+Sessions
+For example:
+
+User entity
+Order entity
+Payment entity
+
+1️⃣1️⃣ Datastore vs Firestore
+Feature	Datastore	Firestore
+Query features	Basic	Advanced
+Realtime updates	No	Yes
+Mode	Legacy	Modern
+Mobile support	Limited	Excellent
+Use Cloud Datastore mainly for existing legacy applications.
+
+New applications usually use Cloud Firestore.
+
+1️⃣2️⃣ Best Practices
+✔ Design entity kinds carefully
+✔ Use indexes for queries
+✔ Avoid large entities
+✔ Use entity groups for transactions
+
+Example:
+
+User
+ └── Orders
+      └── Payments
+	  
+🎯 Summary
+Cloud Datastore is a fully managed NoSQL database on Google Cloud Platform designed for highly scalable applications.
+
+Key features:
+
+Schema-less database
+Automatic scaling
+High availability
+Managed infrastructure
+Typical architecture:
+
+Application
+   │
+   ▼
+API Service
+   │
+   ▼
+Cloud Datastore
+
+1️⃣ Firestore vs Datastore vs Bigtable vs Spanner (complete comparison)
+2️⃣ How Google chooses databases internally
+3️⃣ Complete GCP database architecture diagram
+4️⃣ Which GCP database to choose for different systems (very important).
+
+=====================================================================
+
+Cloud Big table (Hands-on)
+
+☁️ Cloud Bigtable (Hands-on)
+Cloud Bigtable is a fully managed, highly scalable NoSQL database provided by Google Cloud Platform.
+
+It is designed for massive scale workloads, storing terabytes to petabytes of data with very low latency.
+
+Bigtable is the same technology that powers many Google services and inspired databases like Apache HBase.
+
+1️⃣ Cloud Bigtable Architecture
+Bigtable uses a distributed storage architecture.
+
+Application
+     │
+     ▼
+Cloud Bigtable
+     │
+     ├── Node 1
+
+Cloud Big Query (Hands-on)
+
+☁️ BigQuery (Hands-on)
+BigQuery is a fully managed analytics data warehouse provided by Google Cloud Platform.
+
+It is designed for large-scale analytics, allowing you to run SQL queries on terabytes or petabytes of data in seconds.
+
+Typical uses:
+
+Data analytics
+Business intelligence
+Data warehousing
+Machine learning datasets
+
+1️⃣ BigQuery Architecture
+BigQuery is serverless, meaning you don’t manage infrastructure.
+
+Data Sources
+   │
+   ▼
+BigQuery Storage
+   │
+   ▼
+BigQuery Compute Engine
+   │
+   ▼
+SQL Queries
+   │
+   ▼
+Analytics / Dashboard
+Example architecture:
+
+Cloud Storage
+Streaming Data
+Application Logs
+        │
+        ▼
+BigQuery Dataset
+        │
+        ▼
+SQL Queries
+        │
+        ▼
+Visualization (Looker / BI)
+BigQuery separates:
+
+Storage
+Compute
+which allows very high performance analytics.
+
+2️⃣ BigQuery Core Concepts
+Dataset
+A dataset is a container for tables.
+
+Example:
+
+Dataset: ecommerce_analytics
+Table
+A table stores data.
+
+Example:
+
+orders
+users
+products
+Schema
+Defines table structure.
+
+Example:
+
+order_id
+user_id
+amount
+order_date
+Hierarchy:
+
+Project
+   │
+   ▼
+Dataset
+   │
+   ▼
+Tables
+
+3️⃣ Create BigQuery Dataset (Hands-on)
+Open Google Cloud Console.
+
+Step 1
+Navigate to:
+
+BigQuery
+Step 2
+Click:
+
+Create Dataset
+Example configuration:
+
+Dataset ID: ecommerce_dataset
+Region: asia-south1
+Click:
+
+Create Dataset
+
+4️⃣ Create Table
+Inside dataset click:
+
+Create Table
+Configuration example:
+
+Source: Upload
+File format: CSV
+Table name: orders
+Schema example:
+
+order_id STRING
+user_id STRING
+amount FLOAT
+order_date DATE
+
+5️⃣ Insert Data Using SQL
+Example insert query:
+
+INSERT INTO ecommerce_dataset.orders
+(order_id, user_id, amount, order_date)
+VALUES
+("o1", "u1", 120.50, "2026-03-01");
+
+6️⃣ Query Data
+Example query:
+
+SELECT *
+FROM ecommerce_dataset.orders
+WHERE amount > 100;
+Aggregation example:
+
+SELECT
+user_id,
+SUM(amount) AS total_spent
+FROM ecommerce_dataset.orders
+GROUP BY user_id;
+
+7️⃣ Load Data from Cloud Storage
+Using Google Cloud Storage.
+
+Example workflow:
+
+CSV files → Cloud Storage → BigQuery
+Example command using bq command-line tool:
+
+bq load \
+--source_format=CSV \
+ecommerce_dataset.orders \
+gs://data-bucket/orders.csv
+
+8️⃣ Streaming Data into BigQuery
+Applications can stream data directly.
+
+Architecture:
+
+Application
+   │
+   ▼
+Streaming API
+   │
+   ▼
+BigQuery Table
+Example use cases:
+
+Website analytics
+IoT data
+Real-time monitoring
+
+9️⃣ Java Example (Insert Data)
+Dependency:
+
+<dependency>
+ <groupId>com.google.cloud</groupId>
+ <artifactId>google-cloud-bigquery</artifactId>
+</dependency>
+Java example:
+
+import com.google.cloud.bigquery.*;
+
+public class BigQueryExample {
+
+    public static void main(String[] args) {
+
+        BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
+
+        String datasetName = "ecommerce_dataset";
+        String tableName = "orders";
+
+        InsertAllRequest.RowToInsert row =
+                InsertAllRequest.RowToInsert.of(
+                        "row1",
+                        Map.of(
+                                "order_id", "o1",
+                                "user_id", "u1",
+                                "amount", 150
+                        )
+                );
+
+        InsertAllRequest request =
+                InsertAllRequest.newBuilder(datasetName, tableName)
+                        .addRow(row)
+                        .build();
+
+        bigquery.insertAll(request);
+
+        System.out.println("Row inserted");
+    }
+}
+Explanation:
+
+BigQueryOptions → connect to BigQuery
+InsertAllRequest → insert rows
+insertAll() → write data
+🔟 Example Analytics Query
+Example: Top customers.
+
+SELECT
+user_id,
+SUM(amount) AS total_spent
+FROM ecommerce_dataset.orders
+GROUP BY user_id
+ORDER BY total_spent DESC
+LIMIT 10;
+This query scans large datasets efficiently.
+
+1️⃣1️⃣ Real Production Architecture
+Example analytics pipeline:
+
+Application Logs
+       │
+       ▼
+Pub/Sub
+       │
+       ▼
+Dataflow
+       │
+       ▼
+BigQuery
+       │
+       ▼
+BI Dashboard
+Using:
+
+Pub/Sub
+
+Dataflow
+
+BigQuery
+
+1️⃣2️⃣ BigQuery vs Bigtable vs Spanner
+
+Feature	BigQuery	Bigtable	Spanner
+Type	Data warehouse	NoSQL	Relational
+Use case	Analytics	large scale storage	transactional apps
+Query	SQL	key-value	SQL
+Latency	seconds	milliseconds	milliseconds
+Use BigQuery for:
+
+Analytics
+Reporting
+Business intelligence
+
+🎯 Summary:
+BigQuery is a serverless analytics database designed for large-scale data analysis on Google Cloud Platform.
+
+Key features:
+
+Serverless architecture
+SQL-based analytics
+Petabyte-scale queries
+Fast query performance
+Typical architecture:
+
+Data Sources
+   │
+   ▼
+BigQuery
+   │
+   ▼
+Analytics / BI Tools
+
+1️⃣ Complete GCP data pipeline (Pub/Sub → Dataflow → BigQuery)
+2️⃣ Partitioned tables and clustering (performance optimization)
+3️⃣ BigQuery internal architecture (Dremel query engine)
+4️⃣ Real-time analytics architecture used by companies like Uber / Spotify.
+
+===========================================================================
+
+Cloud Dataflow (Hands-on)
+
+☁️ Cloud Dataflow (Hands-on)
+Cloud Dataflow is a data processing service on Google Cloud Platform used to process large datasets in real-time or batch mode.
+
+It is based on Apache Beam, which allows you to write data pipelines that can run on different engines.
+
+Typical uses:
+
+Real-time analytics
+ETL pipelines
+Data transformation
+Streaming data processing
+
+1️⃣ Cloud Dataflow Architecture
+Typical pipeline architecture:
+
+Data Source
+   │
+   ▼
+Dataflow Pipeline
+   │
+   ├── Transform
+   ├── Filter
+   ├── Aggregate
+   │
+   ▼
+Data Sink
+Example real architecture:
+
+Pub/Sub
+   │
+   ▼
+Cloud Dataflow
+   │
+   ▼
+BigQuery
+Using:
+
+Pub/Sub
+
+BigQuery
+
+2️⃣ Batch vs Streaming Pipelines
+Batch Processing
+Processes large historical datasets.
+
+Example:
+
+Daily sales reports
+Log analysis
+Data warehouse ETL
+Architecture:
+
+Cloud Storage
+      │
+      ▼
+Cloud Dataflow
+      │
+      ▼
+BigQuery
+Using Google Cloud Storage.
+
+Streaming Processing
+Processes real-time data continuously.
+
+Example:
+
+IoT sensor data
+Real-time fraud detection
+Live analytics dashboards
+Architecture:
+
+Pub/Sub
+   │
+   ▼
+Dataflow
+   │
+   ▼
+BigQuery
+
+3️⃣ Hands-on: Create Dataflow Pipeline
+Step 1
+Enable APIs in Google Cloud Console.
+
+Navigate:
+
+Dataflow
+Step 2
+Create a pipeline using Apache Beam SDK.
+
+Install Maven dependency:
+
+<dependency>
+ <groupId>org.apache.beam</groupId>
+ <artifactId>beam-sdks-java-core</artifactId>
+</dependency>
+
+4️⃣ Simple Apache Beam Pipeline Example
+Java example:
+
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.values.TypeDescriptors;
+
+public class DataflowExample {
+
+    public static void main(String[] args) {
+
+        Pipeline pipeline = Pipeline.create();
+
+        pipeline
+            .apply(Create.of("apple", "banana", "cherry"))
+            .apply(MapElements.into(TypeDescriptors.strings())
+                    .via(word -> word.toUpperCase()))
+            .apply(org.apache.beam.sdk.io.TextIO.write()
+                    .to("output.txt"));
+
+        pipeline.run().waitUntilFinish();
+    }
+}
+Explanation:
+
+Pipeline → data processing pipeline
+Create.of() → input data
+MapElements → transform data
+TextIO.write() → output
+
+5️⃣ Word Count Example (Classic Dataflow Example)
+This is the most common Dataflow example.
+
+pipeline
+.apply(TextIO.read().from("gs://data-bucket/input.txt"))
+.apply(FlatMapElements
+    .into(TypeDescriptors.strings())
+    .via((String line) -> Arrays.asList(line.split(" "))))
+.apply(Count.perElement())
+.apply(TextIO.write().to("gs://data-bucket/output"));
+Steps:
+
+Read file
+Split words
+Count words
+Write results
+
+6️⃣ Deploy Pipeline to Dataflow
+Use Maven command:
+
+mvn compile exec:java \
+-Dexec.mainClass=com.example.DataflowExample \
+-Dexec.args="--runner=DataflowRunner \
+--project=my-project \
+--tempLocation=gs://temp-bucket/temp"
+Explanation:
+
+runner → Dataflow execution engine
+project → GCP project
+tempLocation → temporary files
+
+7️⃣ Example Streaming Pipeline
+Streaming example using Pub/Sub.
+
+pipeline
+.apply(PubsubIO.readStrings()
+.fromSubscription("projects/my-project/subscriptions/input-sub"))
+
+.apply(MapElements.into(TypeDescriptors.strings())
+.via(msg -> msg.toUpperCase()))
+
+.apply(PubsubIO.writeStrings()
+.to("projects/my-project/topics/output-topic"));
+Architecture:
+
+Pub/Sub Topic
+      │
+      ▼
+Cloud Dataflow
+      │
+      ▼
+Pub/Sub Output
+
+8️⃣ Real Data Pipeline Architecture
+Example enterprise pipeline:
+
+IoT Devices
+      │
+      ▼
+Pub/Sub
+      │
+      ▼
+Cloud Dataflow
+      │
+      ▼
+BigQuery
+      │
+      ▼
+Analytics Dashboard
+Components used:
+
+Pub/Sub
+
+Cloud Dataflow
+
+BigQuery
+
+9️⃣ Windowing in Streaming
+Streaming pipelines use windowing.
+
+Example:
+
+Events per minute
+Events per hour
+Events per day
+Architecture:
+
+Streaming events
+      │
+      ▼
+Window aggregation
+      │
+      ▼
+Results
+🔟 Dataflow Autoscaling
+Dataflow automatically scales workers.
+
+Example:
+
+Low traffic → 1 worker
+High traffic → 20 workers
+Architecture:
+
+Pipeline
+   │
+   ▼
+Workers
+   ├── Worker 1
+   ├── Worker 2
+   ├── Worker 3
+Benefits:
+
+Automatic scaling
+High throughput
+Cost optimization
+
+1️⃣1️⃣ Real Production Architecture
+Example modern data engineering pipeline:
+
+Application Logs
+        │
+        ▼
+Pub/Sub
+        │
+        ▼
+Cloud Dataflow
+        │
+        ▼
+BigQuery
+        │
+        ▼
+Looker Dashboard
+This is a very common GCP data pipeline architecture.
+
+1️⃣2️⃣ Dataflow vs Other GCP Tools
+Tool	Purpose
+BigQuery	analytics
+Dataflow	data processing
+Pub/Sub	messaging
+Cloud Storage	raw data storage
+Typical flow:
+
+Pub/Sub → Dataflow → BigQuery
+
+🎯 Summary:
+Cloud Dataflow is a managed data processing service on Google Cloud Platform used for ETL and streaming pipelines.
+
+Key capabilities:
+
+Batch processing
+Streaming processing
+Autoscaling pipelines
+Integration with GCP services
+Typical architecture:
+
+Data Source
+   │
+   ▼
+Dataflow
+   │
+   ▼
+Data Warehouse
+
+1️⃣ Complete real-time pipeline (Pub/Sub → Dataflow → BigQuery)
+2️⃣ Batch ETL pipeline (Cloud Storage → Dataflow → BigQuery)
+3️⃣ Dataflow internal architecture (workers, shuffle, pipeline graph)
+4️⃣ Real production architecture used by companies like Spotify or Uber on GCP.
+
+=========================================================================
+
+Cloud Pubsub (Hands-on)
+
+☁️ Cloud Pub/Sub (Hands-on)
+Cloud Pub/Sub is a fully managed messaging system provided by Google Cloud Platform.
+
+It enables event-driven communication between services using a publish–subscribe model.
+
+Typical uses:
+
+Event-driven architectures
+Microservices communication
+Real-time data pipelines
+Log/event streaming
+
+1️⃣ Pub/Sub Architecture
+Core components:
+
+Publisher → Topic → Subscription → Subscriber
+Diagram:
+
+Publisher
+   │
+   ▼
+Topic
+   │
+   ├── Subscription A → Service A
+   └── Subscription B → Service B
+Meaning:
+
+Publisher sends messages
+
+Topic stores messages
+
+Subscriptions deliver messages to consumers
+
+2️⃣ Pub/Sub Message Flow
+Example workflow:
+
+User places order
+       │
+       ▼
+Order Service publishes event
+       │
+       ▼
+Pub/Sub Topic
+       │
+       ├── Inventory Service
+       ├── Notification Service
+       └── Analytics Service
+This allows multiple services to react to the same event.
+
+3️⃣ Create Pub/Sub Topic (Hands-on)
+Open Google Cloud Console.
+
+Step 1
+Navigate to:
+
+Pub/Sub → Topics
+Step 2
+Click:
+
+Create Topic
+Example:
+
+Topic ID: order-events
+Click:
+
+Create
+
+4️⃣ Create Subscription
+Inside the topic:
+
+Click:
+
+Create Subscription
+Example configuration:
+
+Subscription ID: order-processor-sub
+Delivery Type: Pull
+Now the architecture becomes:
+
+Publisher
+   │
+   ▼
+Topic: order-events
+   │
+   ▼
+Subscription: order-processor-sub
+
+5️⃣ Publish Message (CLI)
+Using Google Cloud SDK.
+
+Command:
+
+gcloud pubsub topics publish order-events \
+--message="New Order Created"
+Output:
+
+messageIds:
+ - 123456789
+ 
+6️⃣ Pull Messages (CLI)
+Read messages from subscription:
+
+gcloud pubsub subscriptions pull order-processor-sub --auto-ack
+Example output:
+
+DATA: New Order Created
+
+7️⃣ Java Example (Publisher)
+Dependency:
+
+<dependency>
+ <groupId>com.google.cloud</groupId>
+ <artifactId>google-cloud-pubsub</artifactId>
+</dependency>
+Publisher code:
+
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.pubsub.v1.ProjectTopicName;
+import com.google.pubsub.v1.PubsubMessage;
+import com.google.protobuf.ByteString;
+
+public class PubSubPublisher {
+
+    public static void main(String[] args) throws Exception {
+
+        String projectId = "my-project";
+        String topicId = "order-events";
+
+        ProjectTopicName topicName =
+                ProjectTopicName.of(projectId, topicId);
+
+        Publisher publisher = Publisher.newBuilder(topicName).build();
+
+        String message = "New Order Created";
+
+        PubsubMessage pubsubMessage =
+                PubsubMessage.newBuilder()
+                        .setData(ByteString.copyFromUtf8(message))
+                        .build();
+
+        publisher.publish(pubsubMessage).get();
+
+        System.out.println("Message published");
+
+        publisher.shutdown();
+    }
+}
+Explanation:
+
+Publisher → sends message
+Topic → receives message
+PubsubMessage → message payload
+
+8️⃣ Java Example (Subscriber)
+Subscriber code:
+
+import com.google.cloud.pubsub.v1.Subscriber;
+import com.google.pubsub.v1.ProjectSubscriptionName;
+
+public class PubSubSubscriber {
+
+    public static void main(String[] args) {
+
+        String projectId = "my-project";
+        String subscriptionId = "order-processor-sub";
+
+        ProjectSubscriptionName subscriptionName =
+                ProjectSubscriptionName.of(projectId, subscriptionId);
+
+        Subscriber subscriber =
+                Subscriber.newBuilder(subscriptionName,
+                        (message, consumer) -> {
+
+                            System.out.println(
+                                    "Received: " +
+                                    message.getData().toStringUtf8());
+
+                            consumer.ack();
+                        }).build();
+
+        subscriber.startAsync().awaitRunning();
+    }
+}
+Explanation:
+
+Subscriber → receives message
+ack() → confirms message processing
+
+9️⃣ Push vs Pull Subscriptions
+Type	Description
+Pull	Subscriber fetches messages
+Push	Pub/Sub sends messages to HTTP endpoint
+Push example architecture:
+
+Pub/Sub
+   │
+   ▼
+HTTP Endpoint
+(Cloud Run / Cloud Functions)
+Using:
+
+Cloud Run
+
+Cloud Functions
+
+🔟 Real Event-Driven Architecture
+Example microservices architecture:
+
+Order Service
+      │
+      ▼
+Pub/Sub Topic
+      │
+      ├── Inventory Service
+      ├── Email Notification Service
+      └── Analytics Service
+Benefits:
+
+Loose coupling
+Scalability
+Asynchronous processing
+
+1️⃣1️⃣ Pub/Sub + Data Pipeline
+Example analytics pipeline:
+
+Application Logs
+       │
+       ▼
+Pub/Sub
+       │
+       ▼
+Cloud Dataflow
+       │
+       ▼
+BigQuery
+Using:
+
+Cloud Dataflow
+
+BigQuery
+
+1️⃣2️⃣ Message Acknowledgement
+Message lifecycle:
+
+Publish message
+      │
+      ▼
+Subscriber receives
+      │
+      ▼
+ack() → message processed
+If not acknowledged:
+
+Message redelivered
+Ensures reliable processing.
+
+🎯 Summary
+Cloud Pub/Sub is a messaging service for event-driven architectures on Google Cloud Platform.
+
+Key features:
+
+Publish–subscribe model
+Event-driven systems
+Scalable messaging
+Reliable message delivery
+Typical architecture:
+
+Publisher
+   │
+   ▼
+Topic
+   │
+   ▼
+Subscription
+   │
+   ▼
+Subscriber
+
+1️⃣ Cloud Run + Pub/Sub + Cloud Functions event-driven architecture
+2️⃣ Complete microservices event architecture (order → inventory → payment → notification)
+3️⃣ Pub/Sub internal architecture (message partitions, replication)
+4️⃣ Exactly-once vs at-least-once message delivery explained with diagrams.
+
+============================================================================
+Google Cloud Logging (Hands-on)
+
+☁️ Google Cloud Logging (Hands-on)
+Cloud Logging is a service provided by Google Cloud Platform to collect, store, search, and analyze logs from applications and infrastructure.
+
+It is part of Google Cloud Operations Suite.
+
+Typical logs collected from:
+
+Applications
+Virtual machines
+Cloud Run services
+Cloud Functions
+Load balancers
+Kubernetes clusters
+
+1️⃣ Cloud Logging Architecture
+Basic architecture:
+
+Applications / Services
+        │
+        ▼
+Cloud Logging Agent
+        │
+        ▼
+Cloud Logging
+        │
+        ├── Log Explorer
+        ├── Alerts
+        └── Export to BigQuery / Storage
+Example architecture:
+
+Cloud Run
+Cloud Functions
+Compute Engine
+        │
+        ▼
+Cloud Logging
+        │
+        ▼
+Monitoring & Alerts
+
+2️⃣ Types of Logs in Google Cloud
+Common log types:
+
+Log Type	Description
+Admin Activity Logs	configuration changes
+System Event Logs	infrastructure events
+Access Logs	API requests
+Application Logs	app-generated logs
+Example:
+
+User login
+API request
+Database error
+Service failure
+
+3️⃣ View Logs (Hands-on)
+Open Google Cloud Console.
+
+Step 1
+Navigate to:
+
+Logging → Logs Explorer
+Step 2
+Select resource:
+
+Example:
+
+Cloud Run service
+Compute Engine VM
+Step 3
+Search logs.
+
+Example filter:
+
+resource.type="cloud_run_revision"
+Example output:
+
+GET /api/orders 200
+POST /login 401
+Database timeout
+
+4️⃣ Write Application Logs
+Example using Java.
+
+import java.util.logging.Logger;
+
+public class LoggingExample {
+
+    private static final Logger logger =
+            Logger.getLogger(LoggingExample.class.getName());
+
+    public static void main(String[] args) {
+
+        logger.info("Application started");
+
+        try {
+            int result = 10 / 0;
+        } catch (Exception e) {
+            logger.severe("Error occurred: " + e.getMessage());
+        }
+    }
+}
+These logs automatically appear in Cloud Logging when running on services like:
+
+Cloud Run
+
+Cloud Functions
+
+Google Kubernetes Engine
+
+5️⃣ Structured Logging
+Instead of plain text logs, structured logs use JSON format.
+
+Example:
+
+{
+ "severity": "INFO",
+ "message": "Order created",
+ "orderId": "12345",
+ "userId": "u100"
+}
+Benefits:
+
+Better searching
+Easier analytics
+Improved debugging
+
+6️⃣ Log Filtering Example
+Example filter in Logs Explorer:
+
+severity="ERROR"
+Example advanced filter:
+
+resource.type="cloud_run_revision"
+severity>=ERROR
+Meaning:
+
+Show only errors from Cloud Run
+
+7️⃣ Export Logs (Log Sinks)
+Logs can be exported to other services.
+
+Common destinations:
+
+Destination	Use Case
+BigQuery	log analytics
+Cloud Storage	long-term storage
+Pub/Sub	event-driven processing
+Example architecture:
+
+Application
+    │
+    ▼
+Cloud Logging
+    │
+    ├── BigQuery (analytics)
+    ├── Cloud Storage (archive)
+    └── Pub/Sub (alerts)
+Using:
+
+BigQuery
+
+Cloud Storage
+
+Pub/Sub
+
+8️⃣ Create Log Sink
+Steps:
+
+Go to Logging
+
+Click Log Router
+
+Click Create Sink
+
+Example:
+
+Sink Name: error-logs
+Destination: BigQuery
+Now logs automatically flow into BigQuery tables.
+
+9️⃣ Log-based Metrics
+You can create metrics from logs.
+
+Example:
+
+Count number of API errors
+Count failed login attempts
+Track latency issues
+Architecture:
+
+Logs
+  │
+  ▼
+Log-based Metrics
+  │
+  ▼
+Cloud Monitoring
+Using Cloud Monitoring.
+
+🔟 Create Alert from Logs
+Example:
+
+Alert when ERROR logs > 50 per minute
+Steps:
+
+Cloud Monitoring
+   │
+   ▼
+Create Alert Policy
+   │
+   ▼
+Trigger email / Slack
+Architecture:
+
+Application error
+      │
+      ▼
+Cloud Logging
+      │
+      ▼
+Alert Policy
+      │
+      ▼
+Notification (Email / Slack)
+
+1️⃣1️⃣ Real Production Architecture
+Example observability architecture:
+
+Applications
+   │
+   ├── Cloud Run
+   ├── Kubernetes
+   └── VM instances
+        │
+        ▼
+Cloud Logging
+        │
+        ├── BigQuery (analytics)
+        ├── Cloud Monitoring (alerts)
+        └── Cloud Storage (archive)
+		
+1️⃣2️⃣ Best Practices
+✔ Use structured logging
+✔ Add severity levels
+✔ Export logs for analytics
+✔ Monitor errors with alerts
+
+Example log format:
+
+INFO → normal operations
+WARNING → potential issue
+ERROR → failure
+CRITICAL → system crash
+
+🎯 Summary:
+Cloud Logging is a log management system in Google Cloud Platform that collects logs from all cloud resources.
+
+Key capabilities:
+
+Centralized logging
+Search and filtering
+Log analytics
+Alerting and monitoring
+Typical architecture:
+
+Applications
+   │
+   ▼
+Cloud Logging
+   │
+   ▼
+Monitoring / Analytics
+✅ If you'd like, I can also show very important production observability architectures on GCP:
+
+1️⃣ Cloud Logging + Monitoring + Trace complete observability architecture
+2️⃣ Distributed tracing with Cloud Trace
+3️⃣ Real production logging pipeline (Logs → Pub/Sub → Dataflow → BigQuery)
+4️⃣ How companies design centralized logging systems on GCP.
+
+=============================================================================
+Managing identity and access
+management (IAM)- Hands on  Viewing IAM role assignments
+
+🔐 Managing Identity and Access Management (IAM) – Hands-on
+Viewing IAM Role Assignments
+Identity and Access Management in Google Cloud Platform allows you to control who (users or services) can access what resources and what actions they can perform.
+
+IAM works with three main components:
+
+Principal (who)  → User / Service Account / Group
+Role (what)      → Permissions bundle
+Resource (where) → Project / Service / Resource
+Example:
+
+User: alice@gmail.com
+Role: Viewer
+Resource: Project
+🧪 Hands-on: Viewing IAM Role Assignments
+Step 1: Open Google Cloud Console
+Go to Google Cloud Console
+
+https://console.cloud.google.com
+Step 2: Navigate to IAM
+Click Navigation Menu (☰)
+
+Go to:
+
+IAM & Admin → IAM
+You will see the IAM permissions page.
+
+Step 3: View IAM Members
+The IAM page displays a table like this:
+
+Member	Role	Resource
+user1@gmail.com	Viewer	Project
+admin@gmail.com	Owner	Project
+service-account@project.iam.gserviceaccount.com	Editor	Project
+Meaning:
+
+Member → User / Service account
+
+Role → Permissions assigned
+
+Resource → Project or service level
+
+Example:
+
+Member: developer@gmail.com
+Role: Compute Admin
+Resource: Project
+🔎 Filter Role Assignments
+You can search by:
+
+User email
+Role name
+Service account
+Example search:
+
+viewer
+Shows all users with Viewer role.
+
+Common roles:
+
+Viewer
+
+Editor
+
+Owner
+
+Storage Admin
+
+Compute Admin
+
+🧑‍💻 Using gcloud CLI to View IAM Roles
+Using Google Cloud SDK.
+
+Step 1: Set Project
+gcloud config set project PROJECT_ID
+Step 2: View IAM Policy
+gcloud projects get-iam-policy PROJECT_ID
+Example output:
+
+bindings:
+- members:
+  - user:admin@gmail.com
+  role: roles/owner
+- members:
+  - user:dev@gmail.com
+  role: roles/viewer
+Meaning:
+
+admin@gmail.com → Owner
+dev@gmail.com → Viewer
+📊 Viewing Role Permissions
+To see permissions inside a role:
+
+Example:
+
+gcloud iam roles describe roles/viewer
+Output includes permissions like:
+
+compute.instances.get
+storage.buckets.list
+logging.logs.list
+These permissions allow read-only access.
+
+🏗 Example IAM Role Assignment
+Example project access structure:
+
+Project
+│
+├── Owner
+│     └── project-admin@gmail.com
+│
+├── Editor
+│     └── developer@gmail.com
+│
+└── Viewer
+      └── analyst@gmail.com
+⚠️ Best Practices
+✔ Follow Principle of Least Privilege
+✔ Avoid assigning Owner role to many users
+✔ Use Groups instead of individual users
+✔ Regularly audit IAM roles
+
+Example good structure:
+
+Admins Group → Owner
+Developers Group → Editor
+Analysts Group → Viewer
+
+🎯 Summary:
+Identity and Access Management helps manage access securely.
+
+To view IAM role assignments:
+
+1️⃣ Open Google Cloud Console
+2️⃣ Navigate to IAM & Admin → IAM
+3️⃣ View members and assigned roles
+4️⃣ Use gcloud CLI for command-line access
+
+===========================================================================
+
+Adding IAM users and roles (Hands-on)
+
+Creating custom IAM roles
+
+Creating service accounts
+
+Granting permissions to service accounts.
+
+
+yes can you provide complete practical on below? Adding IAM users and roles (Hands-on)
+
+Creating custom IAM roles
+
+Creating service accounts
+
+Granting permissions to service accounts.
+
+Below is a complete practical guide (step-by-step hands-on lab) for Google Cloud IAM covering all four tasks.
+
+Services involved:
+
+Identity and Access Management
+
+Google Cloud Console
+
+Google Cloud SDK
+
+🧪 Practical Lab: Managing IAM in Google Cloud
+This lab covers:
+
+1️⃣ Adding IAM users and roles
+2️⃣ Creating custom IAM roles
+3️⃣ Creating service accounts
+4️⃣ Granting permissions to service accounts
+
+1️⃣ Adding IAM Users and Roles (Hands-on)
+Step 1: Open IAM
+Go to:
+
+Navigation Menu → IAM & Admin → IAM
+In Google Cloud Console.
+
+Step 2: Add a New User
+Click:
+
+Grant Access
+Fill the form.
+
+Example:
+
+New principals: developer@gmail.com
+Role: Viewer
+Example configuration:
+
+User: developer@gmail.com
+Role: Viewer
+Project: MyProject
+Click Save.
+
+Result
+Now the user can:
+
+View project resources
+View logs
+View monitoring dashboards
+But cannot modify resources.
+
+CLI Method
+Using Google Cloud SDK.
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+--member="user:developer@gmail.com" \
+--role="roles/viewer"
+
+2️⃣ Creating Custom IAM Roles (Hands-on)
+Sometimes built-in roles are too broad, so you create custom roles.
+
+Example:
+
+Custom role: Storage Viewer
+Permissions:
+storage.buckets.get
+storage.objects.list
+
+Step 1: Open Roles Page
+Navigate to:
+
+IAM & Admin → Roles
+Step 2: Create Role
+Click:
+
+Create Role
+Fill details.
+
+Example:
+
+Role Title: Custom Storage Viewer
+Role ID: customStorageViewer
+Description: View storage buckets
+
+Step 3: Add Permissions
+Click Add Permissions.
+
+Add example permissions:
+
+storage.buckets.get
+storage.objects.list
+storage.objects.get
+Click Create.
+
+Result
+You now have a custom role.
+
+Example:
+
+projects/myproject/roles/customStorageViewer
+CLI Method
+Create role YAML file:
+
+title: Custom Storage Viewer
+description: View storage buckets
+stage: GA
+includedPermissions:
+- storage.buckets.get
+- storage.objects.list
+- storage.objects.get
+Create role:
+
+gcloud iam roles create customStorageViewer \
+--project=PROJECT_ID \
+--file=role-definition.yaml
+
+3️⃣ Creating Service Accounts (Hands-on)
+A service account is used for applications or services instead of users.
+
+Example use cases:
+
+VM accessing storage
+Cloud Run calling APIs
+Dataflow reading BigQuery
+Service accounts are managed in:
+
+Identity and Access Management
+
+Step 1: Navigate to Service Accounts
+IAM & Admin → Service Accounts
+
+Step 2: Create Service Account
+Click:
+
+Create Service Account
+Example:
+
+Name: app-service-account
+ID: app-service-account
+Description: Service account for application
+Click Create and Continue.
+
+Step 3: Assign Role
+Example role:
+
+Storage Object Viewer
+Click Continue → Done.
+
+Result
+You created:
+
+app-service-account@project-id.iam.gserviceaccount.com
+CLI Method
+Create service account:
+
+gcloud iam service-accounts create app-service-account \
+--display-name="Application Service Account"
+
+4️⃣ Granting Permissions to Service Accounts (Hands-on)
+Now we give the service account access to resources.
+
+Example:
+
+Allow service account to read Cloud Storage
+Using IAM role:
+
+roles/storage.objectViewer
+
+Step 1: Open IAM Page
+Go to:
+
+IAM & Admin → IAM
+
+Step 2: Add Role to Service Account
+Click Grant Access.
+
+Example:
+
+Principal:
+app-service-account@project-id.iam.gserviceaccount.com
+
+Role:
+Storage Object Viewer
+Click Save.
+
+CLI Method
+Grant role:
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+--member="serviceAccount:app-service-account@PROJECT_ID.iam.gserviceaccount.com" \
+--role="roles/storage.objectViewer"
+🏗 Example Real Cloud Architecture
+Example real scenario:
+
+Application running on Cloud Run
+        │
+        ▼
+Service Account
+        │
+        ▼
+IAM Roles
+        │
+        ├── Storage Viewer
+        ├── Pub/Sub Subscriber
+        └── BigQuery Data Viewer
+Used by services like:
+
+Cloud Run
+
+BigQuery
+
+Pub/Sub
+
+🔐 IAM Best Practices
+✔ Follow least privilege principle
+✔ Use service accounts instead of user credentials
+✔ Avoid using Owner role frequently
+✔ Rotate service account keys
+
+Example secure model:
+
+Admin Users → Owner
+Developers → Editor
+Applications → Service Accounts
+🎯 Final Summary
+In this lab you practiced IAM management using Identity and Access Management.
+
+We learned how to:
+
+✅ Add IAM users
+✅ Assign roles
+✅ Create custom roles
+✅ Create service accounts
+✅ Grant permissions to service accounts
+
+
+Create project
+
+Create service account
+
+Deploy app with IAM
+
+Secure storage access
+
+Test permissions
+
+Managing service accounts.(Hand -On) 
+ Managing service accounts with limited privileges
+ Assigning a service account to VM instances
+ Granting access to a service account in another project
+
+=======================================================================
+
+☁️ Managing Service Accounts (Hands-on)
+In Identity and Access Management, a service account is used by applications or VMs to securely access Google Cloud services without using user credentials.
+
+We will practice:
+
+1️⃣ Managing service accounts with limited privileges
+2️⃣ Assigning a service account to VM instances
+3️⃣ Granting access to a service account in another project
+
+Common services used:
+
+Compute Engine
+
+Cloud Storage
+
+Google Cloud Console
+
+🧪 1️⃣ Managing Service Accounts with Limited Privileges
+Goal
+Create a service account with minimal permissions (principle of least privilege).
+
+Step 1: Open Service Accounts
+In Google Cloud Console:
+
+Navigation Menu → IAM & Admin → Service Accounts
+
+Step 2: Create Service Account
+Click:
+
+Create Service Account
+Example:
+
+Name: limited-storage-sa
+ID: limited-storage-sa
+Description: Service account with limited storage access
+Click Create and Continue.
+
+Step 3: Assign Limited Role
+Choose a restricted role.
+
+Example:
+
+Role: Storage Object Viewer
+This allows:
+
+Read storage objects
+List storage objects
+But cannot:
+
+Delete objects
+Modify buckets
+Create buckets
+This is the least privilege model.
+
+CLI Method
+Using Google Cloud SDK
+
+Create service account:
+
+gcloud iam service-accounts create limited-storage-sa \
+--display-name="Limited Storage Service Account"
+Assign role:
+
+gcloud projects add-iam-policy-binding PROJECT_ID \
+--member="serviceAccount:limited-storage-sa@PROJECT_ID.iam.gserviceaccount.com" \
+--role="roles/storage.objectViewer"
+
+🧪 2️⃣ Assigning a Service Account to VM Instances
+Now we allow a VM to use the service account identity.
+
+Service used: Compute Engine
+
+Step 1: Create VM Instance
+Navigate:
+
+Compute Engine → VM Instances
+Click:
+
+Create Instance
+Example configuration:
+
+Name: test-vm
+Region: us-central1
+Machine type: e2-medium
+
+Step 2: Attach Service Account
+Scroll to:
+
+Identity and API access
+Select:
+
+Service Account:
+limited-storage-sa
+Access scope example:
+
+Allow default access
+Click Create.
+
+Result
+Architecture:
+
+VM Instance
+     │
+     ▼
+Service Account Identity
+     │
+     ▼
+IAM Role Permissions
+     │
+     ▼
+Cloud Storage Access
+The VM now uses the service account to access resources securely.
+
+Test Access from VM
+SSH into VM.
+
+Run:
+
+gsutil ls
+If the service account has permission, it will list buckets in Cloud Storage.
+
+🧪 3️⃣ Granting Access to a Service Account in Another Project
+This is called Cross-Project Access.
+
+Example scenario:
+
+Project A → VM running application
+Project B → Cloud Storage bucket
+The service account in Project A needs access to resources in Project B.
+
+Example Setup
+Project A:
+
+app-project
+Service Account: app-sa@app-project
+Project B:
+
+data-project
+Resource: Storage Bucket
+Step 1: Copy Service Account Email
+Example:
+
+app-sa@app-project.iam.gserviceaccount.com
+Step 2: Grant Access in Project B
+Open IAM page in Project B.
+
+Navigate:
+
+IAM & Admin → IAM
+Click:
+
+Grant Access
+Add:
+
+Principal:
+app-sa@app-project.iam.gserviceaccount.com
+Role example:
+
+Storage Object Viewer
+Click Save.
+
+Result
+Architecture:
+
+Project A
+   │
+   └── Service Account
+          │
+          ▼
+Project B
+   │
+   └── Cloud Storage Bucket
+Now the service account from Project A can access resources in Project B.
+
+CLI Method
+Run in Project B:
+
+gcloud projects add-iam-policy-binding DATA_PROJECT_ID \
+--member="serviceAccount:app-sa@app-project.iam.gserviceaccount.com" \
+--role="roles/storage.objectViewer"
+🏗 Real Production Architecture Example
+Application (VM or Cloud Run)
+        │
+        ▼
+Service Account
+        │
+        ▼
+IAM Roles
+        │
+        ├── BigQuery Viewer
+        ├── Storage Viewer
+        └── Pub/Sub Subscriber
+Services used:
+
+BigQuery
+
+Pub/Sub
+
+🔐 Security Best Practices:
+✔ Use least privilege roles
+✔ Avoid using default service account
+✔ Rotate service account keys
+✔ Use Workload Identity instead of keys
+
+Example secure architecture:
+
+VM
+ │
+ ▼
+Dedicated Service Account
+ │
+ ▼
+Restricted IAM Roles
+ │
+ ▼
+Specific Resource Access
+
+🎯 Summary:
+This hands-on covered service account management using Identity and Access Management.
+
+✔We learned how to:
+
+✅ Create service accounts with limited privileges
+✅ Attach service accounts to VM instances using Compute Engine
+✅ Grant cross-project access to service accounts
+===================================================================
+Service Account Keys vs Workload Identity
+
+IAM Conditions (attribute-based access control)
+
+Organization-level IAM policies
+
+Real enterprise IAM architecture in GCP.
+
+====================================================================
+
+
+
+
+

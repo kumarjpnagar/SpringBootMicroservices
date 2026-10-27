@@ -1,0 +1,426 @@
+
+
+Spring Security Zero to Master along with JWT,OAUTH2
+
+Chapter I: Getting Started
+
+Course Introduction
+
+Details of Source Code, PDF Content & other instructions for the course1:01
+IntelliJ IDEA Ultimate
+Creating a simple Spring Boot app with out security - Part 1
+Creating a simple Spring Boot app with out security - Part 2
+Securing Spring Boot basic app using Spring Security & static credentials
+
+Funny memes on Security
+What is Security & Why it is important
+
+Quick introduction to Servlets & Filters
+Introduction to Spring Security Internal flow - Theory
+
+Demo of Spring Security internal flow - Part 1
+Demo of Spring Security internal flow - Part 2
+Sequence flow of the Spring Security default behaviour
+Understanding on how multiple requests work with out credentials
+
+--------------------------
+
+Chapter 2: Chanding the default security configuration
+
+I.Understanding about UI part of the EazyBank application
+II.Creating backend services needed for the EazyBank application
+III.Checking the default configuration inside the spring security framework
+
+IV.Modifying the security config code as per our custom requirements
+V.How to disable formLogin and httpBasic authentication
+
+VI.httpBasic authentication testing using postman
+ 
+----------------------------------------------
+
+Chapter 3: Defining & Managing Users using InMemoryUserDetailsManager
+
+I.Configuring users using InMemoryUserDetailsManager
+
+II.Configuring PasswordEncoder using PasswordEncoderFactories
+
+III.Demo of CompromisedPasswordChecker
+
+IV.Deep Dive of UserDetailsService & UserDetailsManager Interfaces
+
+V.Deep Dive of UserDetails & Authentication interfaces
+
+VI.Design Discussion: Securing the Demo App with out a database
+
+
+---------------------------------------------------
+
+Chapter 4:Defining & Managing Users using a database
+
+I.Quick revision of enhancements done so far
+
+II.Creating MySQL Database using Docker
+
+III.Understanding JdbcUserDetailsManager & creating Users inside the DB
+
+IV.Using JdbcUserDetailsManager to perform authentication
+
+V.Creating our own custom tables for Authentication
+
+VI.Creating JPA Entity and repository classes for new table
+
+VII.Creating our own custom implementation of UserDetailsService
+
+VIII.Building a new REST API to allow the registration of new User
+
+
+-------------------------------------------------
+
+
+Chapter 5: Password Management with PasswordEncoders
+
+I.How our passwords validated with out PasswordEncoders
+
+II.What is Encoding, Decoding & why it is not suitable for passwords management
+
+III.What is Encryption, Decryption & why it is not suitable for passwords management
+
+IV.Demo of Encryption, Decryption
+
+V.Introduction to Hashing
+
+VI.Drawbacks of Hashing & what are Brute force attacks, Dictionary or Rainbow tab
+
+VII.How to overcome Hashing drawbacks, Brute force and Dictionary table attacks
+
+VIII.Introduction to PasswordEncoders in Spring Security
+
+IX.Deep dive of PasswordEncoder implementation classes
+
+X.Demo of registration and login with Bcrypt password encoder
+
+XI.Security Design Review – Password Storage Strategy for HealthBridge App
+
+
+-------------------------------------------------------
+
+
+Chapter 6:Understanding Authentication Provider and Implementing it
+
+I.Why should we consider creating our own AuthenticationProvider
+
+II.Understanding AuthenticationProvider methods
+
+III.Implementing and Customizing the AuthenticationProvider inside our application
+
+III.Environment specific Security configurations using Profiles - Part 1
+
+IV.Environment specific Security configurations using Profiles - Part 2
+
+V.Environment specific Security configurations using Profiles - Part 3
+
+
+------------------------------------------------------
+
+
+Chapter 7: Spring Security customization for most common use cases
+
+Accepting only HTTPS Traffic using Spring Security
+
+Exception Handling in Spring Security framework
+
+Defining Custom AuthenticationEntryPoint - Part 1
+
+Defining Custom AuthenticationEntryPoint - Part 2
+
+Defining Custom AccessDeniedHandler
+
+Session Timeout & invalid session configurations
+
+Concurrent Session Control configurations
+
+Session Fixation Attack protection with Spring Security
+
+Listening Authentication Events - Theory
+
+Listening Authentication Events - Demo
+
+Form Login Configurations for MVC or monolithic apps - Part 1
+
+Form Login Configurations for MVC or monolithic apps - Part 2
+
+Form Login Configurations for MVC or monolithic apps - Part 3
+
+Form Login Configurations for MVC or monolithic apps - Part 4
+
+Logout Configurations for MVC or monolithic apps
+
+Spring Security Thymeleaf integration
+
+Role of SecurityContext & SecurityContextHolder
+
+Load login user details in Spring Security
+
+-------------------------------------------------
+
+
+Chapter 8:Understanding CORS & CSRF
+
+Define each of the below topics very simple, small and clear concise not in big 
+
+Setting up the EazyBank UI project(Use Angular) use very simple example for hands on
+
+Understanding and walkthrough of the Angular code - Part 1
+
+Understanding and walkthrough of the Angular code - Part 2
+
+Creating new DB schema for EazyBank scenarios
+
+Updating Backend project based on the latest DB schema
+
+Testing registration of the new user with latest changes
+
+Taste of CORs error
+
+Introduction to CORs
+
+Possible options to fix the CORs issue
+
+Fixing CORs issue using Spring Security
+
+Demo of default CSRF protection inside Spring Security
+
+Introduction to CSRF attack
+
+Solution to handle CSRF attacks
+
+Implementing CSRF token solution inside backend application - Part 1
+
+Implementing CSRF token solution inside backend application - Part 2
+
+Implementing CSRF token solution inside UI application
+
+Ignoring CSRF protection for public APIs
+
+
+--------------------------------------------------
+
+Chapter 9:Implementing Authorization using Authorities,Roles
+
+Define each of the below topics very simple, small and clear concise not in big 
+
+Authentication Vs Authorization
+
+How Authorities stored inside Spring Security
+
+Creating new table authorities to store multiple roles or authorities
+
+Making backend changes to load authorities from new DB table
+
+Configuring Authorities inside web application using Spring Security
+
+Authority Vs Role in Spring Security
+
+Configuring Roles Authorization inside web application using Spring Security
+
+Listening to the Authorization events
+
+Securing Endpoints with Roles – Your Plan ?
+
+---------------------------------------------------
+Chapter 10:Custom Filters in Spring Security 
+
+Define each of the below topics very simple, small and clear concise not in big 
+
+Demo of Inbuilt Filters of Spring Security framework
+
+How to create and configure our own custom filter
+
+Adding a custom filter using addFilterBefore() method
+
+Adding a custom filter using addFilterAfter() method
+
+Adding a custom filter using addFilterAt() method
+
+
+------------------------------------------------------
+
+Chap 11:Token based Authentication using JSON Web Token (JWT)
+
+Define each of the below topics very simple, small and clear concise and standard not in big 
+
+Opaque Tokens vs JSON Web Tokens (JWT)
+
+Advantages of Token based Authentication
+
+Deep dive about JWT Tokens
+
+Making project configuration to use JWT tokens
+
+Building logic to generate the JWT tokens
+
+Building logic to validate the JWT tokens
+
+Making changes on the client side for JWT token based authentication
+
+Validating the JWT changes made by running the applications
+
+Validating the JWT token expiration scenario
+
+Publish an AuthenticationManager for custom or manual authentication - Part 1
+
+Publish an AuthenticationManager for custom or manual authentication - Part 2
+
+
+------------------------------------------------------
+
+
+Chapter 12: Method Level Security
+
+Define each of the below topics very Basic,simple, small and clear concise and standard not a big example 
+
+
+Introduction to method level security in Spring Security
+
+Details about method invocation authorization in method level security
+
+Demo of method level security using @PreAuthorize and @PostAuthorize
+
+Details about filtering authorization in method level security
+
+Demo of @PreFilter annotation
+
+Demo of @PostFilter annotation
+
+Securing the Inside: Designing Method-Level Security in Spring Applications
+
+----------------------------------------------
+
+
+Chap 13:Deep dive of OAUTH2 & OpenID Connect
+
+Problems that OAUTH2 trying to solve
+
+Introduction to OAUTH2
+
+OAuth2 terminologies or jargons
+
+Demo of OAuth2 Sample flow
+
+Deep dive on Authorization code grant type flow in OAUTH2
+
+Demo of Authorization code grant type flow in OAUTH2
+
+Deep dive & Demo of implicit grant flow in OAUTH2
+
+Deep dive & demo of Authorization code grant type with PKCE1
+
+Deep dive of password grant type flow in OAUTH2
+
+Deep dive of client credentials grant type flow in OAUTH2
+
+Deep dive of refresh token grant type flow in OAUTH2
+
+How resource server validates the tokens issued by Auth server
+
+Introduction to OpenID Connect
+
+
+----------------------------------------
+
+
+Chap 14:Implementing OAUTH2 using spring security & social logins
+
+Define each of the below topics very Basic,simple, small and clear concise and standard not a big example 
+
+Note: take sample refrence from spring.io like code 
+
+Introduction to the agenda of OAUTH2 implementations and demos
+
+Demo of OAUTH2 using social logins - Part 1
+
+Demo of OAUTH2 using social logins - Part 2
+
+Demo of OAUTH2 using social logins - Part 3
+
+Demo of OAUTH2 using social logins - Part 4
+
+Demo of OAUTH2 using social logins - Part 5
+
+
+-----------------------------------------------
+
+Chap 15:Securing EasyBank using OAUTH2 and KeyCloak
+
+Introduction to OAUTH2 flow inside EazyBank web App
+
+Introduction to KeyCloak Auth Server
+
+Installation of KeyCloak server, setup admin account & realm
+
+Creating Client Credentials inside KeyCloak for API-API secured invocations
+
+Setup of EazyBank Resource Server - Part 1
+
+Setup of EazyBank Resource Server - Part 2
+
+Client credentials grant type flow demo in eazybank
+
+Demo of Opaque Tokens - Part 1
+
+Demo of Opaque Tokens - Part 2
+
+Creating Client and User details inside KeyCloak for Auth code grant flow
+
+Testing Authorization code & refresh grant types using Postman App
+
+Testing Authorization code PKCE grant types using Postman App
+
+Implementing PKCE Authorization code grant type inside Angular UI App - Part 1
+
+Implementing PKCE Authorization code grant type inside Angular UI App - Part 2
+
+Testing PKCE flow inside Eazy Bank Angular UI application
+
+Configuring MFA using KeyCloak
+
+Social Login integration with the help of KeyCloak
+
+Designing Scalable Security: Building Authentication and Authorization for Growth
+
+
+----------------------------------------------------
+
+
+Chap 16:OAUTH2 Auth Server using Spring Authorization Server
+
+Note: Need complete Hands on for each with all steps explanation?
+
+Define each of the below topics very Basic,simple, small and clear concise and standard not a big example 
+
+Note: take sample refrence from spring.io like code 
+
+Introduction to Spring Authorization Server
+
+Set up of Spring Authorization Server
+
+Creating Client Credentials inside Spring Auth Server for API-API invocation
+
+Client credentials grant type flow demo with Spring Auth Server
+
+OAuth2 Token Customization in Spring Auth Server
+
+Creating clients inside Spring Auth Server for Auth Code & PKCE grant type flows
+
+Updating Spring Auth Server to authenticate the end user using DB
+
+Auth Code & PKCE grant type flows demo with Spring Auth Server
+
+Refresh token grant type flow demo with Spring Auth Server
+
+Demo of Opaque Tokens with Spring Auth Server
+
+---------------------------------------------
+
+
+

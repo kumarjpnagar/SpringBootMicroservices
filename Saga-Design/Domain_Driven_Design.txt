@@ -1,0 +1,5878 @@
+Domain Driven Design - Strategic(Business domain as a hole) and Tactical Design(Design Patterns to model the business) -> Domain analysis->Define Bounded Context->Identify Suices, kafha,postgresqlbdomain->Define Entities,aggregates,services->Identify Microsercices complete Diagramatic explanation with hands code and definition with comments using Java, spring boot, microservices, postgresql, redis,kafka,?
+Domain-Driven Design: Strategic & Tactical Design with Microservices Implementation
+Complete Architecture Diagram
+
+
+
+1. Domain Analysis & Bounded Context Definition
+E-commerce Platform Example
+java
+/**
+ * STRATEGIC DESIGN - Domain Analysis
+ * Business Domain: E-commerce Platform
+ * 
+ * Core Domain: Order Processing (Competitive Advantage)
+ * Supporting Domains: Inventory, Payment, User Management
+ * Generic Domains: Notification, Logging
+ */
+
+// Bounded Context 1: Order Context
+package com.ecommerce.order.domain;
+
+/**
+ * ORDER BOUNDED CONTEXT
+ * Ubiquitous Language: Order, OrderLine, OrderStatus, Payment, Shipment
+ */
+@Entity
+@Table(name = "orders")
+public class Order {
+    @Id
+    private OrderId id;  // Value Object
+    private CustomerId customerId;
+    private OrderStatus status;
+    @OneToMany(cascade = CascadeType.ALL)
+    private List<OrderLine> orderLines;
+    private Money totalAmount;  // Value Object
+    private Address shippingAddress;
+    
+    // Domain Logic
+    public void addItem(ProductId productId, Quantity quantity, Money price) {
+        if (status != OrderStatus.DRAFT) {
+            throw new DomainException("Cannot modify order in " + status + " status");
+        }
+        OrderLine line = new OrderLine(productId, quantity, price);
+        orderLines.add(line);
+        calculateTotal();
+    }
+    
+    public void confirm() {
+        if (orderLines.isEmpty()) {
+            throw new DomainException("Cannot confirm empty order");
+        }
+        this.status = OrderStatus.CONFIRMED;
+        // Domain Event
+        registerEvent(new OrderConfirmedEvent(this.id, this.customerId));
+    }
+}
+
+// Value Object
+@Embeddable
+public class OrderId implements Serializable {
+    private String value;
+    
+    public OrderId() {}
+    
+    public OrderId(String value) {
+        this.value = value;
+    }
+    
+    // Value object equality based on value
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrderId orderId = (OrderId) o;
+        return Objects.equals(value, orderId.value);
+    }
+}
+
+// Value Object with validation
+@Embeddable
+public class Money {
+    private BigDecimal amount;
+    private String currency;
+    
+    public Money(BigDecimal amount, String currency) {
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Amount cannot be negative");
+        }
+        this.amount = amount;
+        this.currency = currency;
+    }
+    
+    public Money add(Money other) {
+        if (!this.currency.equals(other.currency)) {
+            throw new DomainException("Currency mismatch");
+        }
+        return new Money(this.amount.add(other.amount), this.currency);
+    }
+}
+2. Aggregate & Repository Pattern
+java
+/**
+ * TACTICAL DESIGN - Aggregates & Repositories
+ * Order Aggregate Root ensures consistency boundary
+ */
+
+// Aggregate Root
+package com.ecommerce.order.domain.aggregate;
+
+@AggregateRoot
+@Entity
+public class OrderAggregate {
+    @Id
+    private OrderId orderId;
+    @Version
+    private Long version;  // Optimistic locking
+    
+    @Embedded
+    private OrderStatus status;
+    
+    @ElementCollection
+    private List<OrderItem> items;
+    
+    @Embedded
+    private ShippingInfo shippingInfo;
+    
+    // Aggregate invariant: Total must be >= 0
+    private Money totalAmount;
+    
+    // Domain behaviors
+    public void updateShippingAddress(Address newAddress) {
+        if (status != OrderStatus.PENDING) {
+            throw new IllegalStateException("Cannot update address after order is processed");
+        }
+        this.shippingInfo = new ShippingInfo(newAddress);
+    }
+    
+    public void cancel() {
+        if (status == OrderStatus.SHIPPED) {
+            throw new DomainException("Cannot cancel shipped order");
+        }
+        this.status = OrderStatus.CANCELLED;
+        registerEvent(new OrderCancelledEvent(this.orderId));
+    }
+}
+
+/**
+ * REPOSITORY - Aggregate persistence
+ */
+@Repository
+public interface OrderRepository {
+    OrderAggregate findById(OrderId id);
+    void save(OrderAggregate order);
+    void delete(OrderAggregate order);
+}
+
+// Implementation with Spring Data JPA
+@Repository
+public class OrderRepositoryImpl implements OrderRepository {
+    
+    @PersistenceContext
+    private EntityManager entityManager;
+    
+    @Override
+    public OrderAggregate findById(OrderId id) {
+        return entityManager.find(OrderAggregate.class, id);
+    }
+    
+    @Override
+    public void save(OrderAggregate order) {
+        if (order.getOrderId() == null) {
+            entityManager.persist(order);
+        } else {
+            entityManager.merge(order);
+        }
+    }
+}
+3. Domain Services & Domain Events
+java
+/**
+ * DOMAIN SERVICE - When logic doesn't fit in an Entity or Value Object
+ */
+
+@Service
+@Slf4j
+public class PricingDomainService {
+    
+    // Domain service for complex pricing logic
+    public Money calculateOrderTotal(OrderAggregate order, PricingStrategy strategy) {
+        Money subtotal = order.getItems().stream()
+            .map(item -> item.getPrice().multiply(item.getQuantity()))
+            .reduce(Money.ZERO, Money::add);
+        
+        Money discount = strategy.applyDiscount(subtotal);
+        Money tax = calculateTax(subtotal.subtract(discount));
+        
+        return subtotal.subtract(discount).add(tax);
+    }
+    
+    private Money calculateTax(Money amount) {
+        // Complex tax calculation logic
+        return amount.multiply(new BigDecimal("0.10"));
+    }
+}
+
+/**
+ * DOMAIN EVENTS - For cross-context communication via Kafka
+ */
+@DomainEvent
+public class OrderConfirmedEvent {
+    private final String eventId = UUID.randomUUID().toString();
+    private final OrderId orderId;
+    private final CustomerId customerId;
+    private final LocalDateTime occurredOn;
+    private final List<OrderLine> items;
+    
+    public OrderConfirmedEvent(OrderId orderId, CustomerId customerId, List<OrderLine> items) {
+        this.orderId = orderId;
+        this.customerId = customerId;
+        this.items = items;
+        this.occurredOn = LocalDateTime.now();
+    }
+    
+    // Event data for inventory service
+    public List<StockReservationRequest> getReservationRequests() {
+        return items.stream()
+            .map(item -> new StockReservationRequest(
+                item.getProductId(), 
+                item.getQuantity()
+            ))
+            .collect(Collectors.toList());
+    }
+}
+
+// Event Publisher using Application Events + Kafka
+@Component
+public class DomainEventPublisher {
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @EventListener
+    @Async
+    public void handleOrderConfirmed(OrderConfirmedEvent event) {
+        kafkaTemplate.send("order-confirmed", event.getOrderId().toString(), event);
+        log.info("Published OrderConfirmedEvent for order: {}", event.getOrderId());
+    }
+}
+4. Microservice Implementation - Order Service
+java
+/**
+ * ORDER MICROSERVICE - Complete Implementation
+ * Tools: Spring Boot, PostgreSQL, Kafka, Redis
+ */
+
+// Spring Boot Application
+@SpringBootApplication
+@EnableEurekaClient
+@EnableFeignClients
+@EnableAsync
+public class OrderServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderServiceApplication.class, args);
+    }
+}
+
+// application.yml
+/*
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: order_user
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  redis:
+    host: localhost
+    port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        
+server:
+  port: 8081
+  
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+*/
+
+/**
+ * REST Controller - API Layer
+ */
+@RestController
+@RequestMapping("/api/v1/orders")
+@Slf4j
+public class OrderController {
+    
+    @Autowired
+    private OrderApplicationService orderService;
+    
+    @Autowired
+    private RedisTemplate<String, OrderResponseDTO> redisTemplate;
+    
+    @PostMapping
+    public ResponseEntity<OrderResponseDTO> createOrder(@Valid @RequestBody CreateOrderRequest request) {
+        OrderResponseDTO response = orderService.createOrder(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+    
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponseDTO> getOrder(@PathVariable String orderId) {
+        // Cache lookup first
+        String cacheKey = "order:" + orderId;
+        OrderResponseDTO cached = redisTemplate.opsForValue().get(cacheKey);
+        
+        if (cached != null) {
+            return ResponseEntity.ok(cached);
+        }
+        
+        OrderResponseDTO order = orderService.getOrder(OrderId.of(orderId));
+        
+        // Cache with TTL
+        redisTemplate.opsForValue().set(cacheKey, order, 10, TimeUnit.MINUTES);
+        
+        return ResponseEntity.ok(order);
+    }
+    
+    @PostMapping("/{orderId}/confirm")
+    public ResponseEntity<Void> confirmOrder(@PathVariable String orderId) {
+        orderService.confirmOrder(OrderId.of(orderId));
+        return ResponseEntity.accepted().build();
+    }
+}
+
+/**
+ * APPLICATION SERVICE - Orchestrates domain logic
+ */
+@Service
+@Transactional
+@Slf4j
+public class OrderApplicationService {
+    
+    @Autowired
+    private OrderRepository orderRepository;
+    
+    @Autowired
+    private PricingDomainService pricingService;
+    
+    @Autowired
+    private InventoryFeignClient inventoryClient;
+    
+    @Autowired
+    private DomainEventPublisher eventPublisher;
+    
+    public OrderResponseDTO createOrder(CreateOrderRequest request) {
+        // Validate inventory via Feign client
+        boolean itemsAvailable = inventoryClient.checkAvailability(request.getItems());
+        
+        if (!itemsAvailable) {
+            throw new BusinessException("Some items are out of stock");
+        }
+        
+        // Create aggregate
+        OrderAggregate order = new OrderAggregate();
+        order.setCustomerId(request.getCustomerId());
+        
+        request.getItems().forEach(item -> {
+            order.addItem(item.getProductId(), item.getQuantity(), item.getPrice());
+        });
+        
+        // Domain service for pricing
+        Money total = pricingService.calculateOrderTotal(order, new StandardPricingStrategy());
+        order.setTotalAmount(total);
+        
+        // Persist
+        orderRepository.save(order);
+        
+        // Invalidate cache
+        redisTemplate.delete("orders:customer:" + request.getCustomerId());
+        
+        return mapToDTO(order);
+    }
+    
+    public void confirmOrder(OrderId orderId) {
+        OrderAggregate order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new NotFoundException("Order not found"));
+        
+        // Domain behavior
+        order.confirm();
+        
+        // Save state
+        orderRepository.save(order);
+        
+        // Publish domain event (will be sent to Kafka)
+        OrderConfirmedEvent event = new OrderConfirmedEvent(
+            orderId, 
+            order.getCustomerId(), 
+            order.getItems()
+        );
+        eventPublisher.publishEvent(event);
+    }
+}
+
+/**
+ * FEIGN CLIENT - Service Discovery & Communication
+ */
+@FeignClient(name = "inventory-service", fallback = InventoryFallback.class)
+public interface InventoryFeignClient {
+    
+    @GetMapping("/api/v1/inventory/check")
+    boolean checkAvailability(@RequestParam List<InventoryCheckItem> items);
+    
+    @PostMapping("/api/v1/inventory/reserve")
+    void reserveStock(@RequestBody StockReservationRequest request);
+}
+
+// Circuit Breaker Fallback
+@Component
+class InventoryFallback implements InventoryFeignClient {
+    @Override
+    public boolean checkAvailability(List<InventoryCheckItem> items) {
+        log.warn("Inventory service unavailable, using fallback");
+        return true; // Optimistic fallback
+    }
+    
+    @Override
+    public void reserveStock(StockReservationRequest request) {
+        log.warn("Inventory service unavailable, cannot reserve stock");
+        // Store in dead letter queue for retry
+    }
+}
+5. Inventory Service - Handling Events from Kafka
+java
+/**
+ * INVENTORY MICROSERVICE
+ * Consumes OrderConfirmedEvent from Kafka
+ */
+
+@Service
+@Slf4j
+public class InventoryEventHandler {
+    
+    @Autowired
+    private InventoryRepository inventoryRepository;
+    
+    @Autowired
+    private RedisTemplate<String, StockInfo> redisTemplate;
+    
+    /**
+     * Kafka Consumer - Event-driven communication
+     * Ensures eventual consistency between contexts
+     */
+    @KafkaListener(topics = "order-confirmed", groupId = "inventory-group")
+    public void handleOrderConfirmed(OrderConfirmedEvent event) {
+        log.info("Received OrderConfirmedEvent for order: {}", event.getOrderId());
+        
+        // Process each item for stock reservation
+        event.getReservationRequests().forEach(request -> {
+            ProductInventory inventory = inventoryRepository
+                .findByProductId(request.getProductId())
+                .orElseThrow(() -> new InventoryNotFoundException(request.getProductId()));
+            
+            // Domain logic - Reserve stock
+            inventory.reserveStock(request.getQuantity());
+            
+            // Update PostgreSQL (write model)
+            inventoryRepository.save(inventory);
+            
+            // Update Redis cache (read model)
+            String cacheKey = "stock:" + request.getProductId();
+            StockInfo stockInfo = new StockInfo(
+                inventory.getProductId(), 
+                inventory.getAvailableQuantity()
+            );
+            redisTemplate.opsForValue().set(cacheKey, stockInfo);
+        });
+        
+        // Emit InventoryReservedEvent for shipping service
+        kafkaTemplate.send("inventory-reserved", event.getOrderId().toString(), 
+            new InventoryReservedEvent(event.getOrderId()));
+    }
+}
+
+/**
+ * SAGA Pattern - Distributed Transaction Management
+ */
+@Component
+public class OrderSagaOrchestrator {
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @Autowired
+    private RedisTemplate<String, SagaState> sagaRedisTemplate;
+    
+    // Orchestrate distributed transaction across services
+    public void startOrderSaga(OrderAggregate order) {
+        String sagaId = UUID.randomUUID().toString();
+        SagaState state = new SagaState(sagaId, SagaStatus.STARTED);
+        sagaRedisTemplate.opsForValue().set("saga:" + sagaId, state);
+        
+        // Step 1: Reserve Inventory
+        kafkaTemplate.send("reserve-inventory", sagaId, 
+            new ReserveInventoryCommand(order.getOrderId(), order.getItems()));
+        
+        // Step 2: Process Payment (listening to inventory-reserved topic)
+        // Step 3: Confirm Order (listening to payment-processed topic)
+        // Step 4: Compensating transactions if any step fails
+    }
+    
+    @KafkaListener(topics = "inventory-reservation-failed")
+    public void handleInventoryFailure(InventoryReservationFailedEvent event) {
+        // Compensating action: Cancel order
+        kafkaTemplate.send("cancel-order", event.getOrderId().toString(), 
+            new CancelOrderCommand(event.getOrderId()));
+    }
+}
+6. CQRS Pattern with Redis & PostgreSQL
+java
+/**
+ * CQRS - Command Query Responsibility Segregation
+ * Separate models for writes (PostgreSQL) and reads (Redis)
+ */
+
+// Command Side (Write Model) - PostgreSQL
+@Repository
+public interface OrderCommandRepository extends JpaRepository<OrderAggregate, OrderId> {
+    // Write operations only
+}
+
+// Query Side (Read Model) - Redis
+@Service
+public class OrderQueryService {
+    
+    @Autowired
+    private RedisTemplate<String, OrderReadModel> redisTemplate;
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    // Materialized view in Redis for fast queries
+    public OrderReadModel getOrderSummary(OrderId orderId) {
+        String key = "order-summary:" + orderId.getValue();
+        OrderReadModel cached = redisTemplate.opsForValue().get(key);
+        
+        if (cached == null) {
+            // Build from event store
+            cached = buildFromEventStore(orderId);
+            redisTemplate.opsForValue().set(key, cached, 1, TimeUnit.HOURS);
+        }
+        
+        return cached;
+    }
+    
+    // Update read model via event listeners
+    @EventListener
+    public void onOrderConfirmed(OrderConfirmedEvent event) {
+        OrderReadModel readModel = new OrderReadModel(
+            event.getOrderId(),
+            event.getCustomerId(),
+            event.getItems(),
+            OrderStatus.CONFIRMED,
+            event.getOccurredOn()
+        );
+        
+        String key = "order-summary:" + event.getOrderId().getValue();
+        redisTemplate.opsForValue().set(key, readModel);
+        
+        // Also update customer's order list
+        redisTemplate.opsForList()
+            .leftPush("customer-orders:" + event.getCustomerId(), readModel);
+    }
+}
+
+/**
+ * EVENT SOURCING - Store events, not state
+ */
+@Entity
+@Table(name = "domain_events")
+public class DomainEventEntity {
+    @Id
+    private String eventId;
+    private String aggregateId;
+    private String eventType;
+    @Lob
+    private String eventData; // JSON
+    private Long version;
+    private LocalDateTime occurredOn;
+}
+
+@Repository
+public class EventStore {
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    public void appendEvent(String aggregateId, DomainEvent event, Long expectedVersion) {
+        // Optimistic concurrency control
+        int updated = jdbcTemplate.update(
+            "INSERT INTO domain_events (aggregate_id, version, event_type, event_data, occurred_on) " +
+            "VALUES (?, ?, ?, ?, ?) " +
+            "WHERE NOT EXISTS (SELECT 1 FROM domain_events WHERE aggregate_id = ? AND version = ?)",
+            aggregateId, expectedVersion + 1, event.getClass().getSimpleName(),
+            toJson(event), LocalDateTime.now(), aggregateId, expectedVersion
+        );
+        
+        if (updated == 0) {
+            throw new ConcurrencyException("Version conflict for aggregate: " + aggregateId);
+        }
+    }
+    
+    // Rebuild aggregate from event stream
+    public OrderAggregate rebuildOrder(String orderId) {
+        List<DomainEventEntity> events = jdbcTemplate.query(
+            "SELECT * FROM domain_events WHERE aggregate_id = ? ORDER BY version",
+            new Object[]{orderId},
+            (rs, rowNum) -> mapToEvent(rs)
+        );
+        
+        OrderAggregate order = new OrderAggregate();
+        events.forEach(event -> order.apply(event));
+        return order;
+    }
+}
+7. Complete Microservice Configuration
+yaml
+# docker-compose.yml for all infrastructure
+version: '3.8'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_MULTIPLE_DATABASES: order_db,inventory_db,user_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+      
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+      
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+      
+  eureka-server:
+    build: ./eureka-server
+    ports:
+      - "8761:8761"
+      
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+      
+  order-service:
+    build: ./order-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - eureka-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_db
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      
+  inventory-service:
+    build: ./inventory-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory_db
+      SPRING_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      
+volumes:
+  postgres_data:
+  redis_data:
+Key DDD Concepts Summary
+Strategic Design
+Bounded Context: Order, Inventory, User, Notification (separate business boundaries)
+
+Ubiquitous Language: Shared vocabulary within each context
+
+Context Mapping:
+
+Customer/Supplier (Order depends on Inventory)
+
+Conformist (Notification follows Order patterns)
+
+Anti-Corruption Layer (translates between contexts)
+
+Tactical Design
+Entity: Order (has identity, mutable)
+
+Value Object: Money, OrderId (immutable, equality by value)
+
+Aggregate: OrderAggregate (consistency boundary)
+
+Domain Service: PricingDomainService (stateless business logic)
+
+Domain Event: OrderConfirmedEvent (captures business milestone)
+
+Repository: OrderRepository (aggregate persistence)
+
+Factory: OrderFactory (complex creation logic)
+
+Application Service: Orchestrates use cases
+
+Architectural Patterns Implemented
+Event-Driven Architecture (Kafka)
+
+CQRS (PostgreSQL writes, Redis reads)
+
+Event Sourcing (Event store for audit)
+
+Saga Pattern (Distributed transactions)
+
+Circuit Breaker (Resilience4j with Feign)
+
+API Gateway (Spring Cloud Gateway)
+
+Service Discovery (Eureka)
+
+This complete implementation demonstrates how DDD's strategic and tactical patterns translate directly into microservices architecture with proper bounded contexts, domain events, aggregates, and event-driven communication using Kafka, Redis caching, and PostgreSQL persistence.
+
+Transforming from monolithic to microservices 1) Decouple monolith a) Add Sevice layer | facade b) Add Service mediation layer 2) Develop local microservices a) Identify microservices b) Develop interface definitions c) Develop microservices 3) Implement local microservices a) migrate data b) Testing | parallel run c) swing channels to microservices 4) Deploy microservices to cloud a) Implement API Gateway b) Deploy microservices 5) Implement microservices in the cloud a) migrate data to cloud b) Run parallel in the cloud c) swing channels to api gateway
+Transforming from monolithic to microservices 1) Decouple monolith a) Add Sevice layer | facade b) Add Service mediation layer 2) Develop local microservices a) Identify microservices b) Develop interface definitions c) Develop microservices 3) Implement local microservices a) migrate data b) Testing | parallel run c) swing channels to microservices 4) Deploy microservices to cloud a) Implement API Gateway b) Deploy microservices 5) Implement microservices in the cloud a) migrate data to cloud b) Run parallel in the cloud c) swing channels to api gateway 6) Decommission monolithic app a) Unplug monolith app?
+Complete Monolith to Microservices Transformation Journey
+Strategic Migration Roadmap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Phase 1: Decouple Monolith
+1a) Add Service Layer | Facade Pattern
+java
+/**
+ * LEGACY MONOLITH - Before decoupling
+ * All logic tightly coupled in controllers
+ */
+// BEFORE: God Class Anti-pattern
+@RestController
+public class LegacyOrderController {
+    @Autowired
+    private OrderRepository orderRepo;
+    @Autowired
+    private InventoryRepository inventoryRepo;
+    @Autowired
+    private UserRepository userRepo;
+    @Autowired
+    private PaymentRepository paymentRepo;
+    @Autowired
+    private NotificationService notificationService;
+    
+    @PostMapping("/createOrder")
+    public Order createOrder(@RequestBody OrderRequest request) {
+        // 500+ lines of mixed business logic
+        // Check user
+        // Check inventory
+        // Process payment
+        // Create order
+        // Send notification
+        // Update statistics
+        // All tightly coupled!
+    }
+}
+
+/**
+ * AFTER: Add Service Layer (Facade Pattern)
+ * Extract business logic to domain services
+ */
+
+// Step 1: Create domain service interfaces
+public interface OrderDomainService {
+    Order createOrder(OrderRequest request);
+    Order confirmOrder(Long orderId);
+    void cancelOrder(Long orderId);
+}
+
+public interface InventoryDomainService {
+    boolean checkAvailability(List<OrderItem> items);
+    void reserveStock(List<OrderItem> items);
+    void releaseStock(List<OrderItem> items);
+}
+
+public interface PaymentDomainService {
+    PaymentResult processPayment(PaymentRequest request);
+    void refundPayment(Long paymentId);
+}
+
+// Step 2: Implement service layer (Facade)
+@Service
+@Slf4j
+public class OrderFacadeService {
+    
+    @Autowired
+    private OrderDomainService orderService;
+    
+    @Autowired
+    private InventoryDomainService inventoryService;
+    
+    @Autowired
+    private PaymentDomainService paymentService;
+    
+    @Autowired
+    private NotificationDomainService notificationService;
+    
+    // Facade pattern - coordinates domain services
+    @Transactional
+    public OrderResponse createOrderWithWorkflow(OrderRequest request) {
+        
+        // 1. Validate inventory through service layer
+        if (!inventoryService.checkAvailability(request.getItems())) {
+            throw new BusinessException("Insufficient inventory");
+        }
+        
+        // 2. Process payment
+        PaymentResult payment = paymentService.processPayment(
+            new PaymentRequest(request.getTotalAmount(), request.getPaymentMethod())
+        );
+        
+        if (!payment.isSuccess()) {
+            throw new PaymentException("Payment failed");
+        }
+        
+        // 3. Create order
+        Order order = orderService.createOrder(request);
+        
+        // 4. Reserve inventory
+        inventoryService.reserveStock(request.getItems());
+        
+        // 5. Send notification (async)
+        notificationService.sendOrderConfirmation(order.getCustomerEmail(), order.getId());
+        
+        // 6. Return response
+        return new OrderResponse(order.getId(), order.getStatus(), payment.getTransactionId());
+    }
+}
+
+// Step 3: Refactor controller to use facade
+@RestController
+public class ModernOrderController {
+    
+    @Autowired
+    private OrderFacadeService orderFacade;
+    
+    @PostMapping("/api/orders")
+    public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest request) {
+        OrderResponse response = orderFacade.createOrderWithWorkflow(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+}
+1b) Add Service Mediation Layer
+java
+/**
+ * SERVICE MEDIATION LAYER
+ * Acts as router between monolith and new microservices
+ * Enables gradual migration without breaking existing clients
+ */
+
+// Mediation Layer Configuration
+@Configuration
+public class ServiceMediationConfig {
+    
+    @Bean
+    @LoadBalanced
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+    
+    @Bean
+    public CircuitBreakerFactory circuitBreakerFactory() {
+        return new Resilience4JCircuitBreakerFactory();
+    }
+}
+
+/**
+ * MEDIATOR PATTERN - Routes requests to either monolith or microservice
+ * Based on feature flags, canary releases, or gradual rollout
+ */
+@Component
+@Slf4j
+public class OrderServiceMediator {
+    
+    @Autowired
+    private RestTemplate restTemplate;
+    
+    @Autowired
+    private LegacyOrderService legacyOrderService;
+    
+    // Feature flags for gradual migration
+    @Value("${migration.order.create.use-microservice:false}")
+    private boolean useMicroserviceForCreate;
+    
+    @Value("${migration.order.get.use-microservice:false}")
+    private boolean useMicroserviceForGet;
+    
+    @Value("${migration.traffic.percentage:0}")
+    private int trafficPercentage; // 0-100
+    
+    private final Random random = new Random();
+    
+    /**
+     * Mediation logic - decides where to route
+     */
+    public OrderResponse createOrder(OrderRequest request) {
+        
+        // Strategy 1: Feature flag based routing
+        if (useMicroserviceForCreate) {
+            log.info("Routing order creation to microservice");
+            return callOrderMicroservice(request);
+        } else {
+            log.info("Routing order creation to monolith");
+            return legacyOrderService.createOrder(request);
+        }
+    }
+    
+    /**
+     * Canary release - route based on percentage
+     */
+    public OrderResponse getOrder(Long orderId) {
+        boolean useMicroservice = shouldUseMicroservice();
+        
+        if (useMicroservice) {
+            try {
+                log.info("Canary: Routing GET order {} to microservice", orderId);
+                return callOrderMicroserviceGet(orderId);
+            } catch (Exception e) {
+                log.error("Microservice failed, falling back to monolith", e);
+                return legacyOrderService.getOrder(orderId);
+            }
+        } else {
+            log.info("Routing GET order {} to monolith", orderId);
+            return legacyOrderService.getOrder(orderId);
+        }
+    }
+    
+    private boolean shouldUseMicroservice() {
+        if (trafficPercentage >= 100) return true;
+        if (trafficPercentage <= 0) return false;
+        return random.nextInt(100) < trafficPercentage;
+    }
+    
+    /**
+     * Call to new microservice with circuit breaker
+     */
+    @CircuitBreaker(name = "orderMicroservice", fallbackMethod = "fallbackToMonolith")
+    private OrderResponse callOrderMicroservice(OrderRequest request) {
+        String microserviceUrl = "http://localhost:8081/api/orders";
+        
+        ResponseEntity<OrderResponse> response = restTemplate.postForEntity(
+            microserviceUrl, 
+            request, 
+            OrderResponse.class
+        );
+        
+        return response.getBody();
+    }
+    
+    private OrderResponse fallbackToMonolith(OrderRequest request, Exception e) {
+        log.warn("Circuit breaker triggered, falling back to monolith", e);
+        return legacyOrderService.createOrder(request);
+    }
+    
+    private OrderResponse callOrderMicroserviceGet(Long orderId) {
+        String microserviceUrl = "http://localhost:8081/api/orders/" + orderId;
+        return restTemplate.getForObject(microserviceUrl, OrderResponse.class);
+    }
+}
+
+/**
+ * MEDIATION LAYER CONTROLLER - Single entry point
+ * Clients continue calling same endpoint, mediation layer handles routing
+ */
+@RestController
+@RequestMapping("/api/orders")
+public class MediationController {
+    
+    @Autowired
+    private OrderServiceMediator mediator;
+    
+    @PostMapping
+    public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest request) {
+        // Mediator decides where to route
+        OrderResponse response = mediator.createOrder(request);
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long orderId) {
+        OrderResponse response = mediator.getOrder(orderId);
+        return ResponseEntity.ok(response);
+    }
+}
+Phase 2: Develop Local Microservices
+2a) Identify Microservices (Domain-Driven Design)
+java
+/**
+ * IDENTIFY MICROSERVICES BOUNDARIES
+ * Based on DDD Bounded Contexts
+ */
+
+// Bounded Context Analysis
+public class MicroserviceIdentification {
+    
+    /*
+     * Step 1: Analyze monolithic domain
+     * 
+     * Monolith Responsibilities:
+     * - User Management (authentication, profiles)
+     * - Product Catalog (CRUD, search, categories)
+     * - Order Processing (cart, checkout, fulfillment)
+     * - Inventory Management (stock, warehouses)
+     * - Payment Processing (transactions, refunds)
+     * - Shipping (carriers, tracking)
+     * - Reviews & Ratings
+     * - Notifications (email, SMS, push)
+     * - Analytics & Reporting
+     */
+    
+    /*
+     * Step 2: Identify bounded contexts
+     * 
+     * Core Domain (Competitive Advantage):
+     * - Order Processing Service
+     * 
+     * Supporting Domains:
+     * - Inventory Service
+     * - Pricing Service
+     * 
+     * Generic Domains:
+     * - User Service (authentication, profiles)
+     * - Payment Service
+     * - Notification Service
+     * - Shipping Service
+     */
+    
+    /*
+     * Step 3: Define service boundaries
+     */
+    public enum MicroserviceCandidate {
+        USER_SERVICE("User Management", "Authentication, profiles, preferences"),
+        PRODUCT_SERVICE("Product Catalog", "Products, categories, search, reviews"),
+        ORDER_SERVICE("Order Processing", "Cart, checkout, order lifecycle"),
+        INVENTORY_SERVICE("Inventory", "Stock levels, reservations, warehouses"),
+        PAYMENT_SERVICE("Payments", "Processing, refunds, fraud detection"),
+        SHIPPING_SERVICE("Shipping", "Carriers, labels, tracking"),
+        NOTIFICATION_SERVICE("Notifications", "Email, SMS, push"),
+        ANALYTICS_SERVICE("Analytics", "Reports, metrics, dashboards");
+        
+        private final String name;
+        private final String responsibilities;
+        
+        MicroserviceCandidate(String name, String responsibilities) {
+            this.name = name;
+            this.responsibilities = responsibilities;
+        }
+    }
+}
+2b) Develop Interface Definitions (API Contracts)
+java
+/**
+ * INTERFACE DEFINITIONS - API Contracts
+ * Use OpenAPI/Swagger for contract-first development
+ */
+
+// Order Service API Contract
+@OpenAPIDefinition(
+    info = @Info(
+        title = "Order Service API",
+        version = "1.0.0",
+        description = "Order processing and management"
+    ),
+    servers = @Server(url = "http://localhost:8081")
+)
+public interface OrderServiceAPI {
+    
+    @PostMapping("/api/v1/orders")
+    @Operation(summary = "Create a new order")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Order created"),
+        @ApiResponse(responseCode = "400", description = "Invalid request"),
+        @ApiResponse(responseCode = "409", description = "Conflict")
+    })
+    ResponseEntity<OrderResponseDTO> createOrder(@Valid @RequestBody CreateOrderRequest request);
+    
+    @GetMapping("/api/v1/orders/{orderId}")
+    ResponseEntity<OrderResponseDTO> getOrder(@PathVariable String orderId);
+    
+    @PutMapping("/api/v1/orders/{orderId}/status")
+    ResponseEntity<Void> updateOrderStatus(
+        @PathVariable String orderId,
+        @RequestBody StatusUpdateRequest request
+    );
+    
+    @PostMapping("/api/v1/orders/{orderId}/cancel")
+    ResponseEntity<Void> cancelOrder(@PathVariable String orderId);
+}
+
+// Shared DTOs (Domain Models)
+@Value // Lombok
+@Builder
+public class OrderResponseDTO {
+    private String orderId;
+    private String customerId;
+    private List<OrderItemDTO> items;
+    private BigDecimal totalAmount;
+    private String currency;
+    private OrderStatus status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Value
+@Builder
+public class OrderItemDTO {
+    private String productId;
+    private String productName;
+    private Integer quantity;
+    private BigDecimal unitPrice;
+    private BigDecimal totalPrice;
+}
+2c) Develop Microservices
+java
+/**
+ * COMPLETE ORDER MICROSERVICE IMPLEMENTATION
+ * Using Spring Boot, PostgreSQL, Redis, Kafka
+ */
+
+// Main Application Class
+@SpringBootApplication
+@EnableEurekaClient
+@EnableFeignClients
+@EnableCircuitBreaker
+public class OrderMicroserviceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderMicroserviceApplication.class, args);
+    }
+}
+
+// application.yml
+/*
+server:
+  port: 8081
+  
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/order_db
+    username: ${DB_USERNAME:order_user}
+    password: ${DB_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  redis:
+    host: localhost
+    port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: order-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+    
+resilience4j:
+  circuitbreaker:
+    instances:
+      inventory-service:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+*/
+
+// Domain Entity
+@Entity
+@Table(name = "orders")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Order {
+    
+    @Id
+    private String id;
+    
+    private String customerId;
+    
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
+    
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<OrderItem> items;
+    
+    private BigDecimal totalAmount;
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+}
+
+// Repository
+@Repository
+public interface OrderRepository extends JpaRepository<Order, String> {
+    List<Order> findByCustomerId(String customerId);
+    List<Order> findByStatus(OrderStatus status);
+}
+
+// Service Implementation
+@Service
+@Slf4j
+@Transactional
+public class OrderService implements OrderServiceAPI {
+    
+    @Autowired
+    private OrderRepository orderRepository;
+    
+    @Autowired
+    private InventoryServiceClient inventoryClient;
+    
+    @Autowired
+    private PaymentServiceClient paymentClient;
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @Autowired
+    private RedisTemplate<String, Order> redisTemplate;
+    
+    @Override
+    public ResponseEntity<OrderResponseDTO> createOrder(CreateOrderRequest request) {
+        log.info("Creating order for customer: {}", request.getCustomerId());
+        
+        // Validate inventory via Feign client
+        boolean itemsAvailable = inventoryClient.checkAvailability(request.getItems());
+        
+        if (!itemsAvailable) {
+            throw new BusinessException("Some items are out of stock");
+        }
+        
+        // Create order entity
+        Order order = new Order();
+        order.setCustomerId(request.getCustomerId());
+        order.setStatus(OrderStatus.PENDING);
+        
+        List<OrderItem> orderItems = request.getItems().stream()
+            .map(item -> new OrderItem(item.getProductId(), item.getQuantity(), item.getUnitPrice()))
+            .collect(Collectors.toList());
+        
+        order.setItems(orderItems);
+        
+        // Calculate total
+        BigDecimal total = orderItems.stream()
+            .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.setTotalAmount(total);
+        
+        // Save to database
+        Order savedOrder = orderRepository.save(order);
+        
+        // Cache in Redis
+        String cacheKey = "order:" + savedOrder.getId();
+        redisTemplate.opsForValue().set(cacheKey, savedOrder, 1, TimeUnit.HOURS);
+        
+        // Publish event
+        OrderCreatedEvent event = new OrderCreatedEvent(savedOrder.getId(), savedOrder.getCustomerId(), total);
+        kafkaTemplate.send("order-created", savedOrder.getId(), event);
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDTO(savedOrder));
+    }
+    
+    @Override
+    public ResponseEntity<OrderResponseDTO> getOrder(String orderId) {
+        // Check cache first
+        String cacheKey = "order:" + orderId;
+        Order cachedOrder = redisTemplate.opsForValue().get(cacheKey);
+        
+        if (cachedOrder != null) {
+            return ResponseEntity.ok(mapToDTO(cachedOrder));
+        }
+        
+        // Fetch from database
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
+        
+        // Cache for future requests
+        redisTemplate.opsForValue().set(cacheKey, order, 1, TimeUnit.HOURS);
+        
+        return ResponseEntity.ok(mapToDTO(order));
+    }
+    
+    private OrderResponseDTO mapToDTO(Order order) {
+        return OrderResponseDTO.builder()
+            .orderId(order.getId())
+            .customerId(order.getCustomerId())
+            .items(order.getItems().stream()
+                .map(item -> new OrderItemDTO(item.getProductId(), null, item.getQuantity(), 
+                    item.getUnitPrice(), item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))))
+                .collect(Collectors.toList()))
+            .totalAmount(order.getTotalAmount())
+            .currency("USD")
+            .status(order.getStatus())
+            .createdAt(order.getCreatedAt())
+            .updatedAt(order.getUpdatedAt())
+            .build();
+    }
+}
+Phase 3: Implement Local Microservices
+3a) Migrate Data (Database Migration Strategy)
+java
+/**
+ * DATA MIGRATION STRATEGY
+ * From Monolith Database to Microservice Databases
+ */
+
+// Database Migration Script - Flyway/Liquibase
+@SpringBootApplication
+public class DataMigrationService {
+    
+    /*
+     * Strategy 1: Database per Service Pattern
+     * Monolith DB: ecommerce_db
+     * - orders table
+     * - order_items table
+     * - customers table
+     * - products table
+     * - inventory table
+     * 
+     * Target:
+     * - order_db.orders (order service)
+     * - order_db.order_items (order service)
+     * - customer_db.customers (customer service)
+     * - product_db.products (product service)
+     * - inventory_db.inventory (inventory service)
+     */
+    
+    /**
+     * Migration Script Example (Flyway)
+     * V1__migrate_order_data.sql
+     */
+    /*
+    -- Extract order data from monolith to order service
+    INSERT INTO order_db.orders (id, customer_id, status, total_amount, created_at)
+    SELECT id, customer_id, status, total_amount, created_at
+    FROM monolith_db.orders
+    WHERE created_at >= '2024-01-01';
+    
+    -- Migrate order items
+    INSERT INTO order_db.order_items (id, order_id, product_id, quantity, unit_price)
+    SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.unit_price
+    FROM monolith_db.order_items oi
+    JOIN monolith_db.orders o ON oi.order_id = o.id
+    WHERE o.created_at >= '2024-01-01';
+    */
+}
+
+/**
+ * STRANGER PATTERN - Incremental Data Migration
+ */
+@Service
+@Slf4j
+public class StrangerPatternDataMigration {
+    
+    @Autowired
+    private JdbcTemplate monolithJdbcTemplate;
+    
+    @Autowired
+    private JdbcTemplate orderServiceJdbcTemplate;
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    /**
+     * Step 1: Dual writes during transition period
+     */
+    @EventListener
+    public void onOrderCreatedInMonolith(OrderCreatedEvent event) {
+        // Write to both old and new databases
+        try {
+            // Write to new microservice DB
+            orderServiceJdbcTemplate.update(
+                "INSERT INTO orders (id, customer_id, status, total_amount) VALUES (?, ?, ?, ?)",
+                event.getOrderId(), event.getCustomerId(), "PENDING", event.getTotalAmount()
+            );
+            log.info("Dual write successful for order: {}", event.getOrderId());
+        } catch (Exception e) {
+            log.error("Dual write failed, storing in dead letter queue", e);
+            // Store for retry
+            kafkaTemplate.send("order-migration-dlq", event);
+        }
+    }
+    
+    /**
+     * Step 2: Backfill historical data
+     */
+    @Scheduled(fixedDelay = 3600000) // Every hour
+    public void backfillHistoricalOrders() {
+        int batchSize = 1000;
+        int offset = 0;
+        
+        while (true) {
+            List<Map<String, Object>> orders = monolithJdbcTemplate.queryForList(
+                "SELECT * FROM orders WHERE migrated = false LIMIT ? OFFSET ?",
+                batchSize, offset
+            );
+            
+            if (orders.isEmpty()) break;
+            
+            for (Map<String, Object> order : orders) {
+                try {
+                    orderServiceJdbcTemplate.update(
+                        "INSERT INTO orders (id, customer_id, status, total_amount, created_at) " +
+                        "VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING",
+                        order.get("id"), order.get("customer_id"), order.get("status"),
+                        order.get("total_amount"), order.get("created_at")
+                    );
+                    
+                    // Mark as migrated
+                    monolithJdbcTemplate.update(
+                        "UPDATE orders SET migrated = true WHERE id = ?",
+                        order.get("id")
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to migrate order: {}", order.get("id"), e);
+                }
+            }
+            
+            offset += batchSize;
+            log.info("Migrated {} orders, total offset: {}", orders.size(), offset);
+        }
+    }
+}
+
+/**
+ * DATA SYNCHRONIZATION - Keep services in sync during migration
+ */
+@Component
+public class DataSyncService {
+    
+    @EventListener
+    public void syncOrderUpdate(OrderUpdatedEvent event) {
+        // When microservice updates data, sync back to monolith
+        // until full cutover
+        if (isMonolithStillActive()) {
+            updateMonolithOrder(event);
+        }
+    }
+    
+    private void updateMonolithOrder(OrderUpdatedEvent event) {
+        // Sync changes back to monolith
+        monolithJdbcTemplate.update(
+            "UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?",
+            event.getNewStatus(), event.getOrderId()
+        );
+    }
+}
+3b) Testing & Parallel Run
+java
+/**
+ * PARALLEL RUN TESTING STRATEGY
+ * Run both monolith and microservice, compare results
+ */
+
+@Component
+@Slf4j
+public class ParallelRunValidator {
+    
+    @Autowired
+    private LegacyOrderService legacyService;
+    
+    @Autowired
+    private OrderMicroserviceClient microserviceClient;
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    /**
+     * Shadow traffic - real requests go to monolith,
+     * copy is sent to microservice for validation only
+     */
+    public void shadowTestOrderCreation(OrderRequest request) {
+        // Process in monolith (real response)
+        OrderResponse legacyResponse = legacyService.createOrder(request);
+        
+        // Async call to microservice for validation
+        CompletableFuture.runAsync(() -> {
+            try {
+                OrderResponse microserviceResponse = microserviceClient.createOrder(request);
+                
+                // Compare results
+                ValidationResult result = compareResponses(legacyResponse, microserviceResponse);
+                
+                if (!result.isMatch()) {
+                    log.warn("Response mismatch: {}", result.getDifferences());
+                    kafkaTemplate.send("validation-failures", request, result);
+                } else {
+                    log.info("Validation successful for order: {}", legacyResponse.getOrderId());
+                }
+            } catch (Exception e) {
+                log.error("Microservice call failed in shadow test", e);
+                kafkaTemplate.send("microservice-errors", request, e.getMessage());
+            }
+        });
+        
+        // Return legacy response to client
+        // Client never knows about shadow test
+    }
+    
+    /**
+     * Canary testing - small percentage of real traffic
+     */
+    @Value("${canary.percentage:5}")
+    private int canaryPercentage;
+    
+    public OrderResponse canaryTestOrder(OrderRequest request) {
+        Random random = new Random();
+        boolean useCanary = random.nextInt(100) < canaryPercentage;
+        
+        if (useCanary) {
+            log.info("CANARY: Routing request to microservice");
+            try {
+                OrderResponse response = microserviceClient.createOrder(request);
+                // Log success for monitoring
+                recordCanarySuccess(request);
+                return response;
+            } catch (Exception e) {
+                log.error("CANARY FAILED: Falling back to monolith", e);
+                recordCanaryFailure(request, e);
+                return legacyService.createOrder(request);
+            }
+        } else {
+            log.info("Routing request to monolith (control group)");
+            return legacyService.createOrder(request);
+        }
+    }
+    
+    private ValidationResult compareResponses(OrderResponse legacy, OrderResponse micro) {
+        List<String> differences = new ArrayList<>();
+        
+        if (!legacy.getOrderId().equals(micro.getOrderId())) {
+            differences.add("Order ID mismatch");
+        }
+        
+        if (legacy.getTotalAmount().compareTo(micro.getTotalAmount()) != 0) {
+            differences.add("Total amount mismatch: " + legacy.getTotalAmount() + " vs " + micro.getTotalAmount());
+        }
+        
+        if (legacy.getStatus() != micro.getStatus()) {
+            differences.add("Status mismatch: " + legacy.getStatus() + " vs " + micro.getStatus());
+        }
+        
+        return new ValidationResult(differences.isEmpty(), differences);
+    }
+    
+    /**
+     * A/B Testing with metrics
+     */
+    private void recordCanarySuccess(OrderRequest request) {
+        MeterRegistry registry = Metrics.globalRegistry;
+        registry.counter("canary.success", "endpoint", "createOrder").increment();
+    }
+    
+    private void recordCanaryFailure(OrderRequest request, Exception e) {
+        MeterRegistry registry = Metrics.globalRegistry;
+        registry.counter("canary.failure", "endpoint", "createOrder", "error", e.getClass().getSimpleName()).increment();
+    }
+}
+3c) Swing Channels to Microservices
+java
+/**
+ * GRADUAL TRAFFIC SWING STRATEGY
+ * Move traffic from monolith to microservices incrementally
+ */
+
+@Configuration
+public class TrafficSwingController {
+    
+    @Bean
+    public TrafficSwingManager trafficSwingManager() {
+        return new TrafficSwingManager();
+    }
+}
+
+@Component
+@Slf4j
+public class TrafficSwingManager {
+    
+    private volatile int currentMicroservicePercentage = 0;
+    private final AtomicLong totalRequests = new AtomicLong(0);
+    private final AtomicLong microserviceRequests = new AtomicLong(0);
+    
+    @Scheduled(fixedDelay = 300000) // Every 5 minutes
+    public void analyzeAndSwingTraffic() {
+        // Analyze error rates, latency, and other metrics
+        double errorRate = calculateErrorRate();
+        double avgLatency = calculateAverageLatency();
+        
+        if (errorRate < 0.01 && avgLatency < 100) { // 1% error rate, 100ms latency
+            increaseTrafficToMicroservice();
+        } else if (errorRate > 0.05) { // 5% error rate
+            decreaseTrafficToMicroservice();
+        }
+        
+        log.info("Current traffic distribution - Microservice: {}%, Monolith: {}%", 
+            currentMicroservicePercentage, 100 - currentMicroservicePercentage);
+    }
+    
+    private void increaseTrafficToMicroservice() {
+        if (currentMicroservicePercentage < 100) {
+            int increment = Math.min(10, 100 - currentMicroservicePercentage);
+            currentMicroservicePercentage += increment;
+            log.info("INCREASING microservice traffic to {}%", currentMicroservicePercentage);
+            
+            // Update configuration dynamically
+            updateMediationLayerConfig();
+        }
+    }
+    
+    private void decreaseTrafficToMicroservice() {
+        if (currentMicroservicePercentage > 0) {
+            int decrement = Math.min(20, currentMicroservicePercentage);
+            currentMicroservicePercentage -= decrement;
+            log.warn("DECREASING microservice traffic to {}% due to errors", currentMicroservicePercentage);
+            
+            // Roll back configuration
+            updateMediationLayerConfig();
+        }
+    }
+    
+    private void updateMediationLayerConfig() {
+        // Update the service mediator's traffic percentage
+        ServiceMediationConfig.setTrafficPercentage(currentMicroservicePercentage);
+    }
+    
+    /**
+     * Zero-downtime cutover strategy
+     */
+    public void finalCutover() {
+        log.info("Starting final cutover to microservices");
+        
+        // Phase 1: Drain connections from monolith
+        monolithDrainConnections();
+        
+        // Phase 2: Set traffic to 100% microservice
+        currentMicroservicePercentage = 100;
+        updateMediationLayerConfig();
+        
+        // Phase 3: Verify all requests go to microservice
+        verifyTrafficDistribution();
+        
+        // Phase 4: Put monolith in read-only mode
+        monolithSetReadOnly();
+        
+        // Phase 5: Final data sync
+        syncRemainingData();
+        
+        log.info("Cutover complete - 100% traffic now on microservices");
+    }
+    
+    private void monolithDrainConnections() {
+        // Implement connection draining
+        // Reject new connections, wait for existing to complete
+    }
+    
+    private void verifyTrafficDistribution() {
+        // Monitor for 1 hour to ensure 100% traffic to microservice
+    }
+}
+Phase 4: Deploy Microservices to Cloud
+4a) Implement API Gateway
+java
+/**
+ * SPRING CLOUD GATEWAY IMPLEMENTATION
+ * Single entry point for all microservices
+ */
+
+@SpringBootApplication
+@EnableEurekaClient
+@EnableConfigurationProperties
+public class ApiGatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ApiGatewayApplication.class, args);
+    }
+}
+
+// application.yml
+/*
+server:
+  port: 8080
+  
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      routes:
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: orderServiceCB
+                fallbackUri: forward:/fallback/orders
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@userKeyResolver}"
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+            - name: Retry
+              args:
+                retries: 3
+                statuses: INTERNAL_SERVER_ERROR
+                
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: inventoryServiceCB
+                fallbackUri: forward:/fallback/inventory
+                
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/api/products/**
+            
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "https://yourdomain.com"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWT_SET_URI:http://localhost:9000/.well-known/jwks.json}
+        
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    
+resilience4j:
+  circuitbreaker:
+    instances:
+      orderServiceCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 5
+        
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+*/
+
+/**
+ * API GATEWAY CUSTOM FILTERS
+ */
+@Component
+@Slf4j
+public class LoggingGlobalFilter implements GlobalFilter, Ordered {
+    
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+        
+        log.info("Request: {} {} from {}", 
+            request.getMethod(), 
+            request.getURI().getPath(),
+            request.getRemoteAddress());
+        
+        long startTime = System.currentTimeMillis();
+        
+        return chain.filter(exchange).then(
+            Mono.fromRunnable(() -> {
+                long duration = System.currentTimeMillis() - startTime;
+                ServerHttpResponse response = exchange.getResponse();
+                log.info("Response: {} - Duration: {}ms", 
+                    response.getStatusCode(), duration);
+            })
+        );
+    }
+    
+    @Override
+    public int getOrder() {
+        return -1; // Highest precedence
+    }
+}
+
+/**
+ * RATE LIMITING KEY RESOLVER
+ */
+@Component
+public class UserKeyResolver implements KeyResolver {
+    
+    @Override
+    public Mono<String> resolve(ServerWebExchange exchange) {
+        String apiKey = exchange.getRequest().getHeaders().getFirst("X-API-Key");
+        
+        if (apiKey != null) {
+            return Mono.just(apiKey);
+        }
+        
+        String clientIp = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
+        return Mono.just(clientIp);
+    }
+}
+
+/**
+ * AUTHENTICATION FILTER
+ */
+@Component
+public class JwtAuthenticationFilter implements GlobalFilter {
+    
+    @Autowired
+    private ReactiveJwtDecoder jwtDecoder;
+    
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return chain.filter(exchange); // Continue without auth for public endpoints
+        }
+        
+        String token = authHeader.substring(7);
+        
+        return jwtDecoder.decode(token)
+            .flatMap(jwt -> {
+                // Add user context to headers for downstream services
+                ServerWebExchange mutatedExchange = exchange.mutate()
+                    .request(exchange.getRequest().mutate()
+                        .header("X-User-Id", jwt.getClaim("sub"))
+                        .header("X-User-Roles", String.join(",", jwt.getClaim("roles")))
+                        .build())
+                    .build();
+                return chain.filter(mutatedExchange);
+            })
+            .onErrorResume(e -> {
+                log.error("JWT validation failed", e);
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            });
+    }
+}
+
+/**
+ * FALLBACK HANDLERS
+ */
+@RestController
+public class FallbackController {
+    
+    @GetMapping("/fallback/orders")
+    public Mono<Map<String, String>> orderServiceFallback() {
+        return Mono.just(Map.of(
+            "status", "SERVICE_UNAVAILABLE",
+            "message", "Order service is currently unavailable. Please try again later.",
+            "timestamp", Instant.now().toString()
+        ));
+    }
+    
+    @GetMapping("/fallback/inventory")
+    public Mono<Map<String, String>> inventoryServiceFallback() {
+        return Mono.just(Map.of(
+            "status", "SERVICE_UNAVAILABLE",
+            "message", "Inventory service is temporarily down. Using cached stock information.",
+            "timestamp", Instant.now().toString()
+        ));
+    }
+}
+4b) Deploy Microservices to Cloud
+yaml
+# KUBERNETES DEPLOYMENT CONFIGURATION
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: ecommerce
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: myregistry.azurecr.io/order-service:latest
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "cloud"
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: order-db-url
+        - name: SPRING_REDIS_HOST
+          value: "redis-service"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-service:9092"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          initialDelaySeconds: 20
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: order-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+  type: ClusterIP
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service-hpa
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+# Terraform Configuration for Cloud Infrastructure
+# main.tf
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~>3.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~>2.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+# AKS Cluster
+resource "azurerm_kubernetes_cluster" "ecommerce" {
+  name                = "ecommerce-aks"
+  location            = "eastus"
+  resource_group_name = "ecommerce-rg"
+  dns_prefix         = "ecommerce"
+  
+  default_node_pool {
+    name       = "default"
+    node_count = 3
+    vm_size    = "Standard_D2s_v3"
+  }
+  
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+# Azure Database for PostgreSQL
+resource "azurerm_postgresql_flexible_server" "order_db" {
+  name                   = "ecommerce-order-db"
+  resource_group_name    = "ecommerce-rg"
+  location              = "eastus"
+  version               = "14"
+  administrator_login   = "dbadmin"
+  administrator_password = var.db_password
+  
+  storage_mb = 32768
+  
+  sku_name = "B_Standard_B1ms"
+}
+
+# Azure Cache for Redis
+resource "azurerm_redis_cache" "ecommerce" {
+  name                = "ecommerce-redis"
+  location            = "eastus"
+  resource_group_name = "ecommerce-rg"
+  capacity            = 2
+  family              = "C"
+  sku_name            = "Standard"
+  
+  redis_configuration {
+    maxmemory_policy = "allkeys-lru"
+  }
+}
+
+# Azure Service Bus for Kafka alternative
+resource "azurerm_servicebus_namespace" "ecommerce" {
+  name                = "ecommerce-sb"
+  location            = "eastus"
+  resource_group_name = "ecommerce-rg"
+  sku                 = "Premium"
+}
+Phase 5: Implement Microservices in the Cloud
+5a) Migrate Data to Cloud
+java
+/**
+ * CLOUD DATA MIGRATION SERVICE
+ * Using AWS DMS or Azure Database Migration Service
+ */
+
+@Service
+@Slf4j
+public class CloudDataMigrationService {
+    
+    @Autowired
+    private JdbcTemplate localDbTemplate;
+    
+    @Autowired
+    private JdbcTemplate cloudDbTemplate;
+    
+    /**
+     * Continuous migration strategy
+     */
+    @Scheduled(fixedDelay = 60000) // Every minute
+    public void migrateIncrementalChanges() {
+        // Capture changes from local database
+        List<OrderChange> changes = getChangesSinceLastMigration();
+        
+        // Apply to cloud database
+        for (OrderChange change : changes) {
+            try {
+                applyChangeToCloud(change);
+                markChangeAsMigrated(change.getId());
+            } catch (Exception e) {
+                log.error("Failed to migrate change: {}", change.getId(), e);
+                sendToDeadLetterQueue(change);
+            }
+        }
+    }
+    
+    /**
+     * AWS DMS Configuration (JSON)
+     */
+    /*
+    {
+      "ReplicationInstanceIdentifier": "ecommerce-migration",
+      "ReplicationInstanceClass": "dms.t3.medium",
+      "SourceEndpointIdentifier": "local-postgres",
+      "TargetEndpointIdentifier": "cloud-postgres",
+      "TableMappings": {
+        "rules": [
+          {
+            "rule-type": "selection",
+            "rule-id": "1",
+            "rule-name": "migrate-orders",
+            "object-locator": {
+              "schema-name": "public",
+              "table-name": "orders"
+            },
+            "rule-action": "include"
+          }
+        ]
+      }
+    }
+    */
+    
+    /**
+     * Zero-downtime cloud migration
+     */
+    public void zeroDowntimeMigration() {
+        // Phase 1: Full data copy
+        log.info("Starting full data copy to cloud");
+        fullDataCopy();
+        
+        // Phase 2: Continuous sync
+        log.info("Starting continuous sync");
+        startContinuousSync();
+        
+        // Phase 3: Verify data consistency
+        log.info("Verifying data consistency");
+        verifyConsistency();
+        
+        // Phase 4: Switch read traffic
+        log.info("Switching read traffic to cloud");
+        switchReadTraffic();
+        
+        // Phase 5: Switch write traffic
+        log.info("Switching write traffic to cloud");
+        switchWriteTraffic();
+        
+        // Phase 6: Decommission local database
+        log.info("Migration complete, decommissioning local DB");
+    }
+    
+    private void fullDataCopy() {
+        int batchSize = 10000;
+        int offset = 0;
+        
+        while (true) {
+            List<Order> orders = localDbTemplate.query(
+                "SELECT * FROM orders LIMIT ? OFFSET ?",
+                new Object[]{batchSize, offset},
+                (rs, rowNum) -> mapToOrder(rs)
+            );
+            
+            if (orders.isEmpty()) break;
+            
+            // Bulk insert to cloud
+            cloudDbTemplate.batchUpdate(
+                "INSERT INTO orders (id, customer_id, status, total_amount) VALUES (?, ?, ?, ?)",
+                orders,
+                batchSize,
+                (ps, order) -> {
+                    ps.setString(1, order.getId());
+                    ps.setString(2, order.getCustomerId());
+                    ps.setString(3, order.getStatus().name());
+                    ps.setBigDecimal(4, order.getTotalAmount());
+                }
+            );
+            
+            offset += batchSize;
+            log.info("Copied {} orders to cloud", offset);
+        }
+    }
+}
+5b) Run Parallel in the Cloud
+java
+/**
+ * CLOUD PARALLEL RUN
+ * Run both local and cloud microservices simultaneously
+ */
+
+@Configuration
+public class CloudParallelRunConfig {
+    
+    @Bean
+    @Primary
+    @LoadBalanced
+    public RestTemplate localRestTemplate() {
+        return new RestTemplate();
+    }
+    
+    @Bean
+    public RestTemplate cloudRestTemplate() {
+        RestTemplate template = new RestTemplate();
+        // Configure cloud-specific settings
+        template.setRequestFactory(new HttpComponentsClientHttpRequestFactory());
+        return template;
+    }
+}
+
+@Service
+@Slf4j
+public class CloudParallelValidator {
+    
+    @Autowired
+    @Qualifier("localRestTemplate")
+    private RestTemplate localRest;
+    
+    @Autowired
+    @Qualifier("cloudRestTemplate")
+    private RestTemplate cloudRest;
+    
+    @Value("${cloud.api-gateway.url}")
+    private String cloudGatewayUrl;
+    
+    @Value("${local.api-gateway.url}")
+    private String localGatewayUrl;
+    
+    @Autowired
+    private MeterRegistry meterRegistry;
+    
+    /**
+     * Validate cloud deployment by comparing responses
+     */
+    @Scheduled(fixedDelay = 5000)
+    public void validateCloudDeployment() {
+        // Get recent orders from local
+        Order[] localOrders = localRest.getForObject(
+            localGatewayUrl + "/api/orders/recent", 
+            Order[].class
+        );
+        
+        for (Order order : localOrders) {
+            // Compare with cloud
+            try {
+                Order cloudOrder = cloudRest.getForObject(
+                    cloudGatewayUrl + "/api/orders/" + order.getId(),
+                    Order.class
+                );
+                
+                if (cloudOrder != null && !order.equals(cloudOrder)) {
+                    log.warn("Order mismatch for ID: {}", order.getId());
+                    meterRegistry.counter("cloud.validation.mismatch").increment();
+                } else {
+                    meterRegistry.counter("cloud.validation.success").increment();
+                }
+            } catch (Exception e) {
+                log.error("Cloud validation failed for order: {}", order.getId(), e);
+                meterRegistry.counter("cloud.validation.error").increment();
+            }
+        }
+    }
+    
+    /**
+     * Performance comparison
+     */
+    public void comparePerformance() {
+        Timer.Sample localSample = Timer.start(meterRegistry);
+        // Call local service
+        localRest.getForObject(localGatewayUrl + "/api/orders", Order[].class);
+        localSample.stop(Timer.builder("local.api.latency").register(meterRegistry));
+        
+        Timer.Sample cloudSample = Timer.start(meterRegistry);
+        // Call cloud service
+        cloudRest.getForObject(cloudGatewayUrl + "/api/orders", Order[].class);
+        cloudSample.stop(Timer.builder("cloud.api.latency").register(meterRegistry));
+    }
+}
+
+/**
+ * CANARY DEPLOYMENT IN CLOUD
+ */
+@Component
+public class CloudCanaryDeployment {
+    
+    @Autowired
+    private KubernetesClient k8sClient;
+    
+    /**
+     * Deploy new version to 10% of pods
+     */
+    public void canaryDeploy(String newVersion) {
+        // Create canary deployment
+        Deployment canaryDeployment = new DeploymentBuilder()
+            .withNewMetadata()
+                .withName("order-service-canary")
+                .addToLabels("app", "order-service")
+                .addToLabels("version", "canary")
+                .addToLabels("track", "canary")
+            .endMetadata()
+            .withNewSpec()
+                .withReplicas(1)
+                .withNewSelector()
+                    .addToMatchLabels("app", "order-service")
+                    .addToMatchLabels("version", "canary")
+                .endSelector()
+                .withNewTemplate()
+                    .withNewMetadata()
+                        .addToLabels("app", "order-service")
+                        .addToLabels("version", "canary")
+                    .endMetadata()
+                    .withNewSpec()
+                        .addNewContainer()
+                            .withName("order-service")
+                            .withImage("myregistry/order-service:" + newVersion)
+                            .addNewPort()
+                                .withContainerPort(8081)
+                            .endPort()
+                        .endContainer()
+                    .endSpec()
+                .endTemplate()
+            .endSpec()
+            .build();
+        
+        k8sClient.apps().deployments().inNamespace("default").create(canaryDeployment);
+        
+        // Route 10% traffic to canary
+        updateServiceToWeightedRouting();
+    }
+    
+    private void updateServiceToWeightedRouting() {
+        // Update service with weighted routing
+        String yaml = """
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: order-service
+            spec:
+              selector:
+                app: order-service
+              ports:
+              - port: 8081
+              type: ClusterIP
+              weights:
+              - version: stable
+                weight: 90
+              - version: canary
+                weight: 10
+            """;
+        
+        k8sClient.load(new ByteArrayInputStream(yaml.getBytes())).createOrReplace();
+    }
+}
+5c) Swing Channels to API Gateway
+java
+/**
+ * DNS-BASED TRAFFIC SWING TO CLOUD API GATEWAY
+ */
+
+@Component
+@Slf4j
+public class TrafficSwingToCloud {
+    
+    @Autowired
+    private Route53Client route53Client;
+    
+    @Autowired
+    private CloudWatchClient cloudWatchClient;
+    
+    /**
+     * Gradual DNS weighting
+     */
+    public void swingTrafficToCloud() {
+        // Initial state: 100% to local gateway
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 100);
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 0);
+        
+        // Phase 1: 10% to cloud
+        sleepAndMonitor(3600000); // 1 hour
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 10);
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 90);
+        
+        // Phase 2: 25% to cloud
+        sleepAndMonitor(3600000);
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 25);
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 75);
+        
+        // Phase 3: 50% to cloud
+        sleepAndMonitor(3600000);
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 50);
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 50);
+        
+        // Phase 4: 75% to cloud
+        sleepAndMonitor(3600000);
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 75);
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 25);
+        
+        // Phase 5: 100% to cloud
+        sleepAndMonitor(3600000);
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 100);
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 0);
+        
+        log.info("Traffic fully switched to cloud API Gateway");
+    }
+    
+    private void setTrafficWeight(String domain, String endpoint, int weight) {
+        // Update Route 53 weighted records
+        ChangeResourceRecordSetsRequest request = new ChangeResourceRecordSetsRequest()
+            .withHostedZoneId("Z1234567890")
+            .withChangeBatch(new ChangeBatch()
+                .withChanges(new Change()
+                    .withAction(Action.UPSERT)
+                    .withResourceRecordSet(new ResourceRecordSet()
+                        .withName(domain)
+                        .withType(RRType.A)
+                        .withSetIdentifier(endpoint)
+                        .withWeight(weight)
+                        .withTTL(300L)
+                        .withResourceRecords(new ResourceRecord()
+                            .withValue(getEndpointIP(endpoint))))));
+        
+        route53Client.changeResourceRecordSets(request);
+        log.info("Updated {} weight to {}% for {}", endpoint, weight, domain);
+    }
+    
+    private void sleepAndMonitor(long milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+            
+            // Monitor error rates during swing
+            double errorRate = getCloudErrorRate();
+            if (errorRate > 0.05) {
+                log.error("High error rate in cloud: {}%, rolling back", errorRate * 100);
+                rollbackTraffic();
+                throw new RuntimeException("Rollback triggered due to high error rate");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+    
+    private double getCloudErrorRate() {
+        GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
+            .withNamespace("AWS/ApplicationELB")
+            .withMetricName("HTTPCode_Target_5XX_Count")
+            .withStatistics(Statistic.Sum)
+            .withPeriod(300)
+            .withStartTime(new Date(System.currentTimeMillis() - 300000))
+            .withEndTime(new Date());
+        
+        GetMetricStatisticsResult result = cloudWatchClient.getMetricStatistics(request);
+        // Calculate error rate logic
+        return 0.01; // Example
+    }
+    
+    private void rollbackTraffic() {
+        setTrafficWeight("api.ecommerce.com", "cloud-gateway", 0);
+        setTrafficWeight("api.ecommerce.com", "local-gateway", 100);
+        log.warn("Traffic rolled back to local gateway");
+    }
+}
+Phase 6: Decommission Monolithic Application
+6a) Unplug Monolith App
+java
+/**
+ * MONOLITH DECOMMISSIONING STRATEGY
+ * Safe removal of legacy system
+ */
+
+@Service
+@Slf4j
+public class MonolithDecommissionService {
+    
+    @Autowired
+    private JdbcTemplate monolithDb;
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @Autowired
+    private MeterRegistry meterRegistry;
+    
+    /**
+     * Step 1: Read-only mode for 7 days
+     */
+    public void setMonolithReadOnly() {
+        log.info("Setting monolith to READ-ONLY mode");
+        
+        // Update database to read-only
+        monolithDb.execute("ALTER DATABASE ecommerce_db SET default_transaction_read_only = true");
+        
+        // Update application property
+        updateMonolithConfig("app.readonly", "true");
+        
+        // Start monitoring for write attempts
+        monitorWriteAttempts();
+    }
+    
+    /**
+     * Step 2: Verify no writes for 7 days
+     */
+    @Scheduled(fixedDelay = 3600000) // Every hour
+    public void verifyNoWrites() {
+        // Check for any write operations in logs
+        int writeCount = getWriteOperationCount();
+        
+        if (writeCount > 0) {
+            log.warn("Still detecting {} write operations to monolith", writeCount);
+            meterRegistry.counter("monolith.writes.detected").increment(writeCount);
+        } else {
+            log.info("No write operations detected to monolith");
+            meterRegistry.counter("monolith.writes.zero").increment();
+        }
+    }
+    
+    /**
+     * Step 3: Data archival
+     */
+    public void archiveMonolithData() {
+        log.info("Starting data archival from monolith");
+        
+        // Archive to cold storage (AWS S3 Glacier)
+        List<String> tables = Arrays.asList("orders", "customers", "products", "audit_logs");
+        
+        for (String table : tables) {
+            int count = exportTableToS3(table);
+            log.info("Archived {} records from table {}", count, table);
+        }
+        
+        // Verify archive integrity
+        verifyArchiveIntegrity();
+    }
+    
+    /**
+     * Step 4: Graceful shutdown
+     */
+    @PreDestroy
+    public void gracefulShutdown() {
+        log.info("Initiating graceful shutdown of monolith");
+        
+        // Stop accepting new requests
+        setAcceptingRequests(false);
+        
+        // Wait for in-flight requests to complete
+        waitForInFlightRequests(30000); // 30 seconds max
+        
+        // Close database connections
+        monolithDb.getDataSource().closeConnections();
+        
+        // Send final decommission event
+        MonolithDecommissionedEvent event = new MonolithDecommissionedEvent(
+            Instant.now(),
+            "All traffic migrated to cloud microservices"
+        );
+        kafkaTemplate.send("monolith-decommissioned", event);
+        
+        log.info("Monolith decommissioned successfully");
+    }
+    
+    /**
+     * Step 5: Remove from production
+     */
+    public void removeFromProduction() {
+        // Remove from load balancer
+        removeFromLoadBalancer();
+        
+        // Scale down to zero
+        scaleDownToZero();
+        
+        // Delete deployment
+        deleteKubernetesDeployment();
+        
+        // Remove DNS entries
+        removeDNSEntries();
+        
+        log.info("Monolith completely removed from production environment");
+    }
+    
+    /**
+     * Rollback plan - in case of emergency
+     */
+    public void emergencyRollback() {
+        log.error("EMERGENCY ROLLBACK - Reactivating monolith");
+        
+        // Scale up monolith
+        scaleUpMonolith();
+        
+        // Add back to load balancer
+        addToLoadBalancer();
+        
+        // Update DNS to route 100% to monolith
+        updateDNSForMonolith();
+        
+        // Start data sync from cloud back to monolith
+        startReverseDataSync();
+        
+        log.warn("Emergency rollback complete - monolith is active");
+    }
+    
+    /**
+     * Final verification checklist
+     */
+    public void finalDecommissionChecklist() {
+        List<String> checks = Arrays.asList(
+            "All traffic routing to cloud",
+            "No errors in cloud services for 7 days",
+            "All data successfully migrated",
+            "Backup and archival complete",
+            "All external integrations updated",
+            "Documentation updated",
+            "Team notified of decommission"
+        );
+        
+        for (String check : checks) {
+            log.info("Verification: {}", check);
+            // Perform each verification
+        }
+        
+        // Generate decommission report
+        generateDecommissionReport();
+    }
+}
+
+/**
+ * MONOLITH DECOMMISSION MONITOR
+ */
+@Component
+public class DecommissionMonitor {
+    
+    @EventListener
+    public void onDecommissionComplete(MonolithDecommissionedEvent event) {
+        log.info("=== DECOMMISSION COMPLETE ===");
+        log.info("Monolith decommissioned at: {}", event.getTimestamp());
+        log.info("Total migration time: {} days", calculateMigrationDuration());
+        log.info("Data volume migrated: {} GB", getMigratedDataVolume());
+        log.info("Cost savings: ${}/month", calculateCostSavings());
+        
+        // Send final notification
+        sendDecommissionNotification(event);
+    }
+    
+    private void sendDecommissionNotification(MonolithDecommissionedEvent event) {
+        // Send to Slack, email, PagerDuty
+        String message = String.format(
+            "✅ Monolith Decommission Complete\n" +
+            "Time: %s\n" +
+            "All traffic now on cloud microservices\n" +
+            "Estimated cost savings: $%.2f/month",
+            event.getTimestamp(),
+            calculateCostSavings()
+        );
+        
+        slackNotifier.send("monolith-decom", message);
+    }
+}
+Complete Migration Summary
+Timeline & Success Metrics
+java
+/**
+ * MIGRATION DASHBOARD & METRICS
+ */
+@Component
+public class MigrationDashboard {
+    
+    private final Map<MigrationPhase, Double> progress = new ConcurrentHashMap<>();
+    
+    public enum MigrationPhase {
+        DECOUPLE_MONOLITH(0.1),
+        LOCAL_MICROSERVICES(0.25),
+        DATA_MIGRATION(0.4),
+        CLOUD_DEPLOYMENT(0.6),
+        CLOUD_MIGRATION(0.8),
+        DECOMMISSION(1.0);
+        
+        private final double weight;
+        MigrationPhase(double weight) { this.weight = weight; }
+    }
+    
+    public double getOverallProgress() {
+        return progress.values().stream()
+            .mapToDouble(Double::doubleValue)
+            .average()
+            .orElse(0.0);
+    }
+    
+    @Scheduled(fixedDelay = 5000)
+    public void updateDashboard() {
+        log.info("=== MIGRATION PROGRESS ===");
+        log.info("Overall: {}%", getOverallProgress() * 100);
+        log.info("Decouple Monolith: {}%", progress.getOrDefault(MigrationPhase.DECOUPLE_MONOLITH, 0.0) * 100);
+        log.info("Local Microservices: {}%", progress.getOrDefault(MigrationPhase.LOCAL_MICROSERVICES, 0.0) * 100);
+        log.info("Data Migration: {}%", progress.getOrDefault(MigrationPhase.DATA_MIGRATION, 0.0) * 100);
+        log.info("Cloud Deployment: {}%", progress.getOrDefault(MigrationPhase.CLOUD_DEPLOYMENT, 0.0) * 100);
+        log.info("Cloud Migration: {}%", progress.getOrDefault(MigrationPhase.CLOUD_MIGRATION, 0.0) * 100);
+        log.info("Decommission: {}%", progress.getOrDefault(MigrationPhase.DECOMMISSION, 0.0) * 100);
+        
+        // Push to monitoring system
+        pushToGrafana();
+    }
+}
+Key Success Factors
+Phase	Key Activities	Success Criteria	Rollback Trigger
+1. Decouple	Add service layer, mediation layer	Zero downtime, no behavior change	>1% error increase
+2. Local MS	Identify boundaries, develop MS	100% API compatibility	>5% performance degradation
+3. Local Migration	Data migration, parallel run, swing traffic	99.99% consistency	Data inconsistency >0.1%
+4. Cloud Deploy	API Gateway, K8s deployment	<100ms latency increase	Cloud errors >2%
+5. Cloud Migration	Data to cloud, parallel run	100% data synced	>1% data loss
+6. Decommission	Read-only, archive, shutdown	7 days no writes	Emergency rollback
+This comprehensive migration strategy ensures zero-downtime transition from monolith to cloud-native microservices using Domain-Driven Design principles, with safety nets at every phase and clear rollback procedures.
+
+Devetlop LLD and HLD for all six steps of transforming monolithic to microservices?
+Complete LLD & HLD for Monolith to Microservices Transformation
+High-Level Design (HLD) Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Phase 1: Decouple Monolith - HLD & LLD
+HLD - Phase 1 Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LLD - Phase 1 Implementation
+java
+/**
+ * PHASE 1: DECOUPLE MONOLITH
+ * Low-Level Design - Complete Implementation
+ */
+
+// ============ 1. Service Facade Layer ============
+
+/**
+ * Domain Service Interfaces - Extract business logic
+ */
+public interface OrderDomainService {
+    Order createOrder(OrderCommand command);
+    Order updateOrder(Long orderId, OrderCommand command);
+    void cancelOrder(Long orderId);
+    Order findOrderById(Long orderId);
+    List<Order> findOrdersByCustomer(Long customerId);
+}
+
+public interface InventoryDomainService {
+    boolean checkAvailability(List<OrderItem> items);
+    void reserveStock(List<OrderItem> items);
+    void releaseStock(List<OrderItem> items);
+    StockLevel getStockLevel(Long productId);
+}
+
+public interface PaymentDomainService {
+    PaymentResult processPayment(PaymentRequest request);
+    PaymentResult refundPayment(Long paymentId, BigDecimal amount);
+    PaymentStatus getPaymentStatus(Long paymentId);
+}
+
+public interface NotificationDomainService {
+    void sendOrderConfirmation(String email, Long orderId);
+    void sendPaymentReceipt(String email, PaymentResult payment);
+    void sendShipmentTracking(String email, TrackingInfo tracking);
+}
+
+/**
+ * Service Facade Implementation - Orchestrates domain services
+ */
+@Service
+@Slf4j
+@Transactional
+public class OrderProcessingFacade {
+    
+    private final OrderDomainService orderService;
+    private final InventoryDomainService inventoryService;
+    private final PaymentDomainService paymentService;
+    private final NotificationDomainService notificationService;
+    private final MetricsCollector metricsCollector;
+    
+    public OrderProcessingFacade(
+            OrderDomainService orderService,
+            InventoryDomainService inventoryService,
+            PaymentDomainService paymentService,
+            NotificationDomainService notificationService,
+            MetricsCollector metricsCollector) {
+        this.orderService = orderService;
+        this.inventoryService = inventoryService;
+        this.paymentService = paymentService;
+        this.notificationService = notificationService;
+        this.metricsCollector = metricsCollector;
+    }
+    
+    /**
+     * Complete order processing workflow
+     * Orchestrates multiple domain services
+     */
+    @CircuitBreaker(name = "orderProcessing", fallbackMethod = "fallbackOrderProcessing")
+    public OrderResponse processOrder(OrderRequest request) {
+        long startTime = System.currentTimeMillis();
+        
+        try {
+            // Step 1: Validate inventory
+            log.info("Step 1: Validating inventory for order");
+            boolean available = inventoryService.checkAvailability(request.getItems());
+            if (!available) {
+                throw new InventoryException("Some items are out of stock");
+            }
+            
+            // Step 2: Process payment
+            log.info("Step 2: Processing payment for amount: {}", request.getTotalAmount());
+            PaymentResult payment = paymentService.processPayment(
+                PaymentRequest.builder()
+                    .amount(request.getTotalAmount())
+                    .method(request.getPaymentMethod())
+                    .customerId(request.getCustomerId())
+                    .build()
+            );
+            
+            if (!payment.isSuccess()) {
+                throw new PaymentException("Payment failed: " + payment.getErrorMessage());
+            }
+            
+            // Step 3: Create order
+            log.info("Step 3: Creating order");
+            OrderCommand command = OrderCommand.builder()
+                .customerId(request.getCustomerId())
+                .items(request.getItems())
+                .paymentId(payment.getPaymentId())
+                .shippingAddress(request.getShippingAddress())
+                .build();
+            Order order = orderService.createOrder(command);
+            
+            // Step 4: Reserve inventory
+            log.info("Step 4: Reserving inventory");
+            inventoryService.reserveStock(request.getItems());
+            
+            // Step 5: Send confirmation (async)
+            CompletableFuture.runAsync(() -> {
+                notificationService.sendOrderConfirmation(request.getCustomerEmail(), order.getId());
+                notificationService.sendPaymentReceipt(request.getCustomerEmail(), payment);
+            });
+            
+            // Record metrics
+            long duration = System.currentTimeMillis() - startTime;
+            metricsCollector.record("order.processing.time", duration);
+            metricsCollector.increment("order.created");
+            
+            return OrderResponse.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .paymentId(payment.getPaymentId())
+                .totalAmount(request.getTotalAmount())
+                .build();
+                
+        } catch (Exception e) {
+            log.error("Order processing failed", e);
+            metricsCollector.increment("order.processing.failed");
+            throw new BusinessException("Failed to process order", e);
+        }
+    }
+    
+    /**
+     * Fallback method for circuit breaker
+     */
+    public OrderResponse fallbackOrderProcessing(OrderRequest request, Exception e) {
+        log.warn("Circuit breaker triggered for order processing", e);
+        
+        // Store for retry later
+        storeFailedOrderRequest(request);
+        
+        return OrderResponse.builder()
+            .status(OrderStatus.PENDING_REVIEW)
+            .message("Order received but processing delayed. We'll notify you shortly.")
+            .build();
+    }
+    
+    private void storeFailedOrderRequest(OrderRequest request) {
+        // Store in dead letter queue or database for retry
+        failedOrderRepository.save(FailedOrder.builder()
+            .request(request)
+            .failedAt(LocalDateTime.now())
+            .retryCount(0)
+            .build());
+    }
+}
+
+// ============ 2. Service Mediation Layer ============
+
+/**
+ * Mediation Configuration
+ */
+@Configuration
+public class MediationLayerConfig {
+    
+    @Bean
+    @ConditionalOnProperty(name = "mediation.enabled", havingValue = "true")
+    public ServiceMediator serviceMediator() {
+        return new ServiceMediator();
+    }
+    
+    @Bean
+    public DynamicFeatureFlags featureFlags() {
+        return new DynamicFeatureFlags();
+    }
+}
+
+/**
+ * Service Mediator - Routes traffic between monolith and microservices
+ */
+@Component
+@Slf4j
+public class ServiceMediator {
+    
+    private final DynamicFeatureFlags featureFlags;
+    private final RestTemplate restTemplate;
+    private final MonolithServiceProxy monolithProxy;
+    private final TrafficRouter trafficRouter;
+    
+    // Configuration properties
+    @Value("${migration.strategy:shadow}")
+    private String migrationStrategy;
+    
+    @Value("${migration.traffic.percentage:0}")
+    private int trafficPercentage;
+    
+    @Value("${migration.white-list:}")
+    private List<String> whiteListCustomers;
+    
+    @Value("${migration.black-list:}")
+    private List<String> blackListCustomers;
+    
+    public ServiceMediator(
+            DynamicFeatureFlags featureFlags,
+            RestTemplate restTemplate,
+            MonolithServiceProxy monolithProxy,
+            TrafficRouter trafficRouter) {
+        this.featureFlags = featureFlags;
+        this.restTemplate = restTemplate;
+        this.monolithProxy = monolithProxy;
+        this.trafficRouter = trafficRouter;
+    }
+    
+    /**
+     * Mediate order creation request
+     * Supports multiple routing strategies
+     */
+    public OrderResponse mediateOrderCreation(OrderRequest request) {
+        String customerId = request.getCustomerId();
+        
+        // Strategy 1: Feature flag based routing
+        if (featureFlags.isEnabled("use.microservice.orders")) {
+            log.info("Feature flag enabled: routing to microservice");
+            return routeToMicroservice(request);
+        }
+        
+        // Strategy 2: Customer whitelist (early adopters)
+        if (whiteListCustomers.contains(customerId)) {
+            log.info("Customer {} in whitelist: routing to microservice", customerId);
+            return routeToMicroservice(request);
+        }
+        
+        // Strategy 3: Customer blacklist (problematic customers stay on monolith)
+        if (blackListCustomers.contains(customerId)) {
+            log.info("Customer {} in blacklist: routing to monolith", customerId);
+            return routeToMonolith(request);
+        }
+        
+        // Strategy 4: Percentage-based canary
+        if (trafficRouter.shouldRouteToMicroservice(trafficPercentage)) {
+            log.info("Canary routing ({}%): sending to microservice", trafficPercentage);
+            return routeToMicroservice(request);
+        }
+        
+        // Default: route to monolith
+        return routeToMonolith(request);
+    }
+    
+    /**
+     * Route request to microservice with fallback
+     */
+    private OrderResponse routeToMicroservice(OrderRequest request) {
+        String microserviceUrl = "http://localhost:8081/api/orders";
+        
+        try {
+            long startTime = System.currentTimeMillis();
+            ResponseEntity<OrderResponse> response = restTemplate.postForEntity(
+                microserviceUrl, request, OrderResponse.class);
+            long duration = System.currentTimeMillis() - startTime;
+            
+            log.info("Microservice response time: {}ms", duration);
+            recordMetrics("microservice", true, duration);
+            
+            return response.getBody();
+            
+        } catch (Exception e) {
+            log.error("Microservice call failed, falling back to monolith", e);
+            recordMetrics("microservice", false, 0);
+            
+            // Fallback to monolith
+            return routeToMonolith(request);
+        }
+    }
+    
+    /**
+     * Route request to monolith
+     */
+    private OrderResponse routeToMonolith(OrderRequest request) {
+        long startTime = System.currentTimeMillis();
+        OrderResponse response = monolithProxy.createOrder(request);
+        long duration = System.currentTimeMillis() - startTime;
+        
+        recordMetrics("monolith", true, duration);
+        return response;
+    }
+    
+    private void recordMetrics(String target, boolean success, long duration) {
+        MeterRegistry registry = Metrics.globalRegistry;
+        registry.counter("mediation.routing", "target", target, "success", String.valueOf(success)).increment();
+        registry.timer("mediation.latency", "target", target).record(duration, TimeUnit.MILLISECONDS);
+    }
+}
+
+/**
+ * Dynamic Feature Flags with Redis
+ */
+@Component
+public class DynamicFeatureFlags {
+    
+    @Autowired
+    private RedisTemplate<String, Boolean> redisTemplate;
+    
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+    
+    /**
+     * Check if feature is enabled
+     * Supports time-based, percentage-based, and context-based flags
+     */
+    public boolean isEnabled(String featureName) {
+        // Check Redis cache first
+        Boolean cached = redisTemplate.opsForValue().get("feature:" + featureName);
+        if (cached != null) {
+            return cached;
+        }
+        
+        // Load from configuration
+        boolean enabled = loadFeatureFlag(featureName);
+        
+        // Cache with TTL
+        redisTemplate.opsForValue().set("feature:" + featureName, enabled, 1, TimeUnit.MINUTES);
+        
+        return enabled;
+    }
+    
+    /**
+     * Update feature flag dynamically
+     */
+    public void updateFeatureFlag(String featureName, boolean enabled, String updatedBy) {
+        redisTemplate.opsForValue().set("feature:" + featureName, enabled);
+        
+        // Publish event for other instances
+        eventPublisher.publishEvent(new FeatureFlagChangedEvent(featureName, enabled, updatedBy));
+        
+        log.info("Feature flag {} updated to {} by {}", featureName, enabled, updatedBy);
+    }
+    
+    /**
+     * Time-based feature flag (e.g., enable only during business hours)
+     */
+    public boolean isEnabledWithTimeConstraint(String featureName, LocalTime startTime, LocalTime endTime) {
+        if (!isEnabled(featureName)) {
+            return false;
+        }
+        
+        LocalTime now = LocalTime.now();
+        return now.isAfter(startTime) && now.isBefore(endTime);
+    }
+    
+    /**
+     * Percentage-based roll-out
+     */
+    public boolean isEnabledForPercentage(String featureName, int percentage) {
+        if (!isEnabled(featureName)) {
+            return false;
+        }
+        
+        Random random = new Random();
+        return random.nextInt(100) < percentage;
+    }
+    
+    private boolean loadFeatureFlag(String featureName) {
+        // Load from configuration server or database
+        return FeatureFlagConfig.getDefaultValue(featureName);
+    }
+}
+
+/**
+ * Traffic Router - Controls traffic distribution
+ */
+@Component
+public class TrafficRouter {
+    
+    private final AtomicInteger counter = new AtomicInteger(0);
+    private final Random random = new Random();
+    
+    // Different routing strategies
+    public enum RoutingStrategy {
+        RANDOM,          // Random distribution
+        ROUND_ROBIN,     // Round robin
+        SESSION_AFFINITY, // Stick to same target for session
+        CANARY           // Canary deployment routing
+    }
+    
+    /**
+     * Determine if request should go to microservice
+     */
+    public boolean shouldRouteToMicroservice(int percentage) {
+        if (percentage <= 0) return false;
+        if (percentage >= 100) return true;
+        
+        // Use consistent hashing for session affinity
+        if (routingStrategy == RoutingStrategy.SESSION_AFFINITY) {
+            return routeWithSessionAffinity(percentage);
+        }
+        
+        // Random distribution
+        return random.nextInt(100) < percentage;
+    }
+    
+    /**
+     * Consistent hashing for session affinity
+     */
+    private boolean routeWithSessionAffinity(int percentage) {
+        String sessionId = getCurrentSessionId();
+        int hash = Math.abs(sessionId.hashCode());
+        return (hash % 100) < percentage;
+    }
+    
+    /**
+     * Advanced routing based on multiple factors
+     */
+    public RoutingDecision decideRoute(RequestContext context) {
+        RoutingDecision decision = new RoutingDecision();
+        
+        // Factor 1: Feature flags
+        if (featureFlags.isEnabled("force.microservice")) {
+            decision.setTarget(Target.MICROSERVICE);
+            decision.setReason("Feature flag override");
+            return decision;
+        }
+        
+        // Factor 2: Customer tier (premium customers get microservice)
+        if ("premium".equals(context.getCustomerTier())) {
+            decision.setTarget(Target.MICROSERVICE);
+            decision.setReason("Premium customer");
+            return decision;
+        }
+        
+        // Factor 3: Geographic location
+        if (isRegionSupportedByMicroservice(context.getRegion())) {
+            decision.setTarget(Target.MICROSERVICE);
+            decision.setReason("Region supported");
+            return decision;
+        }
+        
+        // Factor 4: Load-based routing
+        if (isMicroserviceUnderLoaded()) {
+            decision.setTarget(Target.MICROSERVICE);
+            decision.setReason("Microservice has capacity");
+            return decision;
+        }
+        
+        // Default: monolith
+        decision.setTarget(Target.MONOLITH);
+        decision.setReason("Default routing");
+        return decision;
+    }
+    
+    private boolean isMicroserviceUnderLoaded() {
+        // Check microservice metrics
+        double currentLoad = getMicroserviceLoad();
+        return currentLoad < 0.7; // Below 70% load
+    }
+}
+Phase 2: Develop Local Microservices - HLD & LLD
+HLD - Phase 2 Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LLD - Phase 2 Implementation
+java
+/**
+ * PHASE 2: DEVELOP LOCAL MICROSERVICES
+ * Complete microservice implementation with all patterns
+ */
+
+// ============ 1. Service Discovery (Eureka) ============
+
+/**
+ * Eureka Server Configuration
+ */
+@SpringBootApplication
+@EnableEurekaServer
+public class ServiceDiscoveryApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ServiceDiscoveryApplication.class, args);
+    }
+}
+
+// application.yml for Eureka Server
+/*
+server:
+  port: 8761
+  
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    enable-self-preservation: true
+    renewal-threshold: 0.85
+*/
+
+/**
+ * Order Service with Service Discovery
+ */
+@SpringBootApplication
+@EnableEurekaClient
+@EnableFeignClients
+@EnableCircuitBreaker
+public class OrderServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderServiceApplication.class, args);
+    }
+}
+
+// ============ 2. Inter-Service Communication ============
+
+/**
+ * Feign Client for Inventory Service
+ */
+@FeignClient(
+    name = "inventory-service",
+    configuration = FeignConfig.class,
+    fallback = InventoryServiceFallback.class
+)
+public interface InventoryServiceClient {
+    
+    @GetMapping("/api/inventory/check")
+    AvailabilityResponse checkAvailability(@RequestParam List<String> productIds);
+    
+    @PostMapping("/api/inventory/reserve")
+    ReservationResponse reserveStock(@RequestBody ReservationRequest request);
+    
+    @PostMapping("/api/inventory/release")
+    void releaseStock(@RequestBody ReleaseRequest request);
+    
+    @GetMapping("/api/inventory/stock/{productId}")
+    StockInfo getStockInfo(@PathVariable("productId") Long productId);
+}
+
+/**
+ * Feign Configuration
+ */
+@Configuration
+public class FeignConfig {
+    
+    @Bean
+    public RequestInterceptor requestInterceptor() {
+        return requestTemplate -> {
+            // Add correlation ID
+            String correlationId = MDC.get("correlationId");
+            if (correlationId != null) {
+                requestTemplate.header("X-Correlation-Id", correlationId);
+            }
+            
+            // Add authentication
+            requestTemplate.header("X-Auth-Token", getAuthToken());
+        };
+    }
+    
+    @Bean
+    public Retryer feignRetryer() {
+        return new Retryer.Default(100, 1000, 3);
+    }
+    
+    @Bean
+    public Decoder feignDecoder() {
+        return new OptionalDecoder(new ResponseEntityDecoder(new JacksonDecoder()));
+    }
+}
+
+/**
+ * Circuit Breaker Fallback
+ */
+@Component
+@Slf4j
+public class InventoryServiceFallback implements InventoryServiceClient {
+    
+    @Override
+    public AvailabilityResponse checkAvailability(List<String> productIds) {
+        log.warn("Inventory service unavailable, using cached availability");
+        
+        // Return cached availability
+        return AvailabilityResponse.builder()
+            .available(true)
+            .cached(true)
+            .build();
+    }
+    
+    @Override
+    public ReservationResponse reserveStock(ReservationRequest request) {
+        log.error("Cannot reserve stock - inventory service unavailable");
+        throw new ServiceUnavailableException("Inventory service is down");
+    }
+    
+    @Override
+    public void releaseStock(ReleaseRequest request) {
+        log.error("Cannot release stock - inventory service unavailable");
+        // Store for retry
+        storeReleaseRequest(request);
+    }
+    
+    @Override
+    public StockInfo getStockInfo(Long productId) {
+        // Return stale cache data
+        return stockCache.getIfPresent(productId);
+    }
+}
+
+// ============ 3. Event-Driven Communication with Kafka ============
+
+/**
+ * Domain Events Definition
+ */
+@Value
+@Builder
+public class OrderCreatedEvent {
+    private final String eventId = UUID.randomUUID().toString();
+    private final String orderId;
+    private final String customerId;
+    private final List<OrderItem> items;
+    private final BigDecimal totalAmount;
+    private final LocalDateTime occurredAt = LocalDateTime.now();
+    private final String eventType = "ORDER_CREATED";
+    private final int version = 1;
+}
+
+@Value
+@Builder
+public class OrderConfirmedEvent {
+    private String orderId;
+    private String customerId;
+    private LocalDateTime confirmedAt;
+    private List<OrderItem> items;
+}
+
+@Value
+@Builder
+public class PaymentProcessedEvent {
+    private String paymentId;
+    private String orderId;
+    private PaymentStatus status;
+    private BigDecimal amount;
+    private LocalDateTime processedAt;
+}
+
+/**
+ * Event Publisher Service
+ */
+@Service
+@Slf4j
+public class DomainEventPublisher {
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
+    
+    private static final String ORDER_EVENTS_TOPIC = "order-events";
+    private static final String INVENTORY_EVENTS_TOPIC = "inventory-events";
+    private static final String PAYMENT_EVENTS_TOPIC = "payment-events";
+    private static final String DEAD_LETTER_TOPIC = "dead-letter-events";
+    
+    /**
+     * Publish event with retry and dead letter queue
+     */
+    @Retryable(value = {KafkaException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    public void publishOrderEvent(OrderCreatedEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+            
+            ListenableFuture<SendResult<String, Object>> future = 
+                kafkaTemplate.send(ORDER_EVENTS_TOPIC, event.getOrderId(), eventJson);
+            
+            future.addCallback(
+                result -> log.info("Event published successfully: {}", event.getEventId()),
+                ex -> {
+                    log.error("Failed to publish event: {}", event.getEventId(), ex);
+                    handlePublishFailure(event, ex);
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("Error serializing event", e);
+            sendToDeadLetterQueue(event, e);
+        }
+    }
+    
+    /**
+     * Publish batch of events (transactional)
+     */
+    @Transactional
+    public void publishBatchEvents(List<DomainEvent> events) {
+        kafkaTemplate.executeInTransaction(operations -> {
+            for (DomainEvent event : events) {
+                operations.send(event.getTopic(), event.getKey(), event);
+            }
+            return true;
+        });
+    }
+    
+    private void handlePublishFailure(DomainEvent event, Exception ex) {
+        if (event.getRetryCount() >= 3) {
+            sendToDeadLetterQueue(event, ex);
+        } else {
+            event.incrementRetryCount();
+            scheduleRetry(event);
+        }
+    }
+    
+    private void sendToDeadLetterQueue(DomainEvent event, Exception ex) {
+        DeadLetterEvent dlq = DeadLetterEvent.builder()
+            .originalEvent(event)
+            .errorMessage(ex.getMessage())
+            .failedAt(LocalDateTime.now())
+            .build();
+        
+        kafkaTemplate.send(DEAD_LETTER_TOPIC, dlq);
+    }
+}
+
+/**
+ * Event Consumer Service
+ */
+@Service
+@Slf4j
+public class OrderEventConsumer {
+    
+    @Autowired
+    private OrderService orderService;
+    
+    @Autowired
+    private InventoryServiceClient inventoryClient;
+    
+    /**
+     * Consume order events with exactly-once semantics
+     */
+    @KafkaListener(
+        topics = "order-events",
+        groupId = "order-service-group",
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void consumeOrderEvent(ConsumerRecord<String, Object> record) {
+        String eventType = record.headers().lastHeader("event-type").value();
+        
+        try {
+            switch (eventType) {
+                case "ORDER_CREATED":
+                    OrderCreatedEvent createdEvent = (OrderCreatedEvent) record.value();
+                    handleOrderCreated(createdEvent);
+                    break;
+                    
+                case "ORDER_CONFIRMED":
+                    OrderConfirmedEvent confirmedEvent = (OrderConfirmedEvent) record.value();
+                    handleOrderConfirmed(confirmedEvent);
+                    break;
+                    
+                case "PAYMENT_PROCESSED":
+                    PaymentProcessedEvent paymentEvent = (PaymentProcessedEvent) record.value();
+                    handlePaymentProcessed(paymentEvent);
+                    break;
+                    
+                default:
+                    log.warn("Unknown event type: {}", eventType);
+            }
+            
+            // Commit offset after successful processing
+            acknowledge(record);
+            
+        } catch (Exception e) {
+            log.error("Error processing event", e);
+            // Store in error table for manual intervention
+            storeFailedEvent(record, e);
+        }
+    }
+    
+    private void handleOrderCreated(OrderCreatedEvent event) {
+        log.info("Processing OrderCreatedEvent for order: {}", event.getOrderId());
+        
+        // Reserve inventory
+        ReservationRequest request = ReservationRequest.builder()
+            .orderId(event.getOrderId())
+            .items(event.getItems())
+            .build();
+        
+        ReservationResponse response = inventoryClient.reserveStock(request);
+        
+        if (response.isSuccess()) {
+            // Update order status
+            orderService.updateOrderStatus(event.getOrderId(), OrderStatus.INVENTORY_RESERVED);
+        } else {
+            // Compensation: Cancel order
+            orderService.cancelOrder(event.getOrderId(), "Inventory reservation failed");
+        }
+    }
+    
+    private void acknowledge(ConsumerRecord<?, ?> record) {
+        // Implement acknowledgment logic
+    }
+    
+    private void storeFailedEvent(ConsumerRecord<String, Object> record, Exception e) {
+        // Store in database for replay
+        failedEventRepository.save(FailedEvent.builder()
+            .topic(record.topic())
+            .partition(record.partition())
+            .offset(record.offset())
+            .eventData(record.value().toString())
+            .errorMessage(e.getMessage())
+            .failedAt(LocalDateTime.now())
+            .build());
+    }
+}
+
+// ============ 4. Database per Service Pattern ============
+
+/**
+ * Order Service Database Configuration
+ */
+@Configuration
+@EnableJpaRepositories(
+    basePackages = "com.ecommerce.order.repository",
+    entityManagerFactoryRef = "orderEntityManagerFactory",
+    transactionManagerRef = "orderTransactionManager"
+)
+@EnableTransactionManagement
+public class OrderDatabaseConfig {
+    
+    @Primary
+    @Bean(name = "orderDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.order")
+    public DataSource orderDataSource() {
+        return DataSourceBuilder.create().build();
+    }
+    
+    @Primary
+    @Bean(name = "orderEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean orderEntityManagerFactory(
+            EntityManagerFactoryBuilder builder,
+            @Qualifier("orderDataSource") DataSource dataSource) {
+        return builder
+            .dataSource(dataSource)
+            .packages("com.ecommerce.order.entity")
+            .persistenceUnit("order")
+            .build();
+    }
+    
+    @Primary
+    @Bean(name = "orderTransactionManager")
+    public PlatformTransactionManager orderTransactionManager(
+            @Qualifier("orderEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+        return new JpaTransactionManager(Objects.requireNonNull(entityManagerFactory.getObject()));
+    }
+}
+
+// Order Entity
+@Entity
+@Table(name = "orders", indexes = {
+    @Index(name = "idx_customer_id", columnList = "customer_id"),
+    @Index(name = "idx_status_created", columnList = "status, created_at")
+})
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class OrderEntity {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+    
+    @Column(name = "customer_id", nullable = false)
+    private String customerId;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status;
+    
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "order")
+    private List<OrderItemEntity> items;
+    
+    @Column(name = "total_amount", precision = 19, scale = 2)
+    private BigDecimal totalAmount;
+    
+    @Column(name = "payment_id")
+    private String paymentId;
+    
+    @Embedded
+    private Address shippingAddress;
+    
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    @Version
+    private Long version;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+}
+
+// Repository with custom queries
+@Repository
+public interface OrderRepository extends JpaRepository<OrderEntity, String> {
+    
+    @Query("SELECT o FROM OrderEntity o WHERE o.customerId = :customerId AND o.createdAt >= :since")
+    List<OrderEntity> findCustomerOrdersSince(@Param("customerId") String customerId, @Param("since") LocalDateTime since);
+    
+    @Query("SELECT o FROM OrderEntity o WHERE o.status = :status AND o.createdAt < :timeout")
+    List<OrderEntity> findTimeoutOrders(@Param("status") OrderStatus status, @Param("timeout") LocalDateTime timeout);
+    
+    @Modifying
+    @Query("UPDATE OrderEntity o SET o.status = :newStatus WHERE o.id = :orderId AND o.status = :expectedStatus")
+    int updateStatusIf(@Param("orderId") String orderId, 
+                       @Param("expectedStatus") OrderStatus expectedStatus,
+                       @Param("newStatus") OrderStatus newStatus);
+}
+Phase 3: Implement Local Microservices - HLD & LLD
+HLD - Phase 3 Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LLD - Phase 3 Implementation
+java
+/**
+ * PHASE 3: IMPLEMENT LOCAL MICROSERVICES
+ * Data Migration, Parallel Testing, Traffic Swing
+ */
+
+// ============ 1. Data Migration Strategy ============
+
+/**
+ * Strangler Fig Pattern - Incremental Data Migration
+ */
+@Service
+@Slf4j
+public class StranglerDataMigration {
+    
+    @Autowired
+    private JdbcTemplate sourceDb; // Monolith DB
+    
+    @Autowired
+    private JdbcTemplate targetDb; // Microservice DB
+    
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+    
+    private final ConcurrentHashMap<String, MigrationStatus> migrationStatus = new ConcurrentHashMap<>();
+    
+    /**
+     * Phase 1: Schema Migration
+     */
+    @PostConstruct
+    public void migrateSchema() {
+        log.info("Starting schema migration");
+        
+        List<String> createTableStatements = loadSchemaFile("order-service-schema.sql");
+        
+        for (String statement : createTableStatements) {
+            try {
+                targetDb.execute(statement);
+                log.info("Executed: {}", statement.substring(0, Math.min(100, statement.length())));
+            } catch (Exception e) {
+                log.error("Failed to execute: {}", statement, e);
+            }
+        }
+    }
+    
+    /**
+     * Phase 2: Historical Data Migration
+     */
+    @Async
+    @Scheduled(initialDelay = 60000, fixedDelay = Long.MAX_VALUE) // Run once
+    public void migrateHistoricalData() {
+        log.info("Starting historical data migration");
+        
+        int batchSize = 5000;
+        int offset = 0;
+        int totalMigrated = 0;
+        
+        while (true) {
+            List<Map<String, Object>> orders = sourceDb.queryForList(
+                "SELECT * FROM orders WHERE migrated = false ORDER BY id LIMIT ? OFFSET ?",
+                batchSize, offset
+            );
+            
+            if (orders.isEmpty()) {
+                break;
+            }
+            
+            List<OrderEntity> entities = orders.stream()
+                .map(this::convertToOrderEntity)
+                .collect(Collectors.toList());
+            
+            // Batch insert to target
+            batchInsertOrders(entities);
+            
+            // Mark as migrated
+            markAsMigrated(orders);
+            
+            totalMigrated += orders.size();
+            log.info("Migrated {} orders (Total: {})", orders.size(), totalMigrated);
+            
+            offset += batchSize;
+        }
+        
+        log.info("Historical data migration complete. Total records: {}", totalMigrated);
+    }
+    
+    /**
+     * Phase 3: CDC (Change Data Capture) for incremental sync
+     */
+    @EventListener
+    public void handleOrderChange(OrderChangedEvent event) {
+        if (!isMigrated(event.getOrderId())) {
+            // Migrate this specific record
+            migrateSingleOrder(event.getOrderId());
+        }
+        
+        // Sync change to target
+        syncChangeToTarget(event);
+    }
+    
+    /**
+     * Debezium CDC Configuration for real-time sync
+     */
+    @Configuration
+    public class DebeziumCDCConfig {
+        
+        @Bean
+        public EmbeddedEngine debeziumEngine() {
+            return EmbeddedEngine.create()
+                .using(io.debezium.config.Configuration.create()
+                    .with("name", "postgres-connector")
+                    .with("connector.class", "io.debezium.connector.postgresql.PostgresConnector")
+                    .with("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore")
+                    .with("offset.storage.file.filename", "/tmp/offsets.dat")
+                    .with("database.hostname", "localhost")
+                    .with("database.port", "5432")
+                    .with("database.user", "postgres")
+                    .with("database.password", "password")
+                    .with("database.dbname", "monolith_db")
+                    .with("table.include.list", "public.orders")
+                    .with("plugin.name", "pgoutput")
+                    .build())
+                .using(this::handleChangeEvent)
+                .build();
+        }
+        
+        private void handleChangeEvent(SourceRecord record) {
+            // Process CDC event
+            OrderChangeEvent change = parseChangeEvent(record);
+            applyChangeToMicroservice(change);
+        }
+    }
+    
+    /**
+     * Data validation after migration
+     */
+    public ValidationReport validateDataIntegrity() {
+        ValidationReport report = new ValidationReport();
+        
+        // Compare record counts
+        long sourceCount = sourceDb.queryForObject("SELECT COUNT(*) FROM orders", Long.class);
+        long targetCount = targetDb.queryForObject("SELECT COUNT(*) FROM orders", Long.class);
+        
+        report.setSourceCount(sourceCount);
+        report.setTargetCount(targetCount);
+        report.setCountMatch(sourceCount == targetCount);
+        
+        // Sample validation
+        List<Long> sampleIds = getRandomSample(1000);
+        for (Long id : sampleIds) {
+            Map<String, Object> source = sourceDb.queryForMap("SELECT * FROM orders WHERE id = ?", id);
+            Map<String, Object> target = targetDb.queryForMap("SELECT * FROM orders WHERE id = ?", id);
+            
+            boolean matches = compareOrders(source, target);
+            report.addSampleResult(id, matches);
+        }
+        
+        return report;
+    }
+}
+
+// ============ 2. Parallel Run Testing ============
+
+/**
+ * Shadow Testing Framework
+ */
+@Component
+@Slf4j
+public class ShadowTestFramework {
+    
+    @Autowired
+    private MonolithService monolithService;
+    
+    @Autowired
+    private MicroserviceClient microserviceClient;
+    
+    @Autowired
+    private KafkaTemplate<String, TestResult> kafkaTemplate;
+    
+    private final ExecutorService executor = Executors.newFixedThreadPool(10);
+    
+    /**
+     * Shadow test - send copy of request to microservice without affecting response
+     */
+    @Around("@annotation(ShadowTest)")
+    public Object shadowTest(ProceedingJoinPoint joinPoint) throws Throwable {
+        Object[] args = joinPoint.getArgs();
+        Object request = args[0];
+        
+        // Execute real request on monolith
+        Object response = joinPoint.proceed();
+        
+        // Async shadow test
+        CompletableFuture.runAsync(() -> {
+            try {
+                long startTime = System.currentTimeMillis();
+                Object microserviceResponse = microserviceClient.call(request);
+                long duration = System.currentTimeMillis() - startTime;
+                
+                // Compare responses
+                TestResult result = compareResponses(response, microserviceResponse);
+                result.setDuration(duration);
+                result.setRequest(request);
+                
+                // Store results
+                storeTestResult(result);
+                
+                // Send to analytics
+                kafkaTemplate.send("shadow-test-results", result);
+                
+            } catch (Exception e) {
+                log.error("Shadow test failed", e);
+                recordShadowTestFailure(request, e);
+            }
+        }, executor);
+        
+        return response;
+    }
+    
+    /**
+     * Intelligent response comparison
+     */
+    private TestResult compareResponses(Object expected, Object actual) {
+        TestResult result = new TestResult();
+        List<Difference> differences = new ArrayList<>();
+        
+        // Use reflection to compare fields
+        Field[] fields = expected.getClass().getDeclaredFields();
+        for (Field field : fields) {
+            field.setAccessible(true);
+            try {
+                Object expectedValue = field.get(expected);
+                Object actualValue = field.get(actual);
+                
+                if (!Objects.equals(expectedValue, actualValue)) {
+                    differences.add(new Difference(field.getName(), expectedValue, actualValue));
+                }
+            } catch (IllegalAccessException e) {
+                log.error("Failed to compare field: {}", field.getName(), e);
+            }
+        }
+        
+        result.setDifferences(differences);
+        result.setMatch(differences.isEmpty());
+        
+        // Calculate similarity score
+        double similarity = 1.0 - ((double) differences.size() / fields.length);
+        result.setSimilarity(similarity);
+        
+        return result;
+    }
+    
+    /**
+     * Continuous validation during parallel run
+     */
+    @Scheduled(fixedDelay = 60000)
+    public void continuousValidation() {
+        // Get recent requests from the last hour
+        List<RequestLog> recentRequests = getRecentRequests(3600000);
+        
+        for (RequestLog request : recentRequests) {
+            // Replay request to both systems
+            CompletableFuture<Object> monolithFuture = CompletableFuture.supplyAsync(() -> 
+                monolithService.replay(request));
+            
+            CompletableFuture<Object> microserviceFuture = CompletableFuture.supplyAsync(() -> 
+                microserviceClient.replay(request));
+            
+            CompletableFuture.allOf(monolithFuture, microserviceFuture)
+                .thenRun(() -> {
+                    try {
+                        Object monolithResponse = monolithFuture.get();
+                        Object microserviceResponse = microserviceFuture.get();
+                        
+                        TestResult result = compareResponses(monolithResponse, microserviceResponse);
+                        
+                        if (!result.isMatch()) {
+                            log.warn("Validation mismatch for request: {}", request.getId());
+                            alertOnMismatch(request, result);
+                        }
+                    } catch (Exception e) {
+                        log.error("Validation failed", e);
+                    }
+                });
+        }
+    }
+}
+
+/**
+ * A/B Testing Framework
+ */
+@Component
+public class ABTestingFramework {
+    
+    @Autowired
+    private TrafficSplitter trafficSplitter;
+    
+    @Autowired
+    private MetricsCollector metricsCollector;
+    
+    private final Map<String, Experiment> activeExperiments = new ConcurrentHashMap<>();
+    
+    /**
+     * Run A/B test between monolith and microservice
+     */
+    public void runABTest(ExperimentConfig config) {
+        Experiment experiment = Experiment.builder()
+            .id(UUID.randomUUID().toString())
+            .name(config.getName())
+            .controlGroup("monolith")
+            .treatmentGroup("microservice")
+            .trafficPercentage(config.getTrafficPercentage())
+            .duration(config.getDuration())
+            .metrics(config.getMetrics())
+            .build();
+        
+        activeExperiments.put(experiment.getId(), experiment);
+        
+        // Start experiment
+        startExperiment(experiment);
+        
+        // Schedule completion
+        scheduleExperimentCompletion(experiment);
+    }
+    
+    private void startExperiment(Experiment experiment) {
+        log.info("Starting A/B test: {} with {}% traffic to treatment", 
+            experiment.getName(), experiment.getTrafficPercentage());
+        
+        // Configure traffic split
+        trafficSplitter.configureSplit(experiment);
+        
+        // Start collecting metrics
+        startMetricsCollection(experiment);
+    }
+    
+    @Scheduled(fixedDelay = 60000)
+    public void analyzeResults() {
+        for (Experiment experiment : activeExperiments.values()) {
+            if (experiment.isCompleted()) {
+                continue;
+            }
+            
+            // Calculate metrics
+            ExperimentMetrics controlMetrics = calculateMetrics(experiment.getControlGroup());
+            ExperimentMetrics treatmentMetrics = calculateMetrics(experiment.getTreatmentGroup());
+            
+            // Statistical significance test
+            boolean significant = performTTest(controlMetrics, treatmentMetrics);
+            
+            if (significant) {
+                determineWinner(controlMetrics, treatmentMetrics, experiment);
+            }
+        }
+    }
+    
+    private void determineWinner(ExperimentMetrics control, ExperimentMetrics treatment, Experiment experiment) {
+        double improvement = (treatment.getSuccessRate() - control.getSuccessRate()) / control.getSuccessRate();
+        
+        if (improvement > 0.05) { // 5% improvement
+            log.info("Treatment group wins with {}% improvement. Rolling out to 100%", improvement * 100);
+            experiment.setWinner("microservice");
+            rolloutToAll(experiment);
+        } else if (improvement < -0.02) { // 2% worse
+            log.warn("Treatment group performs worse. Terminating experiment.");
+            experiment.setWinner("monolith");
+            terminateExperiment(experiment);
+        }
+    }
+}
+
+// ============ 3. Traffic Swing Implementation ============
+
+/**
+ * Progressive Traffic Swing Controller
+ */
+@Component
+@Slf4j
+public class TrafficSwingController {
+    
+    @Autowired
+    private ServiceMediator mediator;
+    
+    @Autowired
+    private MetricsAnalyzer metricsAnalyzer;
+    
+    @Autowired
+    private HealthChecker healthChecker;
+    
+    private TrafficPlan currentPlan;
+    private final AtomicInteger currentPercentage = new AtomicInteger(0);
+    
+    /**
+     * Execute gradual traffic swing plan
+     */
+    public void executeTrafficSwing(TrafficPlan plan) {
+        this.currentPlan = plan;
+        
+        log.info("Starting traffic swing from {}% to {}% over {} steps",
+            plan.getStartPercentage(), plan.getTargetPercentage(), plan.getSteps());
+        
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        
+        int stepIncrease = (plan.getTargetPercentage() - plan.getStartPercentage()) / plan.getSteps();
+        int currentStep = 0;
+        
+        for (int target = plan.getStartPercentage() + stepIncrease; 
+             target <= plan.getTargetPercentage(); 
+             target += stepIncrease) {
+            
+            final int percentage = target;
+            final int step = currentStep++;
+            
+            scheduler.schedule(() -> {
+                swingToPercentage(percentage, step);
+            }, step * plan.getIntervalSeconds(), TimeUnit.SECONDS);
+        }
+    }
+    
+    private void swingToPercentage(int percentage, int step) {
+        log.info("Step {}: Swinging traffic to {}% microservice", step, percentage);
+        
+        // Update traffic distribution
+        mediator.setMicroservicePercentage(percentage);
+        currentPercentage.set(percentage);
+        
+        // Monitor for issues
+        boolean healthy = monitorAfterSwing(percentage);
+        
+        if (!healthy) {
+            log.error("Issues detected at {}% traffic. Rolling back to previous percentage.", percentage);
+            rollbackTraffic();
+            throw new RuntimeException("Traffic swing aborted due to health issues");
+        }
+        
+        // Log metrics
+        recordTrafficMetrics(percentage);
+    }
+    
+    private boolean monitorAfterSwing(int percentage) {
+        // Monitor for 5 minutes
+        long monitorDuration = 300000; // 5 minutes
+        long startTime = System.currentTimeMillis();
+        
+        while (System.currentTimeMillis() - startTime < monitorDuration) {
+            // Check health metrics
+            HealthStatus status = healthChecker.checkAllServices();
+            
+            if (!status.isHealthy()) {
+                log.error("Health check failed: {}", status.getIssues());
+                return false;
+            }
+            
+            // Check error rates
+            double errorRate = metricsAnalyzer.getErrorRate();
+            if (errorRate > 0.05) { // 5% error rate threshold
+                log.error("Error rate too high: {}%", errorRate * 100);
+                return false;
+            }
+            
+            // Check latency
+            long p95Latency = metricsAnalyzer.getP95Latency();
+            if (p95Latency > 1000) { // 1 second threshold
+                log.error("Latency too high: {}ms", p95Latency);
+                return false;
+            }
+            
+            try {
+                Thread.sleep(10000); // Check every 10 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    private void rollbackTraffic() {
+        int previousPercentage = currentPlan.getStartPercentage();
+        log.warn("ROLLING BACK traffic to {}%", previousPercentage);
+        
+        mediator.setMicroservicePercentage(previousPercentage);
+        currentPercentage.set(previousPercentage);
+        
+        // Send alert
+        sendRollbackAlert();
+    }
+    
+    /**
+     * Smart traffic routing based on multiple factors
+     */
+    public RoutingDecision smartRouting(RequestContext context) {
+        // Factor 1: User segment
+        if (context.getUserSegment() == UserSegment.PREMIUM) {
+            return RoutingDecision.builder()
+                .target(Target.MICROSERVICE)
+                .reason("Premium user - always get latest features")
+                .build();
+        }
+        
+        // Factor 2: Geographic region
+        if (isRegionStable(context.getRegion())) {
+            return RoutingDecision.builder()
+                .target(Target.MICROSERVICE)
+                .reason("Region is stable")
+                .build();
+        }
+        
+        // Factor 3: Request type
+        if (context.getRequestType() == RequestType.READ) {
+            // Reads are safer to route
+            return RoutingDecision.builder()
+                .target(Target.MICROSERVICE)
+                .reason("Read-only operation")
+                .build();
+        }
+        
+        // Factor 4: Current load
+        double microserviceLoad = getMicroserviceLoad();
+        if (microserviceLoad > 0.8) {
+            return RoutingDecision.builder()
+                .target(Target.MONOLITH)
+                .reason("Microservice overloaded")
+                .build();
+        }
+        
+        // Default: follow current percentage
+        boolean useMicroservice = random.nextInt(100) < currentPercentage.get();
+        return RoutingDecision.builder()
+            .target(useMicroservice ? Target.MICROSERVICE : Target.MONOLITH)
+            .reason("Percentage-based routing")
+            .build();
+    }
+}
+
+/**
+ * Zero-Downtime Cutover Manager
+ */
+@Component
+public class CutoverManager {
+    
+    @Autowired
+    private DataSyncService dataSyncService;
+    
+    @Autowired
+    private ConnectionDrainer connectionDrainer;
+    
+    @Autowired
+    private FinalValidator finalValidator;
+    
+    /**
+     * Execute final cutover with zero downtime
+     */
+    @Transactional
+    public void executeFinalCutover() {
+        log.info("=== STARTING FINAL CUTOVER ===");
+        
+        // Step 1: Set monolith to read-only mode
+        log.info("Step 1: Setting monolith to read-only mode");
+        setMonolithReadOnly();
+        verifyReadOnlyMode();
+        
+        // Step 2: Final data sync
+        log.info("Step 2: Performing final data sync");
+        SyncResult syncResult = dataSyncService.syncAllData();
+        if (!syncResult.isComplete()) {
+            throw new CutoverException("Final sync failed: " + syncResult.getErrorMessage());
+        }
+        
+        // Step 3: Drain existing connections
+        log.info("Step 3: Draining monolith connections");
+        connectionDrainer.drainConnections(30000); // 30 seconds max
+        
+        // Step 4: Validate data consistency
+        log.info("Step 4: Validating data consistency");
+        ValidationReport validation = finalValidator.validateCompleteSystem();
+        if (!validation.isConsistent()) {
+            throw new CutoverException("Data inconsistency detected");
+        }
+        
+        // Step 5: Switch traffic to 100% microservice
+        log.info("Step 5: Switching all traffic to microservice");
+        switchAllTrafficToMicroservice();
+        
+        // Step 6: Verify system health
+        log.info("Step 6: Verifying system health");
+        boolean healthy = verifySystemHealth();
+        if (!healthy) {
+            emergencyRollback();
+            throw new CutoverException("System unhealthy after cutover");
+        }
+        
+        log.info("=== CUTOVER COMPLETE - 100% TRAFFIC ON MICROSERVICES ===");
+    }
+    
+    private void emergencyRollback() {
+        log.error("EMERGENCY ROLLBACK INITIATED");
+        
+        // Switch traffic back to monolith
+        switchAllTrafficToMonolith();
+        
+        // Re-enable writes on monolith
+        enableMonolithWrites();
+        
+        // Sync data back to monolith
+        dataSyncService.syncBackToMonolith();
+        
+        log.warn("Emergency rollback complete - monolith is active");
+    }
+}
+Phase 4: Deploy Microservices to Cloud - HLD & LLD
+HLD - Phase 4 Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LLD - Phase 4 Implementation
+java
+/**
+ * PHASE 4: DEPLOY MICROSERVICES TO CLOUD
+ * Kubernetes, AWS/GCP/Azure Deployment
+ */
+
+// ============ 1. Cloud Infrastructure as Code (Terraform) ============
+
+/**
+ * Terraform Configuration for AWS
+ */
+/*
+# main.tf
+terraform {
+  required_version = ">= 1.0"
+  backend "s3" {
+    bucket = "ecommerce-terraform-state"
+    key    = "microservices/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+  profile = "ecommerce-prod"
+}
+
+# VPC Configuration
+resource "aws_vpc" "ecommerce_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  
+  tags = {
+    Name = "ecommerce-vpc"
+    Environment = var.environment
+  }
+}
+
+# EKS Cluster
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "18.0.0"
+  
+  cluster_name    = "ecommerce-cluster"
+  cluster_version = "1.24"
+  
+  vpc_id     = aws_vpc.ecommerce_vpc.id
+  subnet_ids = aws_subnet.private[*].id
+  
+  node_groups = {
+    main = {
+      desired_capacity = 3
+      max_capacity     = 10
+      min_capacity     = 2
+      
+      instance_types = ["t3.large"]
+      
+      k8s_labels = {
+        Environment = var.environment
+        NodeGroup   = "main"
+      }
+    }
+  }
+}
+
+# RDS PostgreSQL
+resource "aws_db_instance" "order_db" {
+  identifier     = "order-db"
+  engine         = "postgres"
+  engine_version = "14.5"
+  instance_class = "db.t3.large"
+  
+  allocated_storage     = 100
+  max_allocated_storage = 1000
+  
+  db_name  = "orderdb"
+  username = var.db_username
+  password = var.db_password
+  
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  
+  backup_retention_period = 30
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "Mon:04:00-Mon:05:00"
+  
+  storage_encrypted = true
+  storage_type      = "gp3"
+  
+  multi_az = true
+  
+  enabled_cloudwatch_logs_exports = ["postgresql"]
+  
+  tags = {
+    Name = "order-db"
+  }
+}
+
+# ElastiCache Redis
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id = "ecommerce-redis"
+  description         = "Redis cluster for caching"
+  engine              = "redis"
+  engine_version      = "6.2"
+  node_type          = "cache.t3.medium"
+  num_cache_clusters = 3
+  
+  parameter_group_name = "default.redis6.x"
+  port                = 6379
+  
+  subnet_group_name = aws_elasticache_subnet_group.main.name
+  security_group_ids = [aws_security_group.redis.id]
+  
+  automatic_failover_enabled = true
+  
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  
+  tags = {
+    Name = "ecommerce-redis"
+  }
+}
+
+# MSK (Managed Kafka)
+resource "aws_msk_cluster" "kafka" {
+  cluster_name = "ecommerce-kafka"
+  kafka_version = "2.8.1"
+  
+  number_of_broker_nodes = 3
+  
+  broker_node_group_info {
+    instance_type   = "kafka.t3.small"
+    client_subnets  = aws_subnet.private[*].id
+    security_groups = [aws_security_group.kafka.id]
+    
+    storage_info {
+      ebs_storage_info {
+        volume_size = 100
+      }
+    }
+  }
+  
+  encryption_info {
+    encryption_at_rest_kms_key_arn = aws_kms_key.kafka.arn
+  }
+  
+  tags = {
+    Name = "ecommerce-kafka"
+  }
+}
+*/
+
+// ============ 2. Kubernetes Deployment Configuration ============
+
+/**
+ * Kubernetes Deployment YAMLs
+ */
+/*
+# order-service-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: ecommerce
+  labels:
+    app: order-service
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+      - name: order-service
+        image: ${DOCKER_REGISTRY}/order-service:${IMAGE_TAG}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+          name: http
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "cloud"
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: order-db-url
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-username
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-password
+        - name: SPRING_REDIS_HOST
+          value: "redis-service.ecommerce.svc.cluster.local"
+        - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-brokers.ecommerce.svc.cluster.local:9092"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+      volumes:
+      - name: config
+        configMap:
+          name: order-service-config
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service-hpa
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: kafka_consumer_lag
+      target:
+        type: AverageValue
+        averageValue: 100
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: order-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+    name: http
+  type: ClusterIP
+---
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  namespace: ecommerce
+data:
+  application.yml: |
+    logging:
+      level:
+        com.ecommerce: DEBUG
+    resilience4j:
+      circuitbreaker:
+        instances:
+          inventory-service:
+            slidingWindowSize: 10
+            failureRateThreshold: 50
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,metrics,prometheus
+*/
+
+/**
+ * Kubernetes Java Client for Deployment Management
+ */
+@Component
+@Slf4j
+public class KubernetesDeploymentManager {
+    
+    @Autowired
+    private KubernetesClient k8sClient;
+    
+    @Autowired
+    private MetricsCollector metricsCollector;
+    
+    /**
+     * Deploy service with canary strategy
+     */
+    public void deployWithCanary(String serviceName, String newVersion, int canaryPercentage) {
+        log.info("Deploying {} version {} with {}% canary", serviceName, newVersion, canaryPercentage);
+        
+        // Create canary deployment
+        Deployment canaryDeployment = createCanaryDeployment(serviceName, newVersion);
+        k8sClient.apps().deployments().inNamespace("ecommerce").create(canaryDeployment);
+        
+        // Update service to route traffic to canary
+        updateServiceRouting(serviceName, canaryPercentage);
+        
+        // Monitor canary
+        monitorCanary(serviceName, newVersion, canaryPercentage);
+    }
+    
+    /**
+     * Blue-Green deployment
+     */
+    public void blueGreenDeployment(String serviceName, String newVersion) {
+        String blueVersion = getCurrentVersion(serviceName);
+        String greenVersion = newVersion;
+        
+        log.info("Starting Blue-Green deployment for {}: Blue={}, Green={}", 
+            serviceName, blueVersion, greenVersion);
+        
+        // Deploy green version
+        Deployment greenDeployment = createDeployment(serviceName, greenVersion);
+        k8sClient.apps().deployments().inNamespace("ecommerce").create(greenDeployment);
+        
+        // Create green service
+        Service greenService = createService(serviceName + "-green", greenVersion);
+        k8sClient.services().inNamespace("ecommerce").create(greenService);
+        
+        // Wait for green to be ready
+        waitForDeployment(serviceName + "-green");
+        
+        // Switch traffic to green
+        switchTrafficToGreen(serviceName);
+        
+        // Keep blue for rollback
+        log.info("Blue-Green deployment complete. Blue version {} still available for rollback", blueVersion);
+    }
+    
+    /**
+     * Rolling update with zero downtime
+     */
+    public void rollingUpdate(String serviceName, String newVersion) {
+        Deployment deployment = k8sClient.apps().deployments()
+            .inNamespace("ecommerce")
+            .withName(serviceName)
+            .get();
+        
+        // Update image
+        deployment.getSpec().getTemplate().getSpec().getContainers().get(0)
+            .setImage("myregistry/" + serviceName + ":" + newVersion);
+        
+        // Perform rolling update
+        k8sClient.apps().deployments()
+            .inNamespace("ecommerce")
+            .withName(serviceName)
+            .rolling()
+            .withTimeout(5, TimeUnit.MINUTES)
+            .updateImage(deployment);
+        
+        log.info("Rolling update to version {} completed", newVersion);
+    }
+    
+    private void monitorCanary(String serviceName, String version, int percentage) {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        
+        scheduler.scheduleAtFixedRate(() -> {
+            // Check error rate
+            double errorRate = getErrorRate(serviceName, version);
+            
+            if (errorRate > 0.05) { // 5% error rate threshold
+                log.error("Canary error rate too high: {}%. Rolling back.", errorRate * 100);
+                rollbackCanary(serviceName);
+                scheduler.shutdown();
+            }
+            
+            // Check latency
+            long p99Latency = getP99Latency(serviceName, version);
+            if (p99Latency > 1000) { // 1 second threshold
+                log.error("Canary latency too high: {}ms. Rolling back.", p99Latency);
+                rollbackCanary(serviceName);
+                scheduler.shutdown();
+            }
+            
+        }, 0, 30, TimeUnit.SECONDS);
+    }
+}
+Phase 5: Implement Microservices in Cloud - HLD & LLD
+HLD - Phase 5 Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LLD - Phase 5 Implementation
+java
+/**
+ * PHASE 5: IMPLEMENT MICROSERVICES IN CLOUD
+ * Cloud Migration, Parallel Run, Traffic Swing to Cloud
+ */
+
+// ============ 1. Cloud Data Migration Service ============
+
+/**
+ * AWS DMS (Database Migration Service) Configuration
+ */
+@Service
+@Slf4j
+public class CloudDataMigrationService {
+    
+    @Autowired
+    private DmsClient dmsClient;
+    
+    @Autowired
+    private S3Client s3Client;
+    
+    @Autowired
+    private RdsClient rdsClient;
+    
+    /**
+     * Create DMS replication task
+     */
+    public String createReplicationTask(ReplicationConfig config) {
+        CreateReplicationTaskRequest request = CreateReplicationTaskRequest.builder()
+            .replicationTaskIdentifier("ecommerce-migration-task")
+            .sourceEndpointArn(config.getSourceEndpointArn())
+            .targetEndpointArn(config.getTargetEndpointArn())
+            .replicationInstanceArn(config.getReplicationInstanceArn())
+            .migrationType(MigrationType.CDC) // Change Data Capture
+            .tableMappings(createTableMappings())
+            .replicationTaskSettings(createTaskSettings())
+            .build();
+        
+        CreateReplicationTaskResponse response = dmsClient.createReplicationTask(request);
+        log.info("Created replication task: {}", response.replicationTask().replicationTaskArn());
+        
+        return response.replicationTask().replicationTaskArn();
+    }
+    
+    /**
+     * Start continuous replication
+     */
+    public void startContinuousReplication(String taskArn) {
+        StartReplicationTaskRequest request = StartReplicationTaskRequest.builder()
+            .replicationTaskArn(taskArn)
+            .startReplicationTaskType(StartReplicationTaskType.START_REPLICATION)
+            .build();
+        
+        dmsClient.startReplicationTask(request);
+        log.info("Started continuous replication for task: {}", taskArn);
+    }
+    
+    /**
+     * Monitor replication status
+     */
+    @Scheduled(fixedDelay = 60000)
+    public void monitorReplication() {
+        DescribeReplicationTasksRequest request = DescribeReplicationTasksRequest.builder()
+            .filters(Filter.builder()
+                .name("replication-task-id")
+                .values("ecommerce-migration-task")
+                .build())
+            .build();
+        
+        DescribeReplicationTasksResponse response = dmsClient.describeReplicationTasks(request);
+        
+        ReplicationTask task = response.replicationTasks().get(0);
+        log.info("Replication status: {} - {} records loaded, {} changes applied",
+            task.status(),
+            task.fullLoadProgressPercent(),
+            task.cdcLatencyInSeconds());
+        
+        // Alert on issues
+        if (task.status().equals("FAILED")) {
+            sendReplicationAlert(task);
+        }
+    }
+}
+
+/**
+ * Data Validation Service for Cloud Migration
+ */
+@Service
+@Slf4j
+public class CloudDataValidator {
+    
+    @Autowired
+    private JdbcTemplate onPremDb;
+    
+    @Autowired
+    private JdbcTemplate cloudDb;
+    
+    @Autowired
+    private S3Client s3Client;
+    
+    /**
+     * Validate data consistency between on-prem and cloud
+     */
+    public ValidationSummary validateDataConsistency() {
+        ValidationSummary summary = new ValidationSummary();
+        
+        // Validate row counts
+        Map<String, Long> onPremCounts = getTableRowCounts(onPremDb);
+        Map<String, Long> cloudCounts = getTableRowCounts(cloudDb);
+        
+        for (String table : onPremCounts.keySet()) {
+            long onPremCount = onPremCounts.get(table);
+            long cloudCount = cloudCounts.getOrDefault(table, 0L);
+            
+            if (onPremCount != cloudCount) {
+                log.warn("Row count mismatch for {}: OnPrem={}, Cloud={}", table, onPremCount, cloudCount);
+                summary.addMismatch(table, "count", onPremCount, cloudCount);
+            }
+        }
+        
+        // Sample-based validation
+        for (String table : TABLES) {
+            validateTableSample(table, summary);
+        }
+        
+        // Checksum validation
+        for (String table : TABLES) {
+            validateTableChecksum(table, summary);
+        }
+        
+        return summary;
+    }
+    
+    private void validateTableChecksum(String table, ValidationSummary summary) {
+        // Compute MD5 of entire table
+        String onPremChecksum = computeTableChecksum(onPremDb, table);
+        String cloudChecksum = computeTableChecksum(cloudDb, table);
+        
+        if (!onPremChecksum.equals(cloudChecksum)) {
+            log.warn("Checksum mismatch for table: {}", table);
+            summary.addChecksumMismatch(table, onPremChecksum, cloudChecksum);
+        }
+    }
+    
+    private String computeTableChecksum(JdbcTemplate db, String table) {
+        return db.queryForObject(
+            "SELECT MD5(STRING_AGG(ROW(?)::TEXT, '' ORDER BY id)) FROM " + table,
+            String.class
+        );
+    }
+}
+
+// ============ 2. Cloud Parallel Run Framework ============
+
+/**
+ * Multi-Cloud/On-Prem Parallel Run
+ */
+@Component
+@Slf4j
+public class CloudParallelRunManager {
+    
+    @Autowired
+    private OnPremServiceProxy onPremProxy;
+    
+    @Autowired
+    private CloudServiceProxy cloudProxy;
+    
+    @Autowired
+    private KafkaTemplate<String, ComparisonResult> resultKafkaTemplate;
+    
+    private final ExecutorService parallelExecutor = Executors.newWorkStealingPool(20);
+    
+    /**
+     * Execute parallel run with all production traffic
+     */
+    public void startCloudParallelRun() {
+        log.info("Starting cloud parallel run - all requests will be sent to both environments");
+        
+        // Intercept all requests
+        // This can be done via filter/interceptor
+        startRequestInterception();
+        
+        // Initialize metrics
+        initParallelRunMetrics();
+        
+        // Start monitoring
+        startParallelRunMonitoring();
+    }
+    
+    /**
+     * Interceptor to duplicate requests to cloud
+     */
+    @Component
+    public class ParallelRunInterceptor implements HandlerInterceptor {
+        
+        @Override
+        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+            // Don't intercept if parallel run is not active
+            if (!isParallelRunActive()) {
+                return true;
+            }
+            
+            // Extract request details
+            RequestDetails details = extractRequestDetails(request);
+            
+            // Async send to cloud
+            CompletableFuture.runAsync(() -> {
+                try {
+                    long startTime = System.currentTimeMillis();
+                    Object cloudResponse = cloudProxy.call(details);
+                    long duration = System.currentTimeMillis() - startTime;
+                    
+                    // Store comparison result
+                    ComparisonResult result = ComparisonResult.builder()
+                        .requestId(details.getRequestId())
+                        .timestamp(Instant.now())
+                        .cloudResponse(cloudResponse)
+                        .cloudLatency(duration)
+                        .build();
+                    
+                    resultKafkaTemplate.send("parallel-run-results", result);
+                    
+                } catch (Exception e) {
+                    log.error("Parallel run call to cloud failed", e);
+                    recordCloudFailure(details, e);
+                }
+            }, parallelExecutor);
+            
+            return true; // Continue with on-prem request
+        }
+    }
+    
+    /**
+     * Analyze parallel run results
+     */
+    @Scheduled(fixedDelay = 60000)
+    public void analyzeParallelRunResults() {
+        List<ComparisonResult> recentResults = getRecentResults(300000); // Last 5 minutes
+        
+        if (recentResults.isEmpty()) {
+            return;
+        }
+        
+        // Calculate success rate
+        long totalRequests = recentResults.size();
+        long successfulRequests = recentResults.stream()
+            .filter(r -> !r.hasError())
+            .count();
+        
+        double successRate = (double) successfulRequests / totalRequests;
+        
+        // Calculate average latency
+        double avgLatency = recentResults.stream()
+            .mapToLong(ComparisonResult::getCloudLatency)
+            .average()
+            .orElse(0);
+        
+        // Calculate response match rate
+        long matchingResponses = recentResults.stream()
+            .filter(r -> r.isResponseMatch())
+            .count();
+        double matchRate = (double) matchingResponses / successfulRequests;
+        
+        log.info("Parallel Run Stats - Success: {}%, Match: {}%, Latency: {}ms",
+            successRate * 100, matchRate * 100, avgLatency);
+        
+        // Store metrics
+        storeParallelRunMetrics(successRate, matchRate, avgLatency);
+        
+        // Decision logic
+        if (successRate > 0.99 && matchRate > 0.95 && avgLatency < 200) {
+            log.info("Cloud environment ready for production traffic!");
+            triggerTrafficMigration();
+        } else if (successRate < 0.95) {
+            log.warn("Cloud environment not ready - success rate too low: {}%", successRate * 100);
+            sendReadinessAlert("success_rate", successRate);
+        }
+    }
+}
+
+// ============ 3. Cloud Traffic Migration ============
+
+/**
+ * Weighted DNS Traffic Migration to Cloud
+ */
+@Component
+@Slf4j
+public class CloudTrafficMigrator {
+    
+    @Autowired
+    private Route53Client route53Client;
+    
+    @Autowired
+    private CloudWatchClient cloudWatchClient;
+    
+    private final TrafficMigrationPlan plan = new TrafficMigrationPlan();
+    
+    /**
+     * Execute DNS-based traffic migration
+     */
+    public void migrateTrafficToCloud() {
+        plan.addStep(10, 3600000);  // 10% for 1 hour
+        plan.addStep(25, 3600000);  // 25% for 1 hour
+        plan.addStep(50, 7200000);  // 50% for 2 hours
+        plan.addStep(75, 7200000);  // 75% for 2 hours
+        plan.addStep(100, 0);       // 100% final
+        
+        executePlan(plan);
+    }
+    
+    private void executePlan(TrafficMigrationPlan plan) {
+        for (TrafficStep step : plan.getSteps()) {
+            log.info("Migrating traffic to {}% cloud", step.getPercentage());
+            
+            // Update Route 53 weighted records
+            updateDNSWeights(step.getPercentage());
+            
+            if (step.getDuration() > 0) {
+                // Monitor for issues during this step
+                boolean success = monitorStep(step);
+                
+                if (!success) {
+                    log.error("Step failed at {}% traffic. Rolling back.", step.getPercentage());
+                    rollbackToPreviousStep();
+                    return;
+                }
+            }
+        }
+        
+        log.info("Traffic migration complete - 100% traffic now on cloud");
+    }
+    
+    private boolean monitorStep(TrafficStep step) {
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime + step.getDuration();
+        
+        while (System.currentTimeMillis() < endTime) {
+            // Check cloud health
+            if (!isCloudHealthy()) {
+                log.error("Cloud health check failed");
+                return false;
+            }
+            
+            // Check error rates
+            double errorRate = getCloudErrorRate();
+            if (errorRate > 0.05) {
+                log.error("Cloud error rate too high: {}%", errorRate * 100);
+                return false;
+            }
+            
+            // Check latency
+            long p99Latency = getCloudP99Latency();
+            if (p99Latency > 1000) {
+                log.error("Cloud latency too high: {}ms", p99Latency);
+                return false;
+            }
+            
+            // Check for data consistency
+            if (!isDataConsistent()) {
+                log.error("Data consistency check failed");
+                return false;
+            }
+            
+            try {
+                Thread.sleep(30000); // Check every 30 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    private void updateDNSWeights(int cloudPercentage) {
+        int onPremPercentage = 100 - cloudPercentage;
+        
+        // Update Route 53 weighted records
+        ChangeResourceRecordSetsRequest request = ChangeResourceRecordSetsRequest.builder()
+            .hostedZoneId("Z1234567890")
+            .changeBatch(ChangeBatch.builder()
+                .changes(
+                    Change.builder()
+                        .action(ChangeAction.UPSERT)
+                        .resourceRecordSet(ResourceRecordSet.builder()
+                            .name("api.ecommerce.com")
+                            .type(RRType.A)
+                            .setIdentifier("cloud")
+                            .weight(cloudPercentage)
+                            .ttl(60L)
+                            .resourceRecords(ResourceRecord.builder()
+                                .value(cloudEndpoint)
+                                .build())
+                            .build())
+                        .build(),
+                    Change.builder()
+                        .action(ChangeAction.UPSERT)
+                        .resourceRecordSet(ResourceRecordSet.builder()
+                            .name("api.ecommerce.com")
+                            .type(RRType.A)
+                            .setIdentifier("onprem")
+                            .weight(onPremPercentage)
+                            .ttl(60L)
+                            .resourceRecords(ResourceRecord.builder()
+                                .value(onPremEndpoint)
+                                .build())
+                            .build())
+                        .build()
+                )
+                .build())
+            .build();
+        
+        route53Client.changeResourceRecordSets(request);
+        log.info("DNS updated: {}% cloud, {}% on-prem", cloudPercentage, onPremPercentage);
+    }
+    
+    private void rollbackToPreviousStep() {
+        int previousPercentage = plan.getCurrentStep().getPreviousPercentage();
+        log.warn("Rolling back traffic to {}% cloud", previousPercentage);
+        updateDNSWeights(previousPercentage);
+        
+        // Send alert
+        sendRollbackAlert(previousPercentage);
+    }
+}
+Phase 6: Decommission Monolithic Application - HLD & LLD
+HLD - Phase 6 Architecture
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LLD - Phase 6 Implementation
+java
+/**
+ * PHASE 6: DECOMMISSION MONOLITHIC APPLICATION
+ * Safe removal with audit trail and rollback capability
+ */
+
+// ============ 1. Read-Only Mode Implementation ============
+
+/**
+ * Monolith Read-Only Wrapper
+ */
+@Component
+@Slf4j
+public class MonolithReadOnlyWrapper {
+    
+    @Autowired
+    private DataSource dataSource;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    private volatile boolean readOnlyMode = false;
+    private final Set<String> allowedReadQueries = new HashSet<>();
+    private final AtomicLong writeAttempts = new AtomicLong(0);
+    
+    @PostConstruct
+    public void init() {
+        // Define allowed read queries pattern
+        allowedReadQueries.add("SELECT.*");
+        allowedReadQueries.add("GET.*");
+        allowedReadQueries.add("FIND.*");
+        
+        // Start write monitor
+        startWriteMonitor();
+    }
+    
+    /**
+     * Enable read-only mode
+     */
+    public void enableReadOnlyMode() {
+        log.info("Enabling read-only mode on monolith");
+        
+        // Set database to read-only
+        jdbcTemplate.execute("ALTER DATABASE ecommerce_db SET default_transaction_read_only = true");
+        
+        // Update application flag
+        readOnlyMode = true;
+        
+        // Reject new write connections
+        rejectWriteConnections();
+        
+        // Log all write attempts
+        logWriteAttempts();
+        
+        // Send notification
+        sendReadOnlyNotification();
+    }
+    
+    /**
+     * Intercept all write operations
+     */
+    @Around("@annotation(org.springframework.web.bind.annotation.PostMapping) || " +
+            "@annotation(org.springframework.web.bind.annotation.PutMapping) || " +
+            "@annotation(org.springframework.web.bind.annotation.DeleteMapping)")
+    public Object blockWriteOperations(ProceedingJoinPoint joinPoint) throws Throwable {
+        if (readOnlyMode) {
+            String methodName = joinPoint.getSignature().getName();
+            writeAttempts.incrementAndGet();
+            
+            log.warn("Write operation blocked in read-only mode: {}", methodName);
+            
+            // Store for audit
+            storeBlockedWrite(joinPoint);
+            
+            throw new ReadOnlyModeException("System is in read-only mode. Write operations are not allowed.");
+        }
+        
+        return joinPoint.proceed();
+    }
+    
+    /**
+     * Monitor write attempts during read-only period
+     */
+    @Scheduled(fixedDelay = 3600000) // Every hour
+    public void reportWriteAttempts() {
+        long attempts = writeAttempts.getAndSet(0);
+        
+        if (attempts > 0) {
+            log.warn("{} write attempts detected in last hour while in read-only mode", attempts);
+            
+            // Alert if too many attempts
+            if (attempts > 100) {
+                sendHighWriteAttemptsAlert(attempts);
+            }
+        } else {
+            log.info("No write attempts detected in last hour - good!");
+        }
+    }
+    
+    /**
+     * Verify no writes for 7 consecutive days
+     */
+    @Scheduled(fixedDelay = 86400000) // Every day
+    public void verifyNoWrites() {
+        if (!readOnlyMode) {
+            return;
+        }
+        
+        long totalAttempts = getTotalWriteAttempts(7); // Last 7 days
+        
+        if (totalAttempts == 0) {
+            log.info("✅ No write attempts for 7 days. Ready for decommission.");
+            incrementReadyDays();
+        } else {
+            log.warn("❌ {} write attempts detected in last 7 days. Not ready for decommission.", totalAttempts);
+            resetReadyDays();
+        }
+        
+        if (getReadyDays() >= 7) {
+            log.info("Monolith has been read-only with no writes for 7 days. Proceeding with decommission.");
+            proceedWithDecommission();
+        }
+    }
+}
+
+// ============ 2. Data Archival Service ============
+
+/**
+ * Comprehensive Data Archival to Cold Storage
+ */
+@Service
+@Slf4j
+public class DataArchivalService {
+    
+    @Autowired
+    private JdbcTemplate monolithDb;
+    
+    @Autowired
+    private S3Client s3Client;
+    
+    @Autowired
+    private GlacierClient glacierClient;
+    
+    /**
+     * Archive all data to S3 Glacier
+     */
+    public ArchiveResult archiveAllData() {
+        ArchiveResult result = new ArchiveResult();
+        result.setStartTime(Instant.now());
+        
+        // Archive each table
+        for (String table : getTablesToArchive()) {
+            try {
+                ArchiveTableResult tableResult = archiveTable(table);
+                result.addTableResult(tableResult);
+                log.info("Archived table {}: {} records, {} MB", 
+                    table, tableResult.getRecordCount(), tableResult.getSizeMB());
+            } catch (Exception e) {
+                log.error("Failed to archive table: {}", table, e);
+                result.addFailedTable(table, e.getMessage());
+            }
+        }
+        
+        // Generate archive manifest
+        generateArchiveManifest(result);
+        
+        // Verify archive integrity
+        verifyArchiveIntegrity(result);
+        
+        result.setEndTime(Instant.now());
+        return result;
+    }
+    
+    private ArchiveTableResult archiveTable(String table) {
+        ArchiveTableResult result = new ArchiveTableResult();
+        result.setTableName(table);
+        
+        // Export data to CSV/JSON
+        String exportFile = exportTableToFile(table);
+        result.setExportFile(exportFile);
+        
+        // Compress
+        String compressedFile = compressFile(exportFile);
+        result.setCompressedSize(getFileSize(compressedFile));
+        
+        // Calculate checksum
+        String checksum = calculateChecksum(compressedFile);
+        result.setChecksum(checksum);
+        
+        // Upload to S3
+        String s3Key = "archives/" + table + "/" + getTimestamp() + ".gz";
+        uploadToS3(compressedFile, s3Key);
+        result.setS3Location(s3Key);
+        
+        // Transition to Glacier
+        transitionToGlacier(s3Key);
+        
+        // Get record count
+        int recordCount = getRecordCount(table);
+        result.setRecordCount(recordCount);
+        
+        return result;
+    }
+    
+    /**
+     * Verify archive integrity
+     */
+    private void verifyArchiveIntegrity(ArchiveResult result) {
+        for (ArchiveTableResult tableResult : result.getTableResults()) {
+            // Download and verify checksum
+            String downloadedFile = downloadFromS3(tableResult.getS3Location());
+            String calculatedChecksum = calculateChecksum(downloadedFile);
+            
+            if (!calculatedChecksum.equals(tableResult.getChecksum())) {
+                log.error("Integrity check failed for table: {}", tableResult.getTableName());
+                result.addIntegrityFailure(tableResult.getTableName());
+            } else {
+                log.info("Integrity check passed for table: {}", tableResult.getTableName());
+            }
+        }
+    }
+    
+    /**
+     * Generate archive manifest for compliance
+     */
+    private void generateArchiveManifest(ArchiveResult result) {
+        ArchiveManifest manifest = ArchiveManifest.builder()
+            .archiveId(UUID.randomUUID().toString())
+            .timestamp(Instant.now())
+            .tables(result.getTableResults())
+            .totalRecords(result.getTotalRecords())
+            .totalSizeMB(result.getTotalSizeMB())
+            .retentionPeriod("7 years")
+            .complianceStandards(List.of("GDPR", "PCI-DSS", "SOC2"))
+            .build();
+        
+        // Save manifest to S3
+        String manifestJson = objectMapper.writeValueAsString(manifest);
+        s3Client.putObject("ecommerce-archives", "manifest.json", manifestJson);
+        
+        // Also save to local for record
+        saveLocalManifest(manifest);
+    }
+}
+
+// ============ 3. Graceful Shutdown Implementation ============
+
+/**
+ * Graceful Shutdown Handler
+ */
+@Component
+@Slf4j
+public class GracefulShutdownHandler {
+    
+    @Autowired
+    private TomcatServletWebServerFactory tomcat;
+    
+    @Autowired
+    private DataSource dataSource;
+    
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+    private final AtomicInteger activeRequests = new AtomicInteger(0);
+    
+    @PostConstruct
+    public void init() {
+        // Configure graceful shutdown
+        tomcat.addConnectorCustomizers(connector -> {
+            connector.setProperty("rejectIllegalHeader", "true");
+        });
+    }
+    
+    /**
+     * Initiate graceful shutdown
+     */
+    @PreDestroy
+    public void gracefulShutdown() {
+        log.info("Starting graceful shutdown of monolith");
+        
+        // Step 1: Stop accepting new requests
+        stopAcceptingRequests();
+        log.info("Stopped accepting new requests");
+        
+        // Step 2: Wait for active requests to complete
+        waitForActiveRequests(30000); // 30 seconds max
+        log.info("Active requests completed");
+        
+        // Step 3: Close database connections
+        closeDatabaseConnections();
+        log.info("Database connections closed");
+        
+        // Step 4: Flush logs and metrics
+        flushLogsAndMetrics();
+        log.info("Logs and metrics flushed");
+        
+        // Step 5: Release external resources
+        releaseExternalResources();
+        log.info("External resources released");
+        
+        // Step 6: Final cleanup
+        performFinalCleanup();
+        
+        log.info("Graceful shutdown complete");
+        shutdownLatch.countDown();
+    }
+    
+    /**
+     * Stop accepting new requests
+     */
+    private void stopAcceptingRequests() {
+        // Set health status to DOWN
+        updateHealthStatus("DOWN");
+        
+        // Reject new connections at load balancer level
+        deregisterFromLoadBalancer();
+        
+        // Close listening sockets
+        closeListeningSockets();
+    }
+    
+    /**
+     * Wait for active requests with timeout
+     */
+    private void waitForActiveRequests(long timeoutMillis) {
+        long startTime = System.currentTimeMillis();
+        
+        while (activeRequests.get() > 0) {
+            if (System.currentTimeMillis() - startTime > timeoutMillis) {
+                log.warn("Timeout waiting for active requests. {} requests still active.", activeRequests.get());
+                
+                // Log active request details for debugging
+                logActiveRequests();
+                break;
+            }
+            
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Interceptor to track active requests
+     */
+    @Component
+    public class RequestTrackingInterceptor implements HandlerInterceptor {
+        
+        @Override
+        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+            activeRequests.incrementAndGet();
+            return true;
+        }
+        
+        @Override
+        public void afterCompletion(HttpServletRequest request, HttpServletResponse response, 
+                                   Object handler, Exception ex) {
+            activeRequests.decrementAndGet();
+        }
+    }
+}
+
+// ============ 4. Final Decommission & Cleanup ============
+
+/**
+ * Complete Decommission Manager
+ */
+@Service
+@Slf4j
+public class FinalDecommissionManager {
+    
+    @Autowired
+    private KubernetesClient k8sClient;
+    
+    @Autowired
+    private LoadBalancerClient lbClient;
+    
+    @Autowired
+    private DnsManager dnsManager;
+    
+    @Autowired
+    private ResourceCleanupService cleanupService;
+    
+    private final DecommissionChecklist checklist = new DecommissionChecklist();
+    
+    /**
+     * Execute complete decommission
+     */
+    public DecommissionResult executeDecommission() {
+        DecommissionResult result = new DecommissionResult();
+        result.setStartTime(Instant.now());
+        
+        try {
+            // Step 1: Final verification
+            log.info("Step 1: Running final verification checklist");
+            boolean verified = runFinalVerification();
+            if (!verified) {
+                throw new DecommissionException("Final verification failed");
+            }
+            checklist.markComplete("final_verification");
+            
+            // Step 2: Remove from load balancer
+            log.info("Step 2: Removing from load balancer");
+            lbClient.deregisterService("monolith");
+            checklist.markComplete("load_balancer");
+            
+            // Step 3: Scale down Kubernetes deployment
+            log.info("Step 3: Scaling down deployment");
+            scaleDownDeployment("monolith", 0);
+            checklist.markComplete("scaled_down");
+            
+            // Step 4: Delete Kubernetes resources
+            log.info("Step 4: Deleting Kubernetes resources");
+            deleteKubernetesResources();
+            checklist.markComplete("k8s_resources");
+            
+            // Step 5: Remove DNS entries
+            log.info("Step 5: Removing DNS entries");
+            dnsManager.removeRecords("monolith.ecommerce.com");
+            checklist.markComplete("dns_removed");
+            
+            // Step 6: Clean up storage
+            log.info("Step 6: Cleaning up storage");
+            cleanupService.cleanupVolumes("monolith");
+            checklist.markComplete("storage_cleaned");
+            
+            // Step 7: Archive application logs
+            log.info("Step 7: Archiving application logs");
+            archiveLogs();
+            checklist.markComplete("logs_archived");
+            
+            // Step 8: Remove from monitoring
+            log.info("Step 8: Removing from monitoring");
+            removeFromMonitoring();
+            checklist.markComplete("monitoring_removed");
+            
+            // Step 9: Update documentation
+            log.info("Step 9: Updating documentation");
+            updateDocumentation();
+            checklist.markComplete("documentation_updated");
+            
+            // Step 10: Send completion notification
+            log.info("Step 10: Sending decommission complete notification");
+            sendDecommissionCompleteNotification();
+            checklist.markComplete("notification_sent");
+            
+            result.setEndTime(Instant.now());
+            result.setSuccess(true);
+            result.setChecklist(checklist);
+            
+            log.info("=== MONOLITH DECOMMISSION COMPLETE ===");
+            log.info("Total duration: {} minutes", 
+                Duration.between(result.getStartTime(), result.getEndTime()).toMinutes());
+            
+        } catch (Exception e) {
+            log.error("Decommission failed", e);
+            result.setSuccess(false);
+            result.setErrorMessage(e.getMessage());
+            emergencyRollback();
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Final verification checklist
+     */
+    private boolean runFinalVerification() {
+        List<VerificationCheck> checks = Arrays.asList(
+            () -> isTrafficZeroToMonolith(),
+            () -> areAllDataArchived(),
+            () -> isReadOnlyModeActive(),
+            () -> areThereActiveConnections(),
+            () -> isBackupComplete()
+        );
+        
+        for (VerificationCheck check : checks) {
+            if (!check.verify()) {
+                log.error("Verification failed: {}", check.getName());
+                return false;
+            }
+            log.info("Verification passed: {}", check.getName());
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Emergency rollback (reactivate monolith)
+     */
+    private void emergencyRollback() {
+        log.error("EMERGENCY ROLLBACK - Reactivating monolith");
+        
+        // Scale up deployment
+        scaleUpDeployment("monolith", 3);
+        
+        // Add back to load balancer
+        lbClient.registerService("monolith");
+        
+        // Restore DNS
+        dnsManager.restoreRecords("monolith.ecommerce.com");
+        
+        // Disable read-only mode
+        disableReadOnlyMode();
+        
+        // Verify health
+        boolean healthy = verifyMonolithHealth();
+        
+        if (healthy) {
+            log.info("Monolith successfully reactivated");
+        } else {
+            log.error("CRITICAL: Monolith reactivation failed! Manual intervention required.");
+            sendCriticalAlert();
+        }
+    }
+    
+    /**
+     * Generate decommission report
+     */
+    public DecommissionReport generateReport(DecommissionResult result) {
+        return DecommissionReport.builder()
+            .timestamp(Instant.now())
+            .duration(Duration.between(result.getStartTime(), result.getEndTime()))
+            .dataArchived(getTotalDataArchived())
+            .costSavings(calculateCostSavings())
+            .performanceImprovement(getPerformanceImprovement())
+            .complianceStatus("COMPLIANT")
+            .nextSteps(List.of(
+                "Monitor cloud services for 30 days",
+                "Perform quarterly archive verification",
+                "Update disaster recovery runbooks",
+                "Schedule post-mortem review"
+            ))
+            .build();
+    }
+}
+
+/**
+ * Decommission Dashboard & Monitoring
+ */
+@Component
+public class DecommissionDashboard {
+    
+    @Autowired
+    private MeterRegistry meterRegistry;
+    
+    @Scheduled(fixedDelay = 5000)
+    public void updateDashboard() {
+        // Update Prometheus metrics
+        meterRegistry.gauge("decommission.progress", 
+            checklist.getCompletionPercentage());
+        
+        meterRegistry.gauge("decommission.remaining.services", 
+            getRemainingServiceCount());
+        
+        meterRegistry.gauge("decommission.data.archived.gb", 
+            getArchivedDataGB());
+        
+        // Push to Grafana
+        pushToGrafana();
+    }
+}
+Complete Migration Summary Table
+Phase	Duration	Key Activities	Success Criteria	Rollback Trigger
+Phase 1: Decouple	2-4 weeks	Service facade, mediation layer, feature flags	Zero downtime, <1% error increase	>2% error rate increase
+Phase 2: Local MS	4-8 weeks	Service boundaries, interfaces, implementation	100% API compatibility, <100ms latency increase	Data inconsistency >0.1%
+Phase 3: Local Migration	2-4 weeks	Data migration, parallel run, traffic swing	99.99% consistency, <0.5% error rate	Error rate >1%, latency >200ms
+Phase 4: Cloud Deploy	1-2 weeks	API Gateway, K8s, cloud infrastructure	<50ms latency increase, 99.95% availability	Cloud errors >2%
+Phase 5: Cloud Migration	2-4 weeks	Cloud data migration, parallel run, DNS swing	100% data consistency, <1% error rate	Data mismatch >0.01%
+Phase 6: Decommission	1-2 weeks	Read-only mode, archival, shutdown	7 days no writes, all data archived	Any write attempt to monolith
+This complete HLD and LLD provides a production-ready roadmap for transforming a monolithic application to cloud-native microservices with zero downtime, comprehensive testing, and safe rollback capabilities at every stage.
+

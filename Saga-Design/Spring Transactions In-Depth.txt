@@ -1,0 +1,82 @@
+
+Chapter1: Spring Framework Introduction
+
+Module Introduction
+Introduction to Spring Framework
+    Dependency Injection & IoC
+    Annotations
+    Creating Spring Boot Application
+    Presentation Layer
+    Service Layer
+    Data Access Layer
+    Database Persistence
+	
+----------------------------
+Chapter 2: Database Transaction
+What is a Transaction?
+Installing Docker and MySQL6
+Setting Up the Balance Enforcer Trigger
+Transaction Management using MySQL Console
+Transaction Savepoint
+Transaction Management using Plain Java
+
+-------
+Chapter 3: Spring TransactionsModule Introduction
+
+Project Setup
+Stuck? Here’s the Final Code for Every Section
+Handling CORS Exception
+Demystifying Open Session in View (OSIV)
+Transactional Annotation
+Transactional Updates
+Read-Only Transactions
+Spring Proxy
+Eager Fetching Exposed6:25
+No-Session & Lazy Initialization Exceptions
+Applied Transactions
+
+--------------------
+
+Chapter 4: Exceptions and Rllbacks
+
+Exception Types
+How Exceptions Affect Transactions
+Controlling Rollback
+
+
+------------------
+Chapter 5: Transaction Propagation
+
+Propagation Types
+Transaction Boundaries
+Data Inconsistency
+
+---------------------
+Chapter 6: Spring Events
+
+Introduction to Spring Events
+Event Listener
+Conditional Event Handling
+Exception Propagation
+Transactional Event Listener
+Before Commit Phase
+Recovering from Failure
+Listeners Gone Quiet
+Fallback Execution
+
+--------------------------
+
+Chapter 7: Isolation Labels
+
+Introduction to Isolation Levels
+Hands-On Demo with MySQL
+
+
+
+
+
+
+
+	
+	
+

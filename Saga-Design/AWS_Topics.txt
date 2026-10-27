@@ -1,0 +1,196 @@
+
+1. Serverless Architecture (MUST KNOW)
+
+Using:
+
+AWS Lambda
+Amazon API Gateway
+Amazon S3
+Amazon DynamoDB
+
+Why important:
+No server management
+Auto scaling
+Pay per use
+Real Use Case:
+Event-driven microservices (like your Incentives system)
+
+👉 You should know:
+
+Cold start problem
+Lambda vs Spring Boot trade-offs
+Event triggers (S3, API Gateway, SQS)
+
+🔥 2. Microservices on AWS
+
+Using:
+
+Amazon ECS
+Amazon EKS
+AWS Fargate
+Why important:
+Most companies moving from monolith → microservices
+
+You should know:
+
+Service discovery
+Load balancing
+API Gateway vs Service Mesh
+
+🔥 3. CI/CD Pipeline (VERY HOT 🔥)
+
+Using:
+
+AWS CodePipeline
+AWS CodeBuild
+AWS CodeDeploy
+Real Use Case:
+Auto deploy Spring Boot app to AWS
+
+You should know:
+Blue/Green deployment
+Canary releases
+Rollback strategies
+
+🔥 4. Messaging & Event-Driven Architecture
+
+Using:
+
+Amazon SQS
+Amazon SNS
+Amazon EventBridge
+
+Why important:
+
+👉 This matches your current Pub/Sub work
+
+You should know:
+
+DLQ (Dead Letter Queue)
+Retry strategy
+Idempotency
+
+🔥 5. API Gateway Deep Dive
+
+Using:
+
+Amazon API Gateway
+Must Know:
+
+Throttling
+Rate limiting
+Authentication (JWT, Cognito)
+Caching
+
+🔥 6. Security (CRITICAL 🔐)
+
+Using:
+
+AWS IAM
+AWS Cognito
+AWS KMS
+
+Must Know:
+
+Roles vs Policies
+Least privilege principle
+Secrets management
+
+🔥 7. Observability & Monitoring
+
+Using:
+
+Amazon CloudWatch
+AWS X-Ray
+Must Know:
+Logs
+Metrics
+Tracing (very important for microservices)
+
+🔥 8. Database Strategy (VERY IMPORTANT)
+
+Using:
+
+Amazon RDS
+Amazon DynamoDB
+Amazon Aurora Serverless
+You should know:
+SQL vs NoSQL
+Scaling strategy
+Read replicas
+
+🔥 9. Caching & Performance
+
+Using:
+
+Amazon CloudFront
+Amazon ElastiCache
+Must Know:
+Cache invalidation
+TTL
+CDN vs Redis
+
+🔥 10. Infrastructure as Code (IaC)
+
+Using:
+
+AWS CloudFormation
+Terraform
+Why important:
+
+👉 No manual AWS setup in real projects
+
+🔥 11. Networking (VERY IMPORTANT FOR INTERVIEWS)
+
+Using:
+
+Amazon VPC
+Must Know:
+Public vs Private subnet
+NAT Gateway
+Security groups vs NACL
+
+🔥 12. Cost Optimization 💰
+Must Know:
+Reserved vs On-demand
+Lambda cost vs EC2
+S3 storage classes
+
+🔥 13. High Availability & Scaling
+
+Must Know:
+Multi-AZ deployment
+Auto Scaling
+Fault tolerance
+
+🎯 For YOU (Based on your work)
+
+Since you are working on:
+✔ Incentives system
+✔ Pub/Sub
+✔ Microservices
+
+👉 Focus HIGH priority:
+
+Event-driven architecture (SQS, SNS, EventBridge)
+Lambda + API Gateway
+Step Functions
+CI/CD
+Observability
+Security (IAM roles)
+
+🧠 Interview Top 5 Questions
+
+Difference between SQS vs SNS
+How Lambda scales?
+What is cold start?
+API Gateway vs Load Balancer
+How to design event-driven system?
+
+🚀 If you want next:
+
+I can give you:
+✅ AWS Interview Questions (Top 100 with answers)
+✅ Real project: End-to-end microservices on AWS
+✅ Your Incentives system mapped to AWS architecture
+✅ Hands-on CI/CD pipeline (Jenkins + AWS)

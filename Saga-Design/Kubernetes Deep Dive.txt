@@ -1,0 +1,2758 @@
+
+
+Complete Kubernetes Deep Dive - All 17 Sections
+
+Below is comprehensive deep dive into each of the 17 sections with complete YAML files and a full deployment strategy for our 6 microservices.
+
+SECTION 1: Introduction to Kubernetes
+
+1.1 What is Kubernetes?
+Kubernetes (K8s) is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications.
+
+Historical Context:
+Origins: Born from Google's internal project called Borg (used for over a decade to manage billions of containers)
+
+Open Source Release: 2014
+
+Current Steward: Cloud Native Computing Foundation (CNCF)
+
+Language: Written in Go (Golang)
+
+Why Kubernetes Matters:
+text
+Traditional Deployment → Container Deployment → Kubernetes Orchestration
+   (Physical servers)    (Docker containers)    (Automated management)
+1.2 Benefits of Kubernetes
+A. Planet Scale
+Designed on same principles that allow Google to run billions of containers weekly
+
+Scales without increasing your operations team
+
+Handles massive workloads with minimal overhead
+
+B. Never Outgrow
+Works from local testing to global enterprise
+
+Flexibility to grow with your needs
+
+Consistent experience regardless of complexity
+
+C. Run Anywhere
+Open source = freedom to use:
+
+On-premises infrastructure
+
+Hybrid cloud
+
+Public cloud (AWS, GCP, Azure)
+
+Effortlessly move workloads between environments
+
+1.3 What Kubernetes Does For You
+Core Capabilities:
+Service Discovery & Load Balancing
+
+Exposes containers using DNS or IP addresses
+
+Load balances traffic across containers
+
+Storage Orchestration
+
+Automatically mounts storage systems of your choice
+
+Automated Rollouts & Rollbacks
+
+Gradually rolls out changes
+
+Automatically rolls back if something goes wrong
+
+Automatic Bin Packing
+
+Places containers based on resource requirements
+
+Optimizes resource utilization
+
+Self-Healing
+
+Restarts failed containers
+
+Replaces and reschedules containers when nodes die
+
+Kills containers that don't respond to health checks
+
+Secret & Configuration Management
+
+Manages sensitive information
+
+Updates configuration without rebuilding images
+
+Horizontal Scaling
+
+Scales applications up/down based on CPU usage
+
+Supports custom metrics for autoscaling
+
+1.4 Kubernetes Architecture Overview
+text
+┌─────────────────────────────────────────────────────────────┐
+│                    CONTROL PLANE (MASTER)                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │   API    │  │   etcd   │  │Controller│  │Scheduler │  │
+│  │  Server  │  │  (DB)    │  │ Manager  │  │          │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        WORKER NODES                        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │ Kubelet  │  │ kube-    │  │ Container│  │  Pods    │  │
+│  │          │  │ proxy    │  │ Runtime  │  │          │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+└─────────────────────────────────────────────────────────────┘
+1.5 Common Use Cases
+When to Use Kubernetes:
+Microservices Architecture: Managing multiple independent services
+
+CI/CD Pipelines: Automated deployment and rollback
+
+Big Data Processing: Batch jobs and data pipelines
+
+Machine Learning: Training and serving models
+
+Multi-cloud Deployments: Hybrid cloud strategies
+
+When NOT to Use Kubernetes:
+Simple applications (single container)
+
+Small teams with no DevOps expertise
+
+Legacy monolithic applications (without containerization)
+
+Short-lived projects
+
+SECTION 2: Kubernetes Architecture Deep Dive
+2.1 Control Plane Components (Master)
+A. kube-apiserver
+yaml
+# Example API request
+POST /api/v1/namespaces/default/pods
+{
+  "kind": "Pod",
+  "metadata": { "name": "nginx-pod" },
+  "spec": {
+    "containers": [{ "name": "nginx", "image": "nginx:latest" }]
+  }
+}
+Key Functions:
+
+Front-end for the control plane
+
+RESTful API server
+
+Validates and configures objects (Pods, Services, Replication Controllers)
+
+All operations (GET, POST, PUT, DELETE) go through it
+
+Implements authentication, authorization, and admission control
+
+Port: 6443 (HTTPS)
+Protocol: REST over HTTPS
+
+B. etcd (Key-Value Store)
+text
+Key-Value Storage Structure:
+/cluster/pods/default/nginx-pod
+/cluster/services/default/nginx-service
+/cluster/nodes/worker-1
+/cluster/events/default
+Key Functions:
+
+Kubernetes' backing store
+
+Stores ALL cluster data (configuration, state, secrets)
+
+Consistent and highly-available
+
+Must be backed up regularly
+
+Best Practices:
+
+Use separate etcd cluster for HA
+
+Regular backups
+
+Encrypt sensitive data
+
+C. kube-controller-manager
+text
+┌─────────────────┐
+│  Controllers    │
+├─────────────────┤
+│ Node Controller │ → Handles node failures
+│ Replication     │ → Maintains pod count
+│  Controller     │
+│ Endpoints       │ → Creates endpoint objects
+│  Controller     │
+│ Service Account │ → Manages service accounts
+│  Controller     │
+│ Namespace       │ → Deletes namespace contents
+│  Controller     │
+└─────────────────┘
+Key Functions:
+
+Runs controller threads
+
+Monitors cluster state
+
+Makes decisions to correct state
+
+Example: Replication Controller Logic
+
+text
+Desired State: 3 replicas
+Actual State: 2 replicas
+Action: Create 1 more pod
+D. kube-scheduler
+Scheduling Decision Process:
+
+Filtering: Identifies feasible nodes
+
+Resource availability (CPU, Memory)
+
+Port conflicts
+
+Node selectors/Affinity
+
+Taints/Tolerations
+
+Scoring: Ranks nodes
+
+Resource utilization
+
+Pod affinity/anti-affinity
+
+Inter-pod anti-affinity
+
+Binding: Assigns pod to selected node
+
+Scheduling Policy Example:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  nodeSelector:
+    disktype: ssd
+  tolerations:
+  - key: "key"
+    operator: "Equal"
+    value: "value"
+    effect: "NoSchedule"
+E. Cloud Controller Manager
+Purpose: Interacts with underlying cloud providers
+
+Introduced: Kubernetes 1.6
+
+Allows: Independent evolution of cloud vendor code and Kubernetes core
+
+Controllers with Cloud Dependencies:
+
+Node Controller: Checks if nodes are deleted in cloud
+
+Route Controller: Sets up routes in cloud infrastructure
+
+Service Controller: Creates/updates cloud load balancers
+
+Volume Controller: Orchestrates cloud volumes
+
+2.2 Worker Node Components
+A. Kubelet
+Responsibilities:
+
+Registers node with cluster
+
+Watches for new pod assignments
+
+Starts pods (via container runtime)
+
+Probes pod health (liveness/readiness)
+
+Reports node/pod status to master
+
+Kubelet Configuration:
+
+yaml
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+address: 0.0.0.0
+port: 10250
+healthzBindAddress: 127.0.0.1
+healthzPort: 10248
+failSwapOn: false
+Pod Lifecycle Management:
+
+text
+Pod Assigned → Pull Images → Create Containers → Start Containers
+                            ↓
+                     Probe Health (Liveness/Readiness)
+                            ↓
+                   Restart on Failure / Rollout Updates
+B. kube-proxy
+Proxy Modes:
+
+userspace: Old mode, packets go through proxy
+
+iptables: Default, uses iptables for NAT
+
+IPVS: High performance, load balancing
+
+Service Types and Proxying:
+
+text
+ClusterIP Service:
+┌─────────┐   ┌─────────┐   ┌─────────┐
+│  Pod 1  │   │  Pod 2  │   │  Pod 3  │
+└─────────┘   └─────────┘   └─────────┘
+      │             │             │
+      └─────────────┼─────────────┘
+                    ▼
+              ClusterIP
+           (10.96.0.10:80)
+                    │
+              kube-proxy
+              (iptables)
+kube-proxy Configuration:
+
+yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+data:
+  mode: "iptables"
+  feature-gates: "SupportIPVSProxyMode=true"
+C. Container Runtime
+Supported Runtimes:
+
+Docker (most common)
+
+containerd
+
+CRI-O
+
+rkt
+
+Example: Docker Runtime with Kubernetes
+
+bash
+# Docker daemon configuration for Kubernetes
+{
+  "bip": "100.100.0.0/16",
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+2.3 Master-Node Communication
+Communication Paths:
+Path 1: APIServer → Kubelet
+
+text
+kube-apiserver ──(HTTPS:10250)──► Kubelet
+Used for:
+
+Fetching pod logs
+
+Attaching to running containers
+
+Executing commands in containers
+
+Checking node status
+
+Path 2: APIServer → Node/Pod/Service
+
+text
+kube-apiserver ──(Proxy)──► Node/Pod/Service
+Used for:
+
+Accessing pod endpoints
+
+Service discovery
+
+Debugging services
+
+Authentication:
+
+Secure HTTPS (port 443)
+
+Client certificates
+
+Bearer tokens
+
+Service accounts
+
+Example: Kubectl Communication Flow
+
+bash
+kubectl get pods
+    │
+    ▼
+~/.kube/config (Credentials)
+    │
+    ▼
+kube-apiserver (Authentication + Authorization)
+    │
+    ▼
+etcd (Retrieve pod data)
+    │
+    ▼
+Return to client
+2.4 Namespaces
+What are Namespaces?
+
+Virtual clusters within a physical cluster
+
+Provide scope for names and resources
+
+Enable resource partitioning
+
+Default Namespaces:
+
+default: Default for objects without namespace
+
+kube-system: System objects (control plane)
+
+kube-public: Public accessible resources
+
+kube-node-lease: Node lease objects
+
+Namespace Commands:
+
+bash
+# List namespaces
+kubectl get namespaces
+
+# Create namespace
+kubectl create namespace development
+
+# Set namespace for current context
+kubectl config set-context --current --namespace=development
+
+# Get pods in namespace
+kubectl get pods -n development
+Namespace Resource Quota:
+
+yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: development
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    pods: "20"
+    persistentvolumeclaims: "10"
+SECTION 3: Key Concepts Deep Dive
+3.1 Pods - The Atomic Unit
+What is a Pod?
+Smallest deployable unit in Kubernetes
+
+Logical host for one or more containers
+
+Single IP address shared by all containers
+
+Shared storage volumes
+
+Collaborative processes that work together
+
+Pod Lifecycle:
+text
+┌──────────┐
+│  Pending │  ← Pod accepted but containers not running
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Running  │  ← All containers running
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│Succeeded │  ← All containers terminated successfully
+└──────────┘
+
+OR
+
+┌──────────┐
+│ Running  │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│  Failed  │  ← At least one container terminated with error
+└──────────┘
+
+OR
+
+┌──────────┐
+│  Pending │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│  Unknown │  ← Pod state cannot be determined
+└──────────┘
+Pod Phases:
+Pending: Pod accepted by system, containers not created
+
+Running: Pod bound to node, all containers created
+
+Succeeded: All containers terminated with success
+
+Failed: At least one container terminated with failure
+
+Unknown: Pod state unknown (typically node communication issue)
+
+Example: Single-Container Pod
+pod-single.yaml:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+    version: v1
+spec:
+  containers:
+  - name: myapp-container
+    image: nginx:1.19
+    ports:
+    - containerPort: 80
+    env:
+    - name: ENVIRONMENT
+      value: "production"
+    - name: DATABASE_URL
+      value: "postgres://user:pass@db-service:5432/mydb"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+Example: Multi-Container Pod
+pod-multi.yaml:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-app-pod
+  labels:
+    app: web-app
+spec:
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+  
+  containers:
+  # Main Application Container
+  - name: nginx
+    image: nginx:1.19
+    volumeMounts:
+    - name: shared-data
+      mountPath: /usr/share/nginx/html
+    ports:
+    - containerPort: 80
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+  
+  # Sidecar Container (Updates files from remote)
+  - name: content-updater
+    image: busybox
+    volumeMounts:
+    - name: shared-data
+      mountPath: /data
+    command:
+    - /bin/sh
+    - -c
+    - |
+      while true; do
+        wget -O /data/index.html https://example.com/content
+        sleep 3600
+      done
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "100m"
+Pod Networking:
+
+Each pod gets unique IP address
+
+All containers share the same network namespace
+
+Containers can communicate via localhost
+
+No need to expose ports between containers
+
+Pod Security Policies
+ServiceAccount for Pod:
+
+yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: myapp-sa
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  serviceAccountName: myapp-sa
+  containers:
+  - name: myapp
+    image: myapp:latest
+Security Context:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-pod
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+  - name: secure-container
+    image: nginx
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+3.2 Labels and Selectors
+Labels: Key-Value Pairs
+Common Label Patterns:
+
+yaml
+metadata:
+  labels:
+    app: myapp                    # Application name
+    environment: production       # Environment
+    version: v1.2.3              # Version
+    tier: frontend               # Tier (frontend, backend, cache)
+    team: platform               # Team ownership
+    managed-by: kubernetes       # Managed by
+    git-commit: abc123           # Git commit hash
+    criticality: high            # Priority
+Selectors: Querying Labels
+Equality-Based Selectors:
+
+yaml
+selector:
+  matchLabels:
+    app: myapp
+    environment: production
+Set-Based Selectors:
+
+yaml
+selector:
+  matchExpressions:
+  - key: environment
+    operator: In
+    values:
+    - production
+    - staging
+  - key: version
+    operator: NotIn
+    values:
+    - v1.0.0
+  - key: tier
+    operator: Exists
+Label Commands:
+bash
+# Add label to pod
+kubectl label pods mypod version=1.0
+
+# List pods with labels
+kubectl get pods --show-labels
+
+# List pods with specific label
+kubectl get pods -l app=myapp
+
+# List pods with multiple labels
+kubectl get pods -l "app=myapp,environment=production"
+
+# List pods using set-based selector
+kubectl get pods -l 'environment in (production, staging)'
+
+# Remove label
+kubectl label pods mypod version-
+3.3 Annotations
+Purpose: Store non-identifying metadata
+
+Common Uses:
+
+Release information (commit hash, release date)
+
+Monitoring (alert rules, dashboard URLs)
+
+CI/CD (Jenkins build URL)
+
+Configuration (deployment instructions)
+
+Example:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  annotations:
+    built-by: jenkins
+    build-date: "2024-01-15"
+    git-commit: "a1b2c3d4"
+    git-branch: "main"
+    team: platform
+    monitor-url: "https://grafana.com/dashboard/myapp"
+    description: "Main application pod"
+SECTION 4: YAML Deep Dive
+4.1 YAML Fundamentals
+YAML Syntax Rules:
+Spaces, not tabs (2 spaces per indent)
+
+Case-sensitive
+
+--- separates documents
+
+... ends document
+
+YAML Data Types:
+Scalars (Strings, Numbers, Booleans):
+
+yaml
+# Strings
+name: "John"
+name: John  # Quotes optional
+multi-line: |
+  This is a
+  multi-line string
+
+# Numbers
+age: 30
+price: 99.99
+
+# Booleans
+enabled: true
+debug: false
+Lists (Arrays):
+
+yaml
+# Inline style
+containers: [{name: nginx, image: nginx:latest}]
+
+# Block style
+containers:
+- name: nginx
+  image: nginx:latest
+- name: redis
+  image: redis:alpine
+Maps (Dictionaries):
+
+yaml
+# Inline style
+metadata: {name: myapp, namespace: production}
+
+# Block style
+metadata:
+  name: myapp
+  namespace: production
+  labels:
+    app: myapp
+    tier: frontend
+YAML Nested Structures:
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.19
+        ports:
+        - containerPort: 80
+4.2 Complete Deployment YAML Template
+deployment-complete.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microservice-name
+  namespace: production
+  labels:
+    app: microservice-name
+    environment: production
+    version: v1.0.0
+    team: backend
+  annotations:
+    description: "Complete microservice deployment"
+    build-url: "https://jenkins/company/job/build/123"
+    
+spec:
+  # Replica Count
+  replicas: 3
+  
+  # Revision History
+  revisionHistoryLimit: 10
+  
+  # Strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Selector
+  selector:
+    matchLabels:
+      app: microservice-name
+  
+  # Pod Template
+  template:
+    metadata:
+      labels:
+        app: microservice-name
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        
+    spec:
+      # Service Account
+      serviceAccountName: microservice-sa
+      
+      # Security Context
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+      
+      # Init Containers
+      initContainers:
+      - name: init-db
+        image: busybox:latest
+        command: ['sh', '-c', 'echo "Checking database connection..."']
+      
+      # Main Containers
+      containers:
+      - name: microservice-container
+        image: company/microservice:latest
+        imagePullPolicy: Always
+        
+        # Ports
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        
+        # Environment Variables
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: microservice-config
+              key: environment
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: microservice-secrets
+              key: database-url
+        - name: LOG_LEVEL
+          value: "INFO"
+        
+        # Resources
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Liveness Probe
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        # Readiness Probe
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        
+        # Volume Mounts
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: data-volume
+          mountPath: /app/data
+          subPath: data
+        
+        # Pre-stop Hook
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 10"]
+      
+      # Volumes
+      volumes:
+      - name: config-volume
+        configMap:
+          name: microservice-config
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: microservice-pvc
+      
+      # Node Affinity
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - general
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - microservice-name
+              topologyKey: kubernetes.io/hostname
+      
+      # Tolerations
+      tolerations:
+      - key: "key"
+        operator: "Equal"
+        value: "value"
+        effect: "NoSchedule"
+      
+      # DNS Configuration
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      
+      # Termination Grace Period
+      terminationGracePeriodSeconds: 60
+4.3 Service YAML Templates
+ClusterIP Service:
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: microservice-service
+  namespace: production
+  labels:
+    app: microservice-name
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    
+spec:
+  type: ClusterIP  # Default
+  clusterIP: 10.96.10.10  # Optional
+  selector:
+    app: microservice-name
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+NodePort Service:
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: microservice-nodeport
+  namespace: production
+  
+spec:
+  type: NodePort
+  selector:
+    app: microservice-name
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30000  # Optional: range 30000-32767
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    nodePort: 30001
+    protocol: TCP
+LoadBalancer Service:
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: microservice-lb
+  namespace: production
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+    
+spec:
+  type: LoadBalancer
+  selector:
+    app: microservice-name
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8080
+    protocol: TCP
+Headless Service:
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: microservice-headless
+  namespace: production
+  
+spec:
+  clusterIP: None  # Headless
+  selector:
+    app: microservice-name
+  ports:
+  - port: 8080
+    targetPort: 8080
+  publishNotReadyAddresses: true  # For StatefulSets
+SECTION 5: Controllers Deep Dive
+5.1 Complete Deployment Example
+Complete Deployment with Rollback:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: production
+  labels:
+    app: user-service
+    tier: backend
+    
+spec:
+  replicas: 3
+  revisionHistoryLimit: 10
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  minReadySeconds: 10
+  
+  selector:
+    matchLabels:
+      app: user-service
+  
+  template:
+    metadata:
+      labels:
+        app: user-service
+        tier: backend
+    spec:
+      containers:
+      - name: user-service
+        image: company/user-service:1.0.0
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8080
+          name: http
+        
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: REDIS_HOST
+          value: "redis-service"
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+Deployment Management Commands:
+
+bash
+# Create deployment
+kubectl apply -f user-service-deployment.yaml
+
+# Get deployment status
+kubectl get deployment user-service
+kubectl describe deployment user-service
+
+# Update deployment (new image)
+kubectl set image deployment/user-service user-service=company/user-service:1.0.1
+
+# Watch rollout status
+kubectl rollout status deployment/user-service
+
+# Check rollout history
+kubectl rollout history deployment/user-service
+
+# Rollback to previous
+kubectl rollout undo deployment/user-service
+
+# Rollback to specific revision
+kubectl rollout undo deployment/user-service --to-revision=3
+
+# Pause rollout
+kubectl rollout pause deployment/user-service
+
+# Resume rollout
+kubectl rollout resume deployment/user-service
+
+# Scale deployment
+kubectl scale deployment user-service --replicas=5
+5.2 StatefulSet Complete Example
+PostgreSQL StatefulSet:
+
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: production
+  labels:
+    app: postgres
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    name: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: production
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: production
+data:
+  postgresql.conf: |
+    listen_addresses = '*'
+    max_connections = 100
+    shared_buffers = 256MB
+    effective_cache_size = 768MB
+    work_mem = 16MB
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: production
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres-password
+        - name: POSTGRES_DB
+          value: "userdb"
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /postgresql/postgresql.conf
+          subPath: postgresql.conf
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U userdb
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: postgres-config
+        configMap:
+          name: postgres-config
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+      labels:
+        app: postgres
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "gp2"
+      resources:
+        requests:
+          storage: 10Gi
+StatefulSet Commands:
+
+bash
+# Get StatefulSet
+kubectl get statefulset postgres
+
+# Scale StatefulSet
+kubectl scale statefulset postgres --replicas=5
+
+# Ordered rolling update
+kubectl patch statefulset postgres -p '{"spec":{"updateStrategy":{"type":"RollingUpdate"}}}'
+
+# Delete statefulset (keeps pods)
+kubectl delete statefulset postgres --cascade=false
+5.3 DaemonSet Complete Example
+Fluentd Logging DaemonSet:
+
+yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluentd
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluentd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluentd
+subjects:
+- kind: ServiceAccount
+  name: fluentd
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
+spec:
+  selector:
+    matchLabels:
+      name: fluentd
+  template:
+    metadata:
+      labels:
+        name: fluentd
+    spec:
+      serviceAccountName: fluentd
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        effect: NoSchedule
+      containers:
+      - name: fluentd
+        image: fluent/fluentd-kubernetes-daemonset:v1-debian-elasticsearch
+        env:
+        - name: FLUENT_ELASTICSEARCH_HOST
+          value: "elasticsearch-service"
+        - name: FLUENT_ELASTICSEARCH_PORT
+          value: "9200"
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: dockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: dockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+5.4 CronJob Complete Example
+Database Backup CronJob:
+
+yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: database-backup
+  namespace: production
+  labels:
+    app: database-backup
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: postgres:13-alpine
+            env:
+            - name: PGHOST
+              value: "postgres-service"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: postgres-user
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: postgres-password
+            - name: PGDATABASE
+              value: "userdb"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              BACKUP_FILE="/tmp/backup-$(date +%Y%m%d-%H%M%S).sql"
+              pg_dump -Fc -f $BACKUP_FILE
+              aws s3 cp $BACKUP_FILE s3://my-backup-bucket/postgres/
+              rm $BACKUP_FILE
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "250m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+          restartPolicy: OnFailure
+SECTION 6: Storage Deep Dive
+6.1 Persistent Volume (PV) and Persistent Volume Claim (PVC)
+Persistent Volume Example:
+
+yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-1
+  labels:
+    type: local
+    storage: ssd
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: slow
+  hostPath:
+    path: "/mnt/data/pv-1"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-2
+  labels:
+    type: local
+    storage: ssd
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  - ReadWriteMany
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: fast
+  hostPath:
+    path: "/mnt/data/pv-2"
+Persistent Volume Claim Example:
+
+yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: user-service-pvc
+  namespace: production
+  labels:
+    app: user-service
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: fast
+  selector:
+    matchLabels:
+      storage: ssd
+Using PVC in Pod:
+
+yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: user-service
+  namespace: production
+spec:
+  containers:
+  - name: app
+    image: company/user-service:latest
+    volumeMounts:
+    - name: data
+      mountPath: /app/data
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: user-service-pvc
+6.2 StorageClass Example
+AWS EBS StorageClass:
+
+yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp2
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+  encrypted: "true"
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+Dynamic Provisioning with StorageClass:
+
+yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dynamic-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 10Gi
+SECTION 7-17: Complete Hands-On Strategy
+Section 7: Setup & Installation (Complete Commands)
+Complete Ubuntu Setup Script:
+install-k8s.sh:
+
+bash
+#!/bin/bash
+# Kubernetes Installation Script
+
+# Update system
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Add Kubernetes repository
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# Install kubeadm, kubelet, kubectl
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+# Disable swap
+sudo swapoff -a
+sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+# Enable bridge traffic
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sudo sysctl --system
+
+# Initialize cluster on master
+if [ "$HOSTNAME" == "master" ]; then
+    sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+    
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    
+    # Install Flannel network
+    kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    
+    echo "Master initialized successfully!"
+    echo "Join command:"
+    kubeadm token create --print-join-command
+fi
+Complete YAML Files for All 6 Microservices
+Architecture Diagram:
+text
+┌─────────────────────────────────────────────────────────────┐
+│                     INGRESS CONTROLLER                      │
+│                 (Load Balancer + SSL Termination)           │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  USER        │  │  ORDER      │  │  PRODUCT     │
+│  SERVICE     │  │  SERVICE    │  │  SERVICE     │
+│  (NodePort)  │  │  (NodePort) │  │  (NodePort)  │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       └─────────────────┼─────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+        ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  PAYMENT     │  │  NOTIFICATION│  │  ANALYTICS   │
+│  SERVICE     │  │  SERVICE     │  │  SERVICE     │
+│  (ClusterIP) │  │  (ClusterIP) │  │  (ClusterIP) │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       └─────────────────┼─────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+        ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐
+│  PostgreSQL  │  │  Redis       │
+│  DB 1        │  │  DB 2        │
+└──────────────┘  └──────────────┘
+1. User Service (Microservice 1)
+user-service-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: production
+  labels:
+    app: user-service
+    tier: backend
+    version: v1.0.0
+    
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+        version: v1.0.0
+    spec:
+      containers:
+      - name: user-service
+        image: company/user-service:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "userdb"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-password
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: user-service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: production
+  labels:
+    app: user-service
+spec:
+  type: NodePort
+  selector:
+    app: user-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30001
+    protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: production
+data:
+  application.yml: |
+    server:
+      port: 8080
+    security:
+      jwt:
+        secret: "jwt-secret-key"
+    features:
+      email-verification: true
+      phone-verification: false
+2. Order Service (Microservice 2)
+order-service-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: production
+  labels:
+    app: order-service
+    tier: backend
+    version: v1.0.0
+    
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        version: v1.0.0
+    spec:
+      containers:
+      - name: order-service
+        image: company/order-service:1.0.0
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "orderdb"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-password
+        - name: USER_SERVICE_URL
+          value: "http://user-service"
+        - name: PRODUCT_SERVICE_URL
+          value: "http://product-service"
+        - name: PAYMENT_SERVICE_URL
+          value: "http://payment-service"
+        - name: REDIS_HOST
+          value: "redis-service"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: production
+  labels:
+    app: order-service
+spec:
+  type: NodePort
+  selector:
+    app: order-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    nodePort: 30002
+    protocol: TCP
+3. Product Service (Microservice 3)
+product-service-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: production
+  labels:
+    app: product-service
+    tier: backend
+    
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+      - name: product-service
+        image: company/product-service:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_NAME
+          value: "productdb"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-password
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: CACHE_TTL
+          value: "300"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: production
+spec:
+  type: NodePort
+  selector:
+    app: product-service
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30003
+4. Payment Service (Microservice 4)
+payment-service-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: production
+  labels:
+    app: payment-service
+    tier: backend
+    
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: company/payment-service:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_NAME
+          value: "paymentdb"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-password
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: payment-secrets
+              key: stripe-secret-key
+        - name: PAYMENT_GATEWAY
+          value: "stripe"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: production
+spec:
+  type: ClusterIP
+  selector:
+    app: payment-service
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-secrets
+  namespace: production
+type: Opaque
+data:
+  stripe-secret-key: <base64-encoded-secret>
+5. Notification Service (Microservice 5)
+notification-service-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: production
+  labels:
+    app: notification-service
+    tier: backend
+    
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: company/notification-service:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: EMAIL_HOST
+          value: "smtp.gmail.com"
+        - name: EMAIL_PORT
+          value: "587"
+        - name: EMAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: email-secrets
+              key: email-user
+        - name: EMAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: email-secrets
+              key: email-password
+        - name: SMS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sms-secrets
+              key: twilio-api-key
+        - name: QUEUE_HOST
+          value: "rabbitmq-service"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: production
+spec:
+  type: ClusterIP
+  selector:
+    app: notification-service
+  ports:
+  - port: 80
+    targetPort: 8080
+6. Analytics Service (Microservice 6)
+analytics-service-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: production
+  labels:
+    app: analytics-service
+    tier: backend
+    
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+      - name: analytics-service
+        image: company/analytics-service:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_NAME
+          value: "analyticsdb"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-password
+        - name: KAFKA_BROKERS
+          value: "kafka-service:9092"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: production
+spec:
+  type: ClusterIP
+  selector:
+    app: analytics-service
+  ports:
+  - port: 80
+    targetPort: 8080
+Database Services
+PostgreSQL Database (DB 1)
+postgres-statefulset.yaml:
+
+yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secrets
+  namespace: production
+type: Opaque
+data:
+  postgres-user: <base64-encoded-username>
+  postgres-password: <base64-encoded-password>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: production
+data:
+  init.sql: |
+    CREATE DATABASE userdb;
+    CREATE DATABASE orderdb;
+    CREATE DATABASE productdb;
+    CREATE DATABASE paymentdb;
+    CREATE DATABASE analyticsdb;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: production
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: postgres-password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: init-script
+        configMap:
+          name: postgres-init
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: production
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+Redis Database (DB 2)
+redis-deployment.yaml:
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:6-alpine
+        ports:
+        - containerPort: 6379
+        command:
+        - redis-server
+        args:
+        - --appendonly
+        - "yes"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: production
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: production
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+Ingress Controller
+ingress.yaml:
+
+yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: microservices-ingress
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+spec:
+  tls:
+  - hosts:
+    - api.company.com
+    secretName: tls-secret
+  rules:
+  - host: api.company.com
+    http:
+      paths:
+      - path: /api/users(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80
+      - path: /api/orders(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: order-service
+            port:
+              number: 80
+      - path: /api/products(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      - path: /api/payments(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: payment-service
+            port:
+              number: 80
+Complete Deployment Strategy
+Phase 1: Infrastructure Setup
+bash
+#!/bin/bash
+# deploy-infrastructure.sh
+
+# Create namespaces
+kubectl create namespace production
+kubectl create namespace staging
+kubectl create namespace development
+
+# Apply secrets
+kubectl apply -f secrets.yaml -n production
+
+# Deploy databases
+kubectl apply -f postgres-statefulset.yaml -n production
+kubectl apply -f redis-deployment.yaml -n production
+
+# Wait for databases to be ready
+kubectl wait --for=condition=ready pod -l app=postgres -n production --timeout=300s
+kubectl wait --for=condition=ready pod -l app=redis -n production --timeout=300s
+
+# Create database schemas
+kubectl exec -it postgres-0 -n production -- psql -U userdb -c "CREATE DATABASE userdb;"
+kubectl exec -it postgres-0 -n production -- psql -U userdb -c "CREATE DATABASE orderdb;"
+kubectl exec -it postgres-0 -n production -- psql -U userdb -c "CREATE DATABASE productdb;"
+kubectl exec -it postgres-0 -n production -- psql -U userdb -c "CREATE DATABASE paymentdb;"
+kubectl exec -it postgres-0 -n production -- psql -U userdb -c "CREATE DATABASE analyticsdb;"
+Phase 2: Deploy Microservices (Order Matters)
+deploy-microservices.sh:
+
+bash
+#!/bin/bash
+
+# Deploy services with no external dependencies first
+echo "Deploying User Service..."
+kubectl apply -f user-service-deployment.yaml -n production
+kubectl wait --for=condition=ready pod -l app=user-service -n production --timeout=300s
+
+echo "Deploying Product Service..."
+kubectl apply -f product-service-deployment.yaml -n production
+kubectl wait --for=condition=ready pod -l app=product-service -n production --timeout=300s
+
+echo "Deploying Payment Service..."
+kubectl apply -f payment-service-deployment.yaml -n production
+kubectl wait --for=condition=ready pod -l app=payment-service -n production --timeout=300s
+
+echo "Deploying Order Service..."
+kubectl apply -f order-service-deployment.yaml -n production
+kubectl wait --for=condition=ready pod -l app=order-service -n production --timeout=300s
+
+echo "Deploying Notification Service..."
+kubectl apply -f notification-service-deployment.yaml -n production
+kubectl wait --for=condition=ready pod -l app=notification-service -n production --timeout=300s
+
+echo "Deploying Analytics Service..."
+kubectl apply -f analytics-service-deployment.yaml -n production
+kubectl wait --for=condition=ready pod -l app=analytics-service -n production --timeout=300s
+
+echo "Deploying Ingress..."
+kubectl apply -f ingress.yaml -n production
+Phase 3: Apply HPA (Horizontal Pod Autoscaler)
+hpa.yaml:
+
+yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: user-service-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+Phase 4: Monitoring Setup
+monitoring.yaml:
+
+yaml
+# Prometheus Service Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: microservices-monitor
+  namespace: production
+  labels:
+    app: microservices
+spec:
+  selector:
+    matchLabels:
+      app: microservices
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: monitoring
+spec:
+  type: NodePort
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    nodePort: 30090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  namespace: monitoring
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30300
+Complete Deployment Commands
+One-Click Deployment Script:
+deploy-all.sh:
+
+bash
+#!/bin/bash
+
+echo "🚀 Starting Complete Deployment..."
+
+# 1. Deploy Infrastructure
+echo "📦 Deploying Infrastructure..."
+./deploy-infrastructure.sh
+
+# 2. Deploy Databases
+echo "🗄️ Deploying Databases..."
+kubectl apply -f postgres-statefulset.yaml -n production
+kubectl apply -f redis-deployment.yaml -n production
+
+# 3. Deploy Microservices
+echo "🎯 Deploying Microservices..."
+./deploy-microservices.sh
+
+# 4. Deploy Monitoring
+echo "📊 Deploying Monitoring..."
+kubectl apply -f monitoring.yaml -n monitoring
+
+# 5. Deploy HPA
+echo "📈 Deploying HPA..."
+kubectl apply -f hpa.yaml -n production
+
+# 6. Get status
+echo "✅ Deployment Complete!"
+echo "--------------------------------------------------"
+echo "Services Status:"
+kubectl get all -n production
+echo "--------------------------------------------------"
+echo "Monitoring Access:"
+echo "Prometheus: http://<node-ip>:30090"
+echo "Grafana: http://<node-ip>:30300 (admin/admin)"
+echo "--------------------------------------------------"
+echo "API Access:"
+kubectl get svc -n production
+Health Check Script:
+health-check.sh:
+
+bash
+#!/bin/bash
+
+echo "🔍 Checking Microservice Health..."
+
+# Check all pods
+echo "Checking Pod Status..."
+kubectl get pods -n production
+
+# Check services
+echo -e "\nChecking Services..."
+kubectl get svc -n production
+
+# Check endpoints
+echo -e "\nChecking Endpoints..."
+for svc in user-service order-service product-service payment-service notification-service analytics-service; do
+    echo "Testing $svc..."
+    kubectl run test-$svc --rm -it --image=busybox --restart=Never -n production -- wget -qO- http://$svc/health 2>/dev/null && echo "✅ $svc healthy" || echo "❌ $svc unhealthy"
+done
+
+# Check HPA status
+echo -e "\n📈 HPA Status:"
+kubectl get hpa -n production
+Rollback Strategy:
+rollback.sh:
+
+bash
+#!/bin/bash
+
+SERVICE=$1
+REVISION=$2
+
+if [ -z "$SERVICE" ] || [ -z "$REVISION" ]; then
+    echo "Usage: ./rollback.sh <service-name> <revision-number>"
+    echo "Example: ./rollback.sh user-service 3"
+    exit 1
+fi
+
+echo "🔄 Rolling back $SERVICE to revision $REVISION..."
+kubectl rollout undo deployment/$SERVICE -n production --to-revision=$REVISION
+
+echo "⏳ Waiting for rollback to complete..."
+kubectl rollout status deployment/$SERVICE -n production
+
+echo "✅ Rollback complete!"
+Complete Validation Commands
+bash
+# Check everything is running
+kubectl get all -n production
+
+# Check pod details
+kubectl describe pods -n production
+
+# Check logs for specific service
+kubectl logs -f deployment/user-service -n production
+
+# Check events
+kubectl get events -n production --sort-by=.metadata.creationTimestamp
+
+# Check resource usage
+kubectl top pods -n production
+
+# Check HPA
+kubectl get hpa -n production
+
+# Check ingress
+kubectl get ingress -n production
+
+# Check services endpoints
+kubectl get endpoints -n production
+
+# Check persistent volumes
+kubectl get pv
+kubectl get pvc -n production
+
+# Check secrets
+kubectl get secrets -n production
+
+# Check configmaps
+kubectl get configmaps -n production
+Monitoring Dashboard URLs
+Service	URL	Credentials
+Prometheus	http://<node-ip>:30090	-
+Grafana	http://<node-ip>:30300	admin/admin
+API Gateway	https://api.company.com	-
+Kube Dashboard	http://<node-ip>:31000	-
+Troubleshooting Commands
+bash
+# Debug pod not starting
+kubectl describe pod <pod-name> -n production
+kubectl logs <pod-name> -n production
+
+# Debug service connectivity
+kubectl run debug --rm -it --image=busybox --restart=Never -n production -- nslookup <service-name>
+
+# Check node status
+kubectl describe nodes
+
+# Check cluster events
+kubectl get events --all-namespaces --sort-by=.metadata.creationTimestamp
+
+# Check resource quota
+kubectl describe resourcequota -n production
+
+# Delete stuck pod
+kubectl delete pod <pod-name> -n production --force --grace-period=0
+
+# Reset cluster
+kubectl delete all --all -n production

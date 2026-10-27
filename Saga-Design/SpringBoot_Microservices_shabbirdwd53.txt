@@ -1,0 +1,2225 @@
+
+
+spring-boot-microservices
+
+1) CloudGateway
+package com.dailycodebuffer.CloudGateway.controller;
+
+import java.util.stream.Collectors;
+@RestController
+@RequestMapping("/authenticate")
+public class AuthenticationController {
+
+    @GetMapping("/login")
+    public ResponseEntity<AuthenticationResponse> login(
+            @AuthenticationPrincipal OidcUser oidcUser,
+            Model model,
+            @RegisteredOAuth2AuthorizedClient("okta")
+             OAuth2AuthorizedClient client
+    ) {
+        AuthenticationResponse authenticationResponse
+                = AuthenticationResponse.builder()
+                .userId(oidcUser.getEmail())
+                .accessToken(client.getAccessToken().getTokenValue())
+                .refreshToken(client.getRefreshToken().getTokenValue())
+                .expiresAt(client.getAccessToken().getExpiresAt().getEpochSecond())
+                .authorityList(oidcUser.getAuthorities()
+                        .stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList()))
+                .build();
+        return new ResponseEntity<>(authenticationResponse, HttpStatus.OK);
+    }
+}
+
+--------------------------
+
+package com.dailycodebuffer.CloudGateway.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class FallbackController {
+
+    @GetMapping("/orderServiceFallBack")
+    public String orderServiceFallback() {
+        return "Order Service is down!";
+    }
+
+    @GetMapping("/paymentServiceFallBack")
+    public String paymentServiceFallback() {
+        return "Payment Service is down!";
+    }
+
+    @GetMapping("/productServiceFallBack")
+    public String productServiceFallback() {
+        return "Product Service is down!";
+    }
+
+}
+
+package com.dailycodebuffer.CloudGateway.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Collection;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class AuthenticationResponse {
+
+    private String userId;
+    private String accessToken;
+    private String refreshToken;
+    private long expiresAt;
+    private Collection<String> authorityList;
+}
+
+
+package com.dailycodebuffer.CloudGateway;
+
+@SpringBootApplication
+@EnableEurekaClient
+public class CloudGatewayApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(CloudGatewayApplication.class, args);
+	}
+
+
+	/*@Bean
+	KeyResolver userKeySolver() {
+		return exchange -> Mono.just("userKey");
+	}*/
+	@Bean
+	KeyResolver authUserKeyResolver() {
+		return exchange -> ReactiveSecurityContextHolder.getContext()
+				.map(ctx -> ctx.getAuthentication()
+						.getCredentials().toString());
+	}
+
+	@Bean
+	public Customizer<Resilience4JCircuitBreakerFactory> defaultCustomizer() {
+		return factory -> factory.configureDefault(
+				id -> new Resilience4JConfigBuilder(id)
+						.circuitBreakerConfig(
+								CircuitBreakerConfig.ofDefaults()
+
+						).build()
+		);
+	}
+}
+
+
+package com.dailycodebuffer.CloudGateway.security;
+
+@Configuration
+@EnableWebFluxSecurity
+public class OktaOAuth2WebSecurity {
+
+    @Bean
+    public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http) {
+        http
+                .authorizeExchange()
+                .anyExchange().authenticated()
+                .and()
+                .oauth2Login()
+                .and()
+                .oauth2ResourceServer()
+                .jwt();
+        return http.build();
+    }
+}
+
+application.yaml
+
+server:
+  port: 9090
+
+spring:
+  redis:
+    host: redis
+    port: 6379
+  application:
+    name: API-GATEWAY
+  config:
+    import: configserver:${CONFIG_SERVER_URL:http://localhost:9296}
+  cloud:
+    gateway:
+      routes:
+        - id : ORDER-SERVICE
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/order/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: ORDER-SERVICE
+                fallbackuri: forward:/orderServiceFallBack
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1
+                redis-rate-limiter.burstCapacity: 1
+        - id: PAYMENT-SERVICE
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payment/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: PAYMENT-SERVICE
+                fallbackuri: forward:/paymentServiceFallBack
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1
+                redis-rate-limiter.burstCapacity: 1
+        - id: PRODUCT-SERVICE
+          uri: lb://PRODUCT-SERVICE
+          predicates:
+            - Path=/product/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: PRODUCT-SERVICE
+                fallbackuri: forward:/productServiceFallBack
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 1
+                redis-rate-limiter.burstCapacity: 1
+
+okta:
+  oauth2:
+    issuer: https://dev-15585796.okta.com/oauth2/default
+    audience: api://default
+    client-id: 0oa6cgklvwIS2SoFZ5d7
+    client-secret: L_VPQB5XQX5QAhnxaDqA0IhWG-TImnVpaHW7ER33
+    scopes: openid, email, profile, offline_access
+	
+	
+------
+Dockerfile
+
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} cloudgateway.jar
+
+ENTRYPOINT ["java", "-jar", "/cloudgateway.jar"]
+
+EXPOSE 9090
+
+============================
+ConfigServer
+package com.dailycodebuffer.ConfigServer;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.config.server.EnableConfigServer;
+
+@SpringBootApplication
+@EnableConfigServer
+public class ConfigServerApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ConfigServerApplication.class, args);
+	}
+
+}
+
+application.yaml
+server:
+  port: 9296
+
+spring:
+  application:
+    name: CONFIG-SERVER
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/shabbirdwd53/spring-app-config
+          clone-on-start: true
+
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: ${EUREKA_SERVER_ADDRESS:http://localhost:8761/eureka}
+
+
+
+Dockerfile
+
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} configserver.jar
+
+ENTRYPOINT ["java", "-jar", "/configserver.jar"]
+
+EXPOSE 9296
+
+==================================
+k8s
+
+cloud-gateway-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-gateway-app
+spec:
+  selector:
+    matchLabels:
+      app: cloud-gateway-app
+  template:
+    metadata:
+      labels:
+        app: cloud-gateway-app
+    spec:
+      containers:
+      - name: cloud-gateway-app
+        image: dailycodebuffer/cloudgateway
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9090
+        env:
+          - name: CONFIG_SERVER_URL
+            valueFrom:
+              configMapKeyRef:
+                name: config-cm
+                key: config_url
+          - name: EUREKA_SERVER_ADDRESS
+            valueFrom:
+              configMapKeyRef:
+                name: eureka-cm
+                key: eureka_service_address
+                
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-gateway-svc
+spec:
+  type: LoadBalancer
+  selector:
+    app: cloud-gateway-app
+  ports:
+  - port: 80
+    targetPort: 9090
+
+
+=====
+config-maps.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-cm
+data:
+  config_url: "http://config-server-svc"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eureka-cm
+data:
+  eureka_service_address: "http://eureka-0.eureka:8761/eureka"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-cm
+data:
+  hostname: "mysql-0.mysql"
+
+
+
+
+
+=========
+config-server-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server-app
+spec:
+  selector:
+    matchLabels:
+      app: config-server-app
+  template:
+    metadata:
+      labels:
+        app: config-server-app
+    spec:
+      containers:
+      - name: config-server-app
+        image: dailycodebuffer/configserver
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9296
+        env:
+          - name: EUREKA_SERVER_ADDRESS
+            valueFrom:
+              configMapKeyRef:
+                name: eureka-cm
+                key: eureka_service_address
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server-svc
+spec:
+  selector:
+    app: config-server-app
+  ports:
+  - port: 80
+    targetPort: 9296
+
+
+
+
+===========================
+mysql-deployment.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  hostPath:
+#    path: "/mnt/data"  # - for Unix/Linux
+     path: "/run/desktop/mnt/host/c/temp/testfiles"
+     type: DirectoryOrCreate
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: root        
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-initdb
+          mountPath: /docker-entrypoint-initdb.d
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-initdb
+          configMap:
+            name: mysql-initdb-cm
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb-cm
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS orderdb;
+    CREATE DATABASE IF NOT EXISTS paymentdb;
+    CREATE DATABASE IF NOT EXISTS productdb;
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  clusterIP: None
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+
+===========================================
+order-service-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service-app
+spec:
+  selector:
+    matchLabels:
+      app: order-service-app
+  template:
+    metadata:
+      labels:
+        app: order-service-app
+    spec:
+      containers:
+      - name: order-service-app
+        image: dailycodebuffer/orderservice
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8082
+        env:
+        - name: CONFIG_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: config-cm
+              key: config_url
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-cm
+              key: hostname
+        - name: EUREKA_SERVER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: eureka-cm
+              key: eureka_service_address
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service-svc
+spec:
+  selector:
+    app: order-service-app
+  ports:
+  - port: 80
+    targetPort: 8082
+
+===========================================
+payment-service-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service-app
+spec:
+  selector:
+    matchLabels:
+      app: payment-service-app
+  template:
+    metadata:
+      labels:
+        app: payment-service-app
+    spec:
+      containers:
+      - name: payment-service-app
+        image: dailycodebuffer/paymentservice
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+        env:
+        - name: CONFIG_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: config-cm
+              key: config_url
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-cm
+              key: hostname
+        - name: EUREKA_SERVER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: eureka-cm
+              key: eureka_service_address
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service-svc
+spec:
+  selector:
+    app: payment-service-app
+  ports:
+  - port: 80
+    targetPort: 8081
+
+
+
+============================================
+product-service-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service-app
+spec:
+  selector:
+    matchLabels:
+      app: product-service-app
+  template:
+    metadata:
+      labels:
+        app: product-service-app
+    spec:
+      containers:
+      - name: product-service-app
+        image: dailycodebuffer/productservice
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8082
+        env:
+        - name: CONFIG_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: config-cm
+              key: config_url
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-cm
+              key: hostname
+        - name: EUREKA_SERVER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: eureka-cm
+              key: eureka_service_address
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service-svc
+spec:
+  selector:
+    app: product-service-app
+  ports:
+  - port: 80
+    targetPort: 8082
+
+==============================================
+redis-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-app
+spec:
+  selector:
+    matchLabels:
+      app: redis-app
+  template:
+    metadata:
+      labels:
+        app: redis-app
+    spec:
+      containers:
+      - name: redis-app
+        image: redis:7.0.4
+        command:
+          - "redis-server"
+        args:
+          - "--protected-mode"
+          - "no"
+        ports:
+        - containerPort: 6379
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+    app: redis-app
+  ports:
+  - port: 6379
+    targetPort: 6379
+
+==============================================
+service-registry-statefulset.yaml
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: eureka
+spec:
+  selector:
+    matchLabels:
+      app: eureka
+  serviceName: "eureka"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: eureka
+    spec:
+      containers:
+      - name: eureka
+        image: dailycodebuffer/serviceregistry
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8761
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka
+spec:
+  clusterIP: None
+  selector:
+    app: eureka
+  ports:
+  - port: 8761
+    name: eureka
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka-lb
+spec:
+  type: NodePort
+  selector:
+    app: eureka
+  ports:
+  - port: 80
+    targetPort: 8761
+
+==============================================
+zipkin-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+spec:
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+      - name: zipkin
+        image: openzipkin/zipkin
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin-svc
+spec:
+  selector:
+    app: zipkin
+  ports:
+  - port: 9411
+    targetPort: 9411
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin-lb-svc
+spec:
+  type: LoadBalancer
+  selector:
+    app: zipkin
+  ports:
+  - port: 9411
+    targetPort: 9411
+
+==================================
+k8s-demo
+deploy.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: my-namespace
+  name: service-registry-app
+spec:
+  selector:
+    matchLabels:
+      app: service-registry-app
+  template:
+    metadata:
+      labels:
+        app: service-registry-app
+    spec:
+      containers:
+      - name: service-registry-app
+        image: dailycodebuffer/serviceregistry:latest
+        ports:
+        - containerPort: 8761
+
+svc.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-registry-svc
+spec:
+  selector:
+    app: service-registry-app
+  ports:
+  - port: 80
+    targetPort: 8761
+
+======================================
+OrderService
+
+package com.dailycodebuffer.OrderService;
+
+import java.util.Arrays;
+
+@SpringBootApplication
+@EnableFeignClients
+public class OrderServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(OrderServiceApplication.class, args);
+	}
+
+	@Autowired
+	private ClientRegistrationRepository clientRegistrationRepository;
+
+	@Autowired
+	private OAuth2AuthorizedClientRepository oAuth2AuthorizedClientRepository;
+
+	@Bean
+	@LoadBalanced
+	public RestTemplate restTemplate() {
+		RestTemplate restTemplate
+				= new RestTemplate();
+		restTemplate.setInterceptors(
+				Arrays.asList(
+						new RestTemplateInterceptor(
+								clientManager(clientRegistrationRepository
+										,oAuth2AuthorizedClientRepository))));
+		return restTemplate;
+	}
+
+	@Bean
+	public OAuth2AuthorizedClientManager clientManager(
+			ClientRegistrationRepository clientRegistrationRepository,
+			OAuth2AuthorizedClientRepository oAuth2AuthorizedClientRepository
+	) {
+		OAuth2AuthorizedClientProvider oAuth2AuthorizedClientProvider
+				= OAuth2AuthorizedClientProviderBuilder
+				.builder()
+				.clientCredentials()
+				.build();
+
+		DefaultOAuth2AuthorizedClientManager oAuth2AuthorizedClientManager
+				= new DefaultOAuth2AuthorizedClientManager(
+						clientRegistrationRepository,
+				oAuth2AuthorizedClientRepository);
+
+		oAuth2AuthorizedClientManager.setAuthorizedClientProvider(
+				oAuth2AuthorizedClientProvider
+		);
+
+		return oAuth2AuthorizedClientManager;
+	}
+
+}
+
+
+package com.dailycodebuffer.OrderService.config;
+
+@Configuration
+public class FeignConfig {
+
+    @Bean
+    ErrorDecoder errorDecoder() {
+        return new CustomErrorDecoder();
+    }
+}
+
+
+package com.dailycodebuffer.OrderService.controller;
+
+import com.dailycodebuffer.OrderService.model.OrderRequest;
+import com.dailycodebuffer.OrderService.model.OrderResponse;
+import com.dailycodebuffer.OrderService.service.OrderService;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/order")
+@Log4j2
+public class OrderController {
+
+    @Autowired
+    private OrderService orderService;
+
+    @PreAuthorize("hasAuthority('Customer')")
+    @PostMapping("/placeOrder")
+    public ResponseEntity<Long> placeOrder(@RequestBody OrderRequest orderRequest) {
+        long orderId = orderService.placeOrder(orderRequest);
+        log.info("Order Id: {}", orderId);
+        return new ResponseEntity<>(orderId, HttpStatus.OK);
+    }
+
+    @PreAuthorize("hasAuthority('Admin') || hasAuthority('Customer')")
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponse> getOrderDetails(@PathVariable long orderId) {
+        OrderResponse orderResponse
+                = orderService.getOrderDetails(orderId);
+
+        return new ResponseEntity<>(order
+		Response,
+                HttpStatus.OK);
+    }
+}
+
+
+
+package com.dailycodebuffer.OrderService.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.time.Instant;
+
+@Entity
+@Table(name = "ORDER_DETAILS")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
+
+    @Column(name = "PRODUCT_ID")
+    private long productId;
+
+    @Column(name = "QUANTITY")
+    private long quantity;
+
+    @Column(name = "ORDER_DATE")
+    private Instant orderDate;
+
+    @Column(name = "STATUS")
+    private String orderStatus;
+
+    @Column(name = "TOTAL_AMOUNT")
+    private long amount;
+}
+
+
+package com.dailycodebuffer.OrderService.exception;
+
+import lombok.Data;
+
+@Data
+public class CustomException extends RuntimeException{
+
+    private String errorCode;
+    private int status;
+
+    public CustomException(String message, String errorCode, int status) {
+        super(message);
+        this.errorCode = errorCode;
+        this.status = status;
+    }
+}
+
+
+
+package com.dailycodebuffer.OrderService.exception;
+
+@ControllerAdvice
+public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ErrorResponse> handleCustomException(CustomException exception) {
+            return new ResponseEntity<>(new ErrorResponse().builder()
+                    .errorMessage(exception.getMessage())
+                    .errorCode(exception.getErrorCode())
+                    .build(),
+                    HttpStatus.valueOf(exception.getStatus()));
+    }
+}
+
+
+package com.dailycodebuffer.OrderService.external.client;
+
+@CircuitBreaker(name = "external", fallbackMethod = "fallback")
+@FeignClient(name = "PAYMENT-SERVICE/payment")
+public interface PaymentService {
+
+    @PostMapping
+    public ResponseEntity<Long> doPayment(@RequestBody PaymentRequest paymentRequest);
+
+    default ResponseEntity<Long> fallback(Exception e) {
+        throw new CustomException("Payment Service is not available",
+                "UNAVAILABLE",
+                500);
+    }
+}
+
+
+package com.dailycodebuffer.OrderService.external.client;
+
+@CircuitBreaker(name = "external", fallbackMethod = "fallback")
+@FeignClient(name = "PRODUCT-SERVICE/product")
+public interface ProductService {
+
+    @PutMapping("/reduceQuantity/{id}")
+    ResponseEntity<Void> reduceQuantity(
+            @PathVariable("id") long productId,
+            @RequestParam long quantity
+    );
+
+
+    default ResponseEntity<Void> fallback(Exception e) {
+        throw new CustomException("Product Service is not available",
+                "UNAVAILABLE",
+                500);
+    }
+
+}
+
+
+package com.dailycodebuffer.OrderService.external.decoder;
+
+import com.dailycodebuffer.OrderService.exception.CustomException;
+import com.dailycodebuffer.OrderService.external.response.ErrorResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.Response;
+import feign.codec.ErrorDecoder;
+import lombok.extern.log4j.Log4j2;
+
+import java.io.IOException;
+
+@Log4j2
+public class CustomErrorDecoder implements ErrorDecoder {
+
+    @Override
+    public Exception decode(String s, Response response) {
+        ObjectMapper objectMapper
+                = new ObjectMapper();
+
+        log.info("::{}",response.request().url());
+        log.info("::{}",response.request().headers());
+
+        try {
+            ErrorResponse errorResponse
+                    = objectMapper.readValue(response.body().asInputStream(),
+                    ErrorResponse.class);
+
+            return new CustomException(errorResponse.getErrorMessage() ,
+                    errorResponse.getErrorCode(),
+                    response.status());
+
+        } catch (IOException e) {
+            throw  new CustomException("Internal Server Error",
+                    "INTERNAL_SERVER_ERROR",
+                    500);
+        }
+    }
+}
+
+
+package com.dailycodebuffer.OrderService.external.intercept;
+
+@Configuration
+public class OAuthRequestInterceptor implements RequestInterceptor {
+
+    @Autowired
+    private OAuth2AuthorizedClientManager oAuth2AuthorizedClientManager;
+
+    @Override
+    public void apply(RequestTemplate template) {
+        template.header("Authorization", "Bearer "
+        + oAuth2AuthorizedClientManager
+                .authorize(OAuth2AuthorizeRequest
+                        .withClientRegistrationId("internal-client")
+                        .principal("internal")
+                        .build())
+                .getAccessToken().getTokenValue());
+    }
+}
+
+
+
+package com.dailycodebuffer.OrderService.external.intercept;
+
+import java.io.IOException;
+
+public class RestTemplateInterceptor implements ClientHttpRequestInterceptor {
+
+    private OAuth2AuthorizedClientManager oAuth2AuthorizedClientManager;
+
+    public RestTemplateInterceptor(
+            OAuth2AuthorizedClientManager oAuth2AuthorizedClientManager) {
+        this.oAuth2AuthorizedClientManager
+                = oAuth2AuthorizedClientManager;
+    }
+
+    @Override
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+        request.getHeaders().add("Authorization",
+                "Bearer " +
+                oAuth2AuthorizedClientManager
+                        .authorize(OAuth2AuthorizeRequest
+                                .withClientRegistrationId("internal-client")
+                                .principal("internal")
+                                .build())
+                        .getAccessToken().getTokenValue());
+
+        return execution.execute(request, body);
+    }
+}
+
+
+package com.dailycodebuffer.OrderService.external.request;
+
+import com.dailycodebuffer.OrderService.model.PaymentMode;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class PaymentRequest {
+
+    private long orderId;
+    private long amount;
+    private String referenceNumber;
+    private PaymentMode paymentMode;
+
+}
+
+
+
+package com.dailycodebuffer.OrderService.external.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ErrorResponse {
+    private String errorMessage;
+    private String errorCode;
+}
+
+
+package com.dailycodebuffer.OrderService.external.response;
+
+import com.dailycodebuffer.OrderService.model.PaymentMode;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class PaymentResponse {
+
+    private long paymentId;
+    private String status;
+    private PaymentMode paymentMode;
+    private long amount;
+    private Instant paymentDate;
+    private long orderId;
+}
+
+
+package com.dailycodebuffer.OrderService.external.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class ProductResponse {
+
+    private String productName;
+    private long productId;
+    private long quantity;
+    private long price;
+}
+
+
+package com.dailycodebuffer.OrderService.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class OrderRequest {
+
+    private long productId;
+    private long totalAmount;
+    private long quantity;
+    private PaymentMode paymentMode;
+}
+
+
+package com.dailycodebuffer.OrderService.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class OrderResponse {
+    private long orderId;
+    private Instant orderDate;
+    private String orderStatus;
+    private long amount;
+    private ProductDetails productDetails;
+    private PaymentDetails paymentDetails;
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ProductDetails {
+
+        private String productName;
+        private long productId;
+        private long quantity;
+        private long price;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class PaymentDetails{
+        private long paymentId;
+        private PaymentMode paymentMode;
+        private String paymentStatus;
+        private Instant paymentDate;
+    }
+}
+
+
+package com.dailycodebuffer.OrderService.model;
+
+public enum PaymentMode {
+    CASH,
+    PAYPAL,
+    DEBIT_CARD,
+    CREDIT_CARD,
+    APPLE_PAY
+}
+
+
+package com.dailycodebuffer.OrderService.repository;
+
+import com.dailycodebuffer.OrderService.entity.Order;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface OrderRepository extends JpaRepository<Order,Long> {
+}
+
+
+package com.dailycodebuffer.OrderService.security;
+
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class WebSecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityWebFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(
+                        authorizeRequest -> authorizeRequest
+                        .anyRequest()
+                                .authenticated())
+                .oauth2ResourceServer(
+                        OAuth2ResourceServerConfigurer::jwt);
+
+        return http.build();
+    }
+}
+
+package com.dailycodebuffer.OrderService.service;
+
+import com.dailycodebuffer.OrderService.model.OrderRequest;
+import com.dailycodebuffer.OrderService.model.OrderResponse;
+
+public interface OrderService {
+    long placeOrder(OrderRequest orderRequest);
+
+    OrderResponse getOrderDetails(long orderId);
+}
+
+package com.dailycodebuffer.OrderService.service;
+
+import java.time.Instant;
+
+@Service
+@Log4j2
+public class OrderServiceImpl implements OrderService{
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private ProductService productService;
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Override
+    public long placeOrder(OrderRequest orderRequest) {
+
+        //Order Entity -> Save the data with Status Order Created
+        //Product Service - Block Products (Reduce the Quantity)
+        //Payment Service -> Payments -> Success-> COMPLETE, Else
+        //CANCELLED
+
+        log.info("Placing Order Request: {}", orderRequest);
+
+        productService.reduceQuantity(orderRequest.getProductId(), orderRequest.getQuantity());
+
+        log.info("Creating Order with Status CREATED");
+        Order order = Order.builder()
+                .amount(orderRequest.getTotalAmount())
+                .orderStatus("CREATED")
+                .productId(orderRequest.getProductId())
+                .orderDate(Instant.now())
+                .quantity(orderRequest.getQuantity())
+                .build();
+
+        order = orderRepository.save(order);
+
+        log.info("Calling Payment Service to complete the payment");
+        PaymentRequest paymentRequest
+                = PaymentRequest.builder()
+                .orderId(order.getId())
+                .paymentMode(orderRequest.getPaymentMode())
+                .amount(orderRequest.getTotalAmount())
+                .build();
+
+        String orderStatus = null;
+        try {
+            paymentService.doPayment(paymentRequest);
+            log.info("Payment done Successfully. Changing the Oder status to PLACED");
+            orderStatus = "PLACED";
+        } catch (Exception e) {
+            log.error("Error occurred in payment. Changing order status to PAYMENT_FAILED");
+            orderStatus = "PAYMENT_FAILED";
+        }
+
+        order.setOrderStatus(orderStatus);
+        orderRepository.save(order);
+
+        log.info("Order Places successfully with Order Id: {}", order.getId());
+        return order.getId();
+    }
+
+    @Override
+    public OrderResponse getOrderDetails(long orderId) {
+        log.info("Get order details for Order Id : {}", orderId);
+
+        Order order
+                = orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException("Order not found for the order Id:" + orderId,
+                        "NOT_FOUND",
+                        404));
+
+        log.info("Invoking Product service to fetch the product for id: {}", order.getProductId());
+        ProductResponse productResponse
+                = restTemplate.getForObject(
+                        "http://PRODUCT-SERVICE/product/" + order.getProductId(),
+                ProductResponse.class
+        );
+
+        log.info("Getting payment information form the payment Service");
+        PaymentResponse paymentResponse
+                = restTemplate.getForObject(
+                        "http://PAYMENT-SERVICE/payment/order/" + order.getId(),
+                PaymentResponse.class
+                );
+
+        OrderResponse.ProductDetails productDetails
+                = OrderResponse.ProductDetails
+                .builder()
+                .productName(productResponse.getProductName())
+                .productId(productResponse.getProductId())
+                .build();
+
+        OrderResponse.PaymentDetails paymentDetails
+                = OrderResponse.PaymentDetails
+                .builder()
+                .paymentId(paymentResponse.getPaymentId())
+                .paymentStatus(paymentResponse.getStatus())
+                .paymentDate(paymentResponse.getPaymentDate())
+                .paymentMode(paymentResponse.getPaymentMode())
+                .build();
+
+        OrderResponse orderResponse
+                = OrderResponse.builder()
+                .orderId(order.getId())
+                .orderStatus(order.getOrderStatus())
+                .amount(order.getAmount())
+                .orderDate(order.getOrderDate())
+                .productDetails(productDetails)
+                .paymentDetails(paymentDetails)
+                .build();
+
+        return orderResponse;
+    }
+}
+
+
+resources  
+   application.yaml
+   
+   server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/orderdb
+    username: root
+    password: root
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL57InnoDBDialect
+    hibernate:
+      ddl-auto: update
+  application:
+    name: ORDER-SERVICE
+  config:
+    import: configserver:${CONFIG_SERVER_URL:http://localhost:9296}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-15585796.okta.com/oauth2/default
+      client:
+        registration:
+          internal-client:
+            provider: okta
+            authorization-grant-type: client_credentials
+            scope: internal
+            client-id: 0oa6cgklvwIS2SoFZ5d7
+            client-secret: L_VPQB5XQX5QAhnxaDqA0IhWG-TImnVpaHW7ER33
+        provider:
+          okta:
+            issuer-uri: https://dev-15585796.okta.com/oauth2/default
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      external:
+        event-consumer-buffer-size: 10
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 5s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: COUNT_BASED
+
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    fetch-registry: true
+#    register-with-eureka: true
+#    service-url:
+#      defaultZone: ${EUREKA_SERVER_ADDRESS:http://localhost:8761/eureka
+
+
+---------
+Dockerfile
+
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} orderservice.jar
+
+ENTRYPOINT ["java", "-jar", "/orderservice.jar"]
+
+EXPOSE 8082
+
+==========================================
+PaymentService
+
+package com.dailycodebuffer.PaymentService.controller;
+
+@RestController
+@RequestMapping("/payment")
+public class PaymentController {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @PostMapping
+    public ResponseEntity<Long> doPayment(@RequestBody PaymentRequest paymentRequest) {
+        return new ResponseEntity<>(
+                paymentService.doPayment(paymentRequest),
+                HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<PaymentResponse> getPaymentDetailsByOrderId(@PathVariable String orderId) {
+        return new ResponseEntity<>(
+                paymentService.getPaymentDetailsByOrderId(orderId),
+                HttpStatus.OK
+        );
+    }
+
+}
+
+
+
+package com.dailycodebuffer.PaymentService.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.time.Instant;
+
+@Entity
+@Table(name = "TRANSACTION_DETAILS")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class TransactionDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
+
+    @Column(name = "ORDER_ID")
+    private long orderId;
+
+    @Column(name = "MODE")
+    private String paymentMode;
+
+    @Column(name = "REFERENCE_NUMBER")
+    private String referenceNumber;
+
+    @Column(name = "PAYMENT_DATE")
+    private Instant paymentDate;
+
+    @Column(name = "STATUS")
+    private String paymentStatus;
+
+    @Column(name = "AMOUNT")
+    private long amount;
+}
+
+
+package com.dailycodebuffer.PaymentService.model;
+
+public enum PaymentMode {
+    CASH,
+    PAYPAL,
+    DEBIT_CARD,
+    CREDIT_CARD,
+    APPLE_PAY
+}
+
+
+package com.dailycodebuffer.PaymentService.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class PaymentRequest {
+
+    private long orderId;
+    private long amount;
+    private String referenceNumber;
+    private PaymentMode paymentMode;
+
+}
+
+
+package com.dailycodebuffer.PaymentService.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class PaymentResponse {
+
+    private long paymentId;
+    private String status;
+    private PaymentMode paymentMode;
+    private long amount;
+    private Instant paymentDate;
+    private long orderId;
+}
+
+
+
+package com.dailycodebuffer.PaymentService.repository;
+
+import com.dailycodebuffer.PaymentService.entity.TransactionDetails;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface TransactionDetailsRepository extends JpaRepository<TransactionDetails, Long> {
+
+    TransactionDetails findByOrderId(long orderId);
+}
+
+package com.dailycodebuffer.PaymentService.security;
+
+@Configuration
+@EnableWebSecurity
+public class WebSecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorizeRequests ->
+                        authorizeRequests
+                                .antMatchers("/payment/**")
+                                .hasAuthority("SCOPE_internal")
+                                .anyRequest()
+                                .authenticated())
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+        return http.build();
+    }
+}
+
+
+
+package com.dailycodebuffer.PaymentService.service;
+
+import com.dailycodebuffer.PaymentService.model.PaymentRequest;
+import com.dailycodebuffer.PaymentService.model.PaymentResponse;
+
+public interface PaymentService {
+    long doPayment(PaymentRequest paymentRequest);
+
+    PaymentResponse getPaymentDetailsByOrderId(String orderId);
+}
+
+
+
+package com.dailycodebuffer.PaymentService.service;
+
+import java.time.Instant;
+
+@Service
+@Log4j2
+public class PaymentServiceImpl implements PaymentService{
+
+    @Autowired
+    private TransactionDetailsRepository transactionDetailsRepository;
+
+    @Override
+    public long doPayment(PaymentRequest paymentRequest) {
+        log.info("Recording Payment Details: {}", paymentRequest);
+
+        TransactionDetails transactionDetails
+                = TransactionDetails.builder()
+                .paymentDate(Instant.now())
+                .paymentMode(paymentRequest.getPaymentMode().name())
+                .paymentStatus("SUCCESS")
+                .orderId(paymentRequest.getOrderId())
+                .referenceNumber(paymentRequest.getReferenceNumber())
+                .amount(paymentRequest.getAmount())
+                .build();
+
+        transactionDetailsRepository.save(transactionDetails);
+
+        log.info("Transaction Completed with Id: {}", transactionDetails.getId());
+
+        return transactionDetails.getId();
+    }
+
+    @Override
+    public PaymentResponse getPaymentDetailsByOrderId(String orderId) {
+        log.info("Getting payment details for the Order Id: {}", orderId);
+
+        TransactionDetails transactionDetails
+                = transactionDetailsRepository.findByOrderId(Long.valueOf(orderId));
+
+        PaymentResponse paymentResponse
+                = PaymentResponse.builder()
+                .paymentId(transactionDetails.getId())
+                .paymentMode(PaymentMode.valueOf(transactionDetails.getPaymentMode()))
+                .paymentDate(transactionDetails.getPaymentDate())
+                .orderId(transactionDetails.getOrderId())
+                .status(transactionDetails.getPaymentStatus())
+                .amount(transactionDetails.getAmount())
+                .build();
+
+        return paymentResponse;
+    }
+}
+
+
+package com.dailycodebuffer.PaymentService;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class PaymentServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(PaymentServiceApplication.class, args);
+	}
+
+}
+
+
+
+resources
+     application.yaml
+	 
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/paymentdb
+    username: root
+    password: root
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL57InnoDBDialect
+    hibernate:
+      ddl-auto: update
+  application:
+    name: PAYMENT-SERVICE
+  config:
+    import: configserver:${CONFIG_SERVER_URL:http://localhost:9296}
+------
+
+Dockerfile
+
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} paymentservice.jar
+
+ENTRYPOINT ["java", "-jar", "/paymentservice.jar"]
+
+EXPOSE 8081
+
+========================================
+ProductService
+
+package com.dailycodebuffer.ProductService.controller;
+
+@RestController
+@RequestMapping("/product")
+public class ProductController {
+
+    @Autowired
+    private ProductService productService;
+
+    @PreAuthorize("hasAuthority('Admin')")
+    @PostMapping
+    public ResponseEntity<Long> addProduct(@RequestBody ProductRequest productRequest) {
+        long productId = productService.addProduct(productRequest);
+        return new ResponseEntity<>(productId, HttpStatus.CREATED);
+    }
+
+    @PreAuthorize("hasAuthority('Admin') || hasAuthority('Customer') || hasAuthority('SCOPE_internal')")
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponse> getProductById(@PathVariable("id") long productId) {
+        ProductResponse productResponse
+                = productService.getProductById(productId);
+        return new ResponseEntity<>(productResponse, HttpStatus.OK);
+    }
+
+    @PutMapping("/reduceQuantity/{id}")
+    public ResponseEntity<Void> reduceQuantity(
+            @PathVariable("id") long productId,
+            @RequestParam long quantity
+    ) {
+            productService.reduceQuantity(productId,quantity);
+            return new ResponseEntity<>(HttpStatus.OK);
+    }
+}
+
+
+
+package com.dailycodebuffer.ProductService.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Product {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long productId;
+
+    @Column(name = "PRODUCT_NAME")
+    private String productName;
+
+    @Column(name = "PRICE")
+    private long price;
+
+    @Column(name = "QUANTITY")
+    private long quantity;
+}
+
+
+package com.dailycodebuffer.ProductService.exception;
+
+import lombok.Data;
+
+@Data
+public class ProductServiceCustomException extends RuntimeException{
+
+    private String errorCode;
+
+    public ProductServiceCustomException(String message, String errorCode) {
+        super(message);
+        this.errorCode = errorCode;
+    }
+}
+
+
+package com.dailycodebuffer.ProductService.exception;
+
+@ControllerAdvice
+public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(ProductServiceCustomException.class)
+    public ResponseEntity<ErrorResponse> handleProductServiceException(ProductServiceCustomException exception) {
+            return new ResponseEntity<>(new ErrorResponse().builder()
+                    .errorMessage(exception.getMessage())
+                    .errorCode(exception.getErrorCode())
+                    .build(), HttpStatus.NOT_FOUND);
+    }
+}
+
+
+package com.dailycodebuffer.ProductService.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ErrorResponse {
+    private String errorMessage;
+    private String errorCode;
+}
+
+
+package com.dailycodebuffer.ProductService.model;
+
+import lombok.Data;
+
+@Data
+public class ProductRequest {
+    private String name;
+    private long price;
+    private long quantity;
+}
+
+
+package com.dailycodebuffer.ProductService.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class ProductResponse {
+
+    private String productName;
+    private long productId;
+    private long quantity;
+    private long price;
+}
+
+
+package com.dailycodebuffer.ProductService.repository;
+
+import com.dailycodebuffer.ProductService.entity.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ProductRepository extends JpaRepository<Product,Long> {
+}
+
+
+package com.dailycodebuffer.ProductService.security;
+
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class WebSecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityWebFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(
+                        authorizeRequest -> authorizeRequest
+                                .anyRequest()
+                                .authenticated())
+                .oauth2ResourceServer(
+                        OAuth2ResourceServerConfigurer::jwt);
+
+        return http.build();
+    }
+}
+
+
+package com.dailycodebuffer.ProductService.service;
+
+import com.dailycodebuffer.ProductService.model.ProductRequest;
+import com.dailycodebuffer.ProductService.model.ProductResponse;
+
+public interface ProductService {
+    long addProduct(ProductRequest productRequest);
+
+    ProductResponse getProductById(long productId);
+
+    void reduceQuantity(long productId, long quantity);
+}
+
+package com.dailycodebuffer.ProductService.service;
+
+import static org.springframework.beans.BeanUtils.*;
+
+@Service
+@Log4j2
+public class ProductServiceImpl implements ProductService{
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Override
+    public long addProduct(ProductRequest productRequest) {
+       log.info("Adding Product..");
+
+        Product product
+                = Product.builder()
+                .productName(productRequest.getName())
+                .quantity(productRequest.getQuantity())
+                .price(productRequest.getPrice())
+                .build();
+
+        productRepository.save(product);
+
+        log.info("Product Created");
+        return product.getProductId();
+    }
+
+    @Override
+    public ProductResponse getProductById(long productId) {
+        log.info("Get the product for productId: {}", productId);
+
+        Product product
+                = productRepository.findById(productId)
+                .orElseThrow(
+                        () -> new ProductServiceCustomException("Product with given id not found","PRODUCT_NOT_FOUND"));
+
+        ProductResponse productResponse
+                = new ProductResponse();
+
+        copyProperties(product, productResponse);
+
+        return productResponse;
+    }
+
+    @Override
+    public void reduceQuantity(long productId, long quantity) {
+        log.info("Reduce Quantity {} for Id: {}", quantity,productId);
+
+        Product product
+                = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductServiceCustomException(
+                        "Product with given Id not found",
+                        "PRODUCT_NOT_FOUND"
+                ));
+
+        if(product.getQuantity() < quantity) {
+            throw new ProductServiceCustomException(
+                    "Product does not have sufficient Quantity",
+                    "INSUFFICIENT_QUANTITY"
+            );
+        }
+
+        product.setQuantity(product.getQuantity() - quantity);
+        productRepository.save(product);
+        log.info("Product Quantity updated Successfully");
+    }
+}
+
+
+package com.dailycodebuffer.ProductService;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ProductServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ProductServiceApplication.class, args);
+	}
+
+}
+
+
+resources
+
+   application.yaml
+   
+   server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/productdb
+    username: root
+    password: root
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL57InnoDBDialect
+    hibernate:
+      ddl-auto: update
+  application:
+    name: PRODUCT-SERVICE
+  config:
+    import: configserver:${CONFIG_SERVER_URL:http://localhost:9296}
+
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    fetch-registry: true
+#    register-with-eureka: true
+#    service-url:
+#      defaultZone: ${EUREKA_SERVER_ADDRESS:http://localhost:8761/eureka}
+
+-------
+
+Dockerfile
+
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} productservice.jar
+
+ENTRYPOINT ["java", "-jar", "/productservice.jar"]
+
+EXPOSE 8080
+ 
+===================================
+service-registry
+
+package com.dailycodebuffer.serviceregistry;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+@SpringBootApplication
+@EnableEurekaServer
+public class ServiceRegistryApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ServiceRegistryApplication.class, args);
+	}
+
+}
+
+folder>wrapper
+maven-wrapper.jar
+maven-wrapper.properties
+
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.8.6/apache-maven-3.8.6-bin.zip
+wrapperUrl=https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.1.0/maven-wrapper-3.1.0.jar
+
+
+----
+Dockerfile
+
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} serviceregistry.jar
+
+ENTRYPOINT ["java", "-jar", "/serviceregistry.jar"]
+
+EXPOSE 8761
+
+
+======================================
+
+Applying kubernates configuration to make pod running.
+Go to k8s directory which contains
+
+Apply config maps first : kubectl apply -f generic-config-map.yaml
+
+Setting up mysql pod : kubectl apply -f mysql.yaml This yaml contains mysql password as well , you can use secrets/config for passwords too.
+
+Set up zipkin : kubectl apply -f zipkin.yaml Access zipkin dashboard with http://localhost:9411 which was exposed using loadbalancer
+
+Set up service registry pod : kubectl apply -f service-registry-deployment.yaml
+
+Set up config server pod : kubectl apply -f config-service-deployment.yaml
+
+Set up cloud gateway pod : kubectl apply -f cloud-gateway-deployment.yaml
+
+Set up other microservices pod : kubectl apply -f 
+
+payment-service-deployment.yaml/order-service-deployment.yaml/product-service-deployment.yaml
+		
+Related to OKTA Configuration
+First create new application in okta . Application type should be open id application. Authroization server has configuration related to access token and refresh token validity.
+
+Go to security -> API -> default audience to modify access policies and timing.
+
+To get refresh token , we need to ensure we have grant type refresh token for application and also scope is offline_access provided when retriving tokens. Refer application yaml of cloud gateway.

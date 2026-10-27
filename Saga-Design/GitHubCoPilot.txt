@@ -1,0 +1,383 @@
+
+GitHub Copilot Certification Exam Prep 2026 Hands-On
+
+Section 1 – Introduction
+
+
+Section 2 – GitHub Copilot: Plans, Setup, Chat, IDE, CLI & Features
+(16 lectures · 2h 10min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+
+Setup: GitHub Copilot in IDE (VS Code)
+8:37
+GitHub Copilot Chat in IDE (VS Code)
+12:54
+Introduction to GitHub Copilot Plans and Features
+9:14
+Subscribe to Github Copilot Pro
+3:28
+GitHub Copilot: Chat, Inline Chat, Suggestions, Exception handling
+6:14
+GitHub Copilot: Inline Suggestions, Comment-to-Code, Multi-Language, & Unit Test
+7:35
+GitHub Settings for Copilot
+13:01
+Copilot Chat: Code Explanation, Refactor, and Test Generation
+7:45
+Improve Chat Responses with Prompt Refinement
+7:04
+Limitations of GitHub Copilot Chat
+12:10
+Share Feedback Using the Copilot Chat UI
+2:54
+Slash Commands in GitHub Copilot Chat
+4:48
+GitHub Copilot CLI Part 1
+9:44
+GitHub Copilot CLI Part 2
+6:29
+Setup: GitHub Copilot in JetBrains IntelliJ IDEA
+9:30
+Setup: GitHub Copilot in Visual Studio
+
+----------------------
+
+Section 3 – GitHub Copilot Interaction Modes & Built-in Expert Agents
+(6 lectures · 1h 12min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+
+GitHub Copilot Ask Mode: Contextual Questioning and Code Understanding
+10:31
+GitHub Copilot Plan Mode: Structured Solution Planning with AI Assistance
+14:53
+GitHub Copilot Edit Mode: In-Context Code Changes and Refactoring
+10:49
+GitHub Copilot Agent Mode: Autonomous Workspace Editing & Task Execution
+12:23
+AI Agent Expert: Advanced AI Agent Workflows, Evaluation, and Deployment
+13:25
+Data Analysis Expert: Exploring Data Files, Structures, and AI-Driven Insights
+-----------------------------------------------
+Section 4 – Responsible AI
+(1 lecture · 10 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+
+Responsible AI: Risks, Validation, Operation & Harm Mitigation
+
+
+--------------------
+
+Section 5 – How GitHub Copilot Works and Handles Data
+(3 lectures · 24 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+
+GitHub Copilot: Data Pipeline Lifecycle
+10:01
+How GitHub Copilot Handles Data?
+6:39
+Limitations of GitHub Copilot and LLMs
+
+-----------------------------------------------
+
+Section 6 – Prompt Crafting and Prompt Engineering
+(9 lectures · 64 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Java/Spring Boot/Python Library
+
+
+Fundamentals of Prompt Crafting in GitHub Copilot
+9:03
+How GitHub Copilot Determines Prompt Context
+7:25
+Language Options for Interacting with GitHub Copilot
+6:32
+Prompt Crafting and Prompt Engineering
+5:50
+Different Parts of a Prompt
+5:44
+Zero-Shot vs. Few-Shot Prompting
+4:21
+How Chat History Influences GitHub Copilot Responses
+5:54
+Best Practices for Crafting High-Quality Prompts in GitHub Copilot
+6:27
+Prompt Engineering Principles and Best Practices
+---------------------
+
+Section 7 – Developer Use Cases for AI
+(10 lectures · 1h 10min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Java/Spring Boot/Python Library
+
+Learning New Programming Languages and Frameworks
+7:05
+Language Translation
+6:25
+Context Switching
+7:20
+Writing Documentation
+5:23
+Generating Sample Data
+5:32
+Modernizing Legacy Applications
+4:29
+Debugging Code
+5:30
+Data Science
+5:26
+GitHub Copilot for SDLC (Software Development Lifecycle) Management
+5:45
+Limitations of GitHub Copilot
+
+----------------------------------
+
+Section 8 – GitHub Copilot for GitHub Actions: CI/CD Automation and Workflow Development
+(4 lectures · 37 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Java/Spring Boot/Python Library/CI-CD
+Language: English
+
+Creating Python CI Workflow in GitHub Actions Using GitHub Copilot
+
+Running and Validating the CI Workflow with Push and Pull Request Triggers
+
+Creating Docker CI/CD Pipeline with GitHub Copilot and GitHub Actions
+
+Debugging Docker CI/CD Pipeline and Fixing Auth Issues with GitHub Copilot
+
+
+
+----------------------------------------
+
+Section 9 – Testing with GitHub Copilot
+(3 lectures · 20 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Java/Spring Boot/Python Library/
+Language: English
+
+Testing with GitHub Copilot
+
+GitHub Copilot Testing: E-Commerce Cart System
+
+Edge Case Testing with GitHub Copilot
+
+
+---------------------------------------------
+Section 10 – Enhance Code Quality Through Testing
+(3 lectures · 20 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Java/Spring Boot/Python Library/
+Language: English
+
+Improve Effectiveness of Existing Tests with GitHub Copilot’s Suggestions
+
+Generate Boilerplate Code for Various Test Types using GitHub Copilot
+
+Write Assertions for Different Testing Scenarios Using GitHub Copilot
+
+
+
+---------------------------------------------
+
+Section 11 – Leverage GitHub Copilot for Security and Performance
+(4 lectures · 48 min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Java/Spring Boot/Python Library/
+Language: English
+
+
+Analyzing Tests with GitHub Copilot to Identify Issues & Recommend Improvements
+
+GitHub Copilot for Security Vulnerability Detection
+
+GitHub Copilot for Performance Optimization Part 1
+
+GitHub Copilot for Performance Optimization Part 2
+
+
+
+------------------------------------------------------
+
+Section 12 – GitHub Copilot for Python: Expense Tracker Application with CLI and GUI
+(8 lectures · 1h 18min)
+
+Requirement:
+Explanation
+Hands on code with steps
+Real time usage
+Tech Stack: IntelliJ/VSCODE/Python and python Library/
+Language: English
+
+Project Overview & Environment Setup
+
+Generating Project Structure with GitHub Copilot
+
+Building the CLI Expense Tracker with GitHub Copilot
+
+Running & Testing the CLI Application
+
+Adding GUI Using Gradio
+
+Input Validation & Test Cases with GitHub Copilot
+
+Adding CSV Export Feature with GitHub Copilot
+
+Code Optimization & Documentation with GitHub Copilot
+
+
+
+
+-------------------------------------------------------------
+Section 13 – GitHub Copilot for Java: Hands-On Coding, Debugging & Automation
+(6 lectures · 1h)
+
+Requirement:
+Explanation
+Hands on code with complete practical solution industry level
+Real time usage
+Tech Stack: IntelliJ/Java/Spring Boot
+Language: English
+
+Setting Up Java & IntelliJ for GitHub Copilot Development
+
+Creating Your First Java Maven Project Using GitHub Copilot
+
+Enhancing Java Code with Copilot: Edge Cases, Unit Tests & Exception Handling
+
+Building a CLI-Based Notes Application Using GitHub Copilot
+
+Debugging & Fixing Copilot-Generated Logic: Correcting Note ID Issues
+
+Implementing JSON-Based Persistent Storage in Java with GitHub Copilot
+
+
+
+
+--------------------------------------------------
+Section 14 – GitHub Copilot Model Context Protocol (MCP) – Tools and Extensions
+(4 lectures · 49 min)
+
+Requirement:
+Explanation
+Hands on code with complete practical solution industry level
+Real time usage
+Tech Stack: IntelliJ/VsCode/Java/Spring Boot/Python/Python Library/AI-Driven
+Language: English
+
+Configure GitHub MCP Server in VS Code with GitHub Copilot
+
+Automate GitHub Workflows with MCP: Branches, Pull Requests & Issues
+
+Run Local MCP Servers with GitHub Copilot: Windows CLI & Python Tools
+
+Build a Custom Python MCP Server and Connect It to GitHub Copilot in VS Code
+
+
+
+----------------------------------------
+Section 15 – Git Basics
+(12 lectures · 1h 12min)
+
+Hands on with proper Explanation in step wise step
+
+Install Git Bash to Local Machine
+
+Create GitHub Account
+
+Install IntelliJ 
+
+Git Config Settings
+
+Git Flow: Create Repository, Stage, and Commit Changes
+
+Make IntelliJ as Default Code Editor
+
+.gitignore: Exclude Files from Your Git Repository
+
+.gitkeep: Tracking Empty Folders in Git
+
+Branches in Git: Creating and Switching Branches
+
+Merging Branches in Git: Fast-Forward Merge
+
+Merging Branches in Git: 3-Way Merge
+
+Handling Git Merge Conflicts
+
+-------------------------------------------
+
+Section 16 – GitHub Basics
+(13 lectures · 1h 20min)
+
+Note: Hands on with proper Explanation in step wise step
+
+Create and manage repositories on GitHub
+
+Push and Pull Changes
+
+GitHub Issues and Pull Requests
+
+Configure Repository Settings
+
+Set-Up Repository Permissions
+
+Use Repository Templates
+
+Understand File Versioning
+
+GitHub Desktop for File Management
+
+Fork Repositories on GitHub
+
+Use GitHub Actions for CI/CD
+
+Create and Manage Issues
+
+Labels, Milestones, and Projects
+
+Contribute to Open Source Projects, and GitHub Discussions
+
+--------------------------------
+
+
+

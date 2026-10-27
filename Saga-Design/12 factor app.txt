@@ -1,0 +1,1374 @@
+12 factor app methodology hands on with complete defenition and comments on code using java, spring boot, microservice, kafka, git?
+I'll provide a comprehensive hands-on implementation of the 12-Factor App methodology using Java, Spring Boot, microservices, Kafka, and Git.
+
+Project Structure
+text
+12-factor-microservice/
+├── config-service/
+├── discovery-service/
+├── api-gateway/
+├── order-service/
+├── payment-service/
+├── notification-service/
+├── docker-compose.yml
+├── kubernetes/
+└── README.md
+1. Codebase - One Codebase Tracked in Git
+Git Structure
+bash
+# Initialize git repository
+git init
+git add .
+git commit -m "Initial commit: 12-factor microservice architecture"
+
+# .gitignore
+gitignore
+# .gitignore
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Docker ###
+docker-compose.override.yml
+
+### Environment Variables ###
+.env
+*.env
+application-secrets.yml
+2. Dependencies - Explicitly Declare and Isolate
+Root pom.xml (Dependency Management)
+xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <groupId>com.example</groupId>
+    <artifactId>12-factor-microservice</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.1.5</version>
+        <relativePath/>
+    </parent>
+    
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2022.0.4</spring-cloud.version>
+        <kafka.version>3.6.0</kafka.version>
+    </properties>
+    
+    <modules>
+        <module>config-service</module>
+        <module>discovery-service</module>
+        <module>api-gateway</module>
+        <module>order-service</module>
+        <module>payment-service</module>
+        <module>notification-service</module>
+    </modules>
+    
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
+3. Config - Store Config in Environment
+Config Service (Spring Cloud Config)
+java
+// ConfigServiceApplication.java
+package com.example.config;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.config.server.EnableConfigServer;
+
+/**
+ * Configuration Service - Implements 12-Factor Factor III: Config
+ * Stores configuration in environment variables and externalizes all config
+ * 
+ * This service serves configuration to all microservices:
+ * - Configuration is stored in Git repository
+ * - Environment-specific configs are loaded based on active profiles
+ * - Sensitive data (passwords, keys) are injected via environment variables
+ */
+@SpringBootApplication
+@EnableConfigServer
+public class ConfigServiceApplication {
+    
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigServiceApplication.class, args);
+    }
+}
+yaml
+# application.yml (Config Service)
+server:
+  port: 8888
+  
+spring:
+  application:
+    name: config-service
+  cloud:
+    config:
+      server:
+        git:
+          # Config repository - Separate repo for config (Factor III)
+          uri: ${CONFIG_REPO_URI:https://github.com/your-org/config-repo}
+          username: ${CONFIG_REPO_USERNAME}
+          password: ${CONFIG_REPO_PASSWORD}
+          search-paths: '{application}'
+          default-label: main
+      # Allow config to be overridden by environment variables
+      override-none: true
+      
+  # Enable profile-specific configuration
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+    
+# Expose environment variables as configuration sources
+management:
+  endpoints:
+    web:
+      exposure:
+        include: env,health,info
+Order Service Config Example
+yaml
+# order-service.yml (in config repository)
+spring:
+  datasource:
+    # Database config from environment variables
+    url: ${ORDER_DB_URL:jdbc:postgresql://localhost:5432/orderdb}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
+    
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      
+  jpa:
+    hibernate:
+      ddl-auto: validate
+      
+# Service configuration
+service:
+  payment:
+    timeout: ${PAYMENT_SERVICE_TIMEOUT:5000}
+    retry-count: ${PAYMENT_SERVICE_RETRY:3}
+4. Backing Services - Treat Backing Services as Attached Resources
+java
+// OrderServiceApplication.java
+package com.example.order;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.kafka.annotation.EnableKafka;
+
+/**
+ * Order Service - Implements 12-Factor Factor IV: Backing Services
+ * 
+ * Backing services (database, Kafka, payment API) are treated as attached resources:
+ * - All services are accessed via URLs/credentials from environment
+ * - Services can be swapped without code changes
+ * - Local and production services use same code, different configuration
+ */
+@SpringBootApplication
+@EnableDiscoveryClient
+@EnableFeignClients
+@EnableKafka
+public class OrderServiceApplication {
+    
+    public static void main(String[] args) {
+        SpringApplication.run(OrderServiceApplication.class, args);
+    }
+}
+
+/**
+ * Database Configuration - Externalized via JPA
+ * Connection details come from environment, not hardcoded
+ */
+@Configuration
+public class DatabaseConfig {
+    
+    @Value("${spring.datasource.url}")
+    private String databaseUrl; // From environment
+    
+    @Value("${spring.datasource.username}")
+    private String username; // From environment
+    
+    @Value("${spring.datasource.password}")
+    private String password; // From environment
+    
+    @Bean
+    public DataSource dataSource() {
+        // DataSource is configured from externalized configuration
+        // Can be swapped between PostgreSQL, MySQL, etc. without code changes
+        return DataSourceBuilder.create()
+                .url(databaseUrl)
+                .username(username)
+                .password(password)
+                .build();
+    }
+}
+
+/**
+ * Kafka Configuration - Backing service for messaging
+ */
+@Configuration
+public class KafkaConfig {
+    
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers; // From environment
+    
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate() {
+        // Kafka connection is externalized
+        // Can point to local Kafka, Confluent Cloud, or MSK without code changes
+        return new KafkaTemplate<>(producerFactory());
+    }
+    
+    private ProducerFactory<String, Object> producerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+}
+
+/**
+ * Payment Service Client - External API as backing service
+ */
+@FeignClient(name = "payment-service", configuration = FeignConfig.class)
+public interface PaymentServiceClient {
+    
+    @PostMapping("/api/v1/payments")
+    PaymentResponse processPayment(@RequestBody PaymentRequest request);
+    
+    /**
+     * Feign configuration - Service discovery and timeouts from environment
+     */
+    @Configuration
+    class FeignConfig {
+        
+        @Value("${service.payment.timeout:5000}")
+        private int timeout; // From environment
+        
+        @Bean
+        public Request.Options options() {
+            // Timeout values can be adjusted per environment
+            return new Request.Options(
+                Duration.ofMillis(timeout),  // Connect timeout
+                Duration.ofMillis(timeout)   // Read timeout
+            );
+        }
+    }
+}
+5. Build, Release, Run - Strictly Separate Build and Run Stages
+dockerfile
+# Dockerfile - Multi-stage build for strict separation
+# Stage 1: Build Stage (uses Maven)
+FROM maven:3.8.4-openjdk-17-slim AS builder
+
+WORKDIR /app
+
+# Copy only pom.xml first for dependency caching
+COPY pom.xml .
+COPY order-service/pom.xml order-service/
+
+# Download dependencies (build stage)
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY order-service/src order-service/src
+RUN mvn clean package -DskipTests -pl order-service -am
+
+# Stage 2: Run Stage (minimal JRE only)
+FROM openjdk:17-jre-slim
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+WORKDIR /app
+
+# Copy only the built JAR from builder stage
+COPY --from=builder /app/order-service/target/*.jar app.jar
+
+# Run as non-root user
+USER appuser
+
+# Expose port from environment
+EXPOSE ${PORT:-8080}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:${PORT:-8080}/actuator/health || exit 1
+
+# Run with environment variables
+ENTRYPOINT ["java", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", \
+  "/app/app.jar"]
+bash
+# build.sh - Build stage script
+#!/bin/bash
+set -e
+
+# Build stage - Creates immutable artifact
+echo "Building order-service..."
+./mvnw clean package -DskipTests -pl order-service -am
+
+# Build Docker image with version tag
+VERSION=${BUILD_VERSION:-$(git rev-parse --short HEAD)}
+docker build -t order-service:${VERSION} -f order-service/Dockerfile .
+
+# Tag as latest for deployment
+docker tag order-service:${VERSION} order-service:latest
+
+echo "Build complete. Artifact: order-service:${VERSION}"
+bash
+# release.sh - Release stage script
+#!/bin/bash
+set -e
+
+# Release stage - Combine build with config
+VERSION=${1:-latest}
+ENVIRONMENT=${2:-production}
+
+echo "Releasing version ${VERSION} to ${ENVIRONMENT}"
+
+# Pull the built artifact
+docker pull order-service:${VERSION}
+
+# Tag for environment
+docker tag order-service:${VERSION} order-service:${ENVIRONMENT}
+
+# Push to registry
+docker push order-service:${VERSION}
+docker push order-service:${ENVIRONMENT}
+
+echo "Release complete. Ready for run stage."
+yaml
+# docker-compose.yml - Run stage configuration
+version: '3.8'
+
+services:
+  order-service:
+    image: order-service:${RELEASE_VERSION:-latest}  # Specific release version
+    environment:
+      # Configuration from environment - No config files in image
+      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
+      - ORDER_DB_URL=jdbc:postgresql://postgres:5432/orderdb
+      - ORDER_DB_USERNAME=${ORDER_DB_USERNAME}
+      - ORDER_DB_PASSWORD=${ORDER_DB_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - PAYMENT_SERVICE_URL=http://payment-service:8081
+      - SERVER_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - kafka
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+6. Processes - Execute the App as One or More Stateless Processes
+java
+// OrderService.java - Stateless process implementation
+package com.example.order.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Order Service Implementation - Implements 12-Factor Factor VI: Processes
+ * 
+ * Key principles implemented:
+ * 1. Stateless - No session affinity required
+ * 2. Process-level isolation - State stored in backing services (DB)
+ * 3. Horizontal scalability - Multiple instances can run simultaneously
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OrderService {
+    
+    private final OrderRepository orderRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final PaymentServiceClient paymentClient;
+    
+    /**
+     * Create order - Stateless operation
+     * All state is persisted to database, not stored in memory
+     * Multiple instances can process orders concurrently
+     */
+    @Transactional
+    public Order createOrder(CreateOrderRequest request) {
+        log.info("Creating order for user: {}", request.getUserId());
+        
+        // Create order entity
+        Order order = Order.builder()
+            .userId(request.getUserId())
+            .items(request.getItems())
+            .totalAmount(calculateTotal(request.getItems()))
+            .status(OrderStatus.PENDING)
+            .createdAt(Instant.now())
+            .build();
+        
+        // Persist to database - External backing service
+        Order savedOrder = orderRepository.save(order);
+        log.info("Order created with ID: {}", savedOrder.getId());
+        
+        // Send event - No local state retention
+        publishOrderCreatedEvent(savedOrder);
+        
+        return savedOrder;
+    }
+    
+    /**
+     * Process payment - Demonstrates stateless processing
+     * Session data is not stored locally, uses external services
+     */
+    @Transactional
+    public Order processPayment(Long orderId, PaymentDetails paymentDetails) {
+        // Retrieve from DB - No local cache
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
+        
+        try {
+            // Call external payment service - No local state
+            PaymentResponse paymentResponse = paymentClient.processPayment(
+                PaymentRequest.builder()
+                    .orderId(order.getId())
+                    .amount(order.getTotalAmount())
+                    .paymentDetails(paymentDetails)
+                    .build()
+            );
+            
+            // Update state in DB only
+            order.setPaymentId(paymentResponse.getPaymentId());
+            order.setStatus(OrderStatus.PAID);
+            order.setUpdatedAt(Instant.now());
+            
+            Order updatedOrder = orderRepository.save(order);
+            
+            // Publish event - Asynchronous, stateless
+            publishOrderPaidEvent(updatedOrder);
+            
+            return updatedOrder;
+            
+        } catch (Exception e) {
+            log.error("Payment failed for order: {}", orderId, e);
+            order.setStatus(OrderStatus.PAYMENT_FAILED);
+            order.setErrorMessage(e.getMessage());
+            return orderRepository.save(order);
+        }
+    }
+    
+    /**
+     * Publish event - Stateless message production
+     * No memory of published messages kept locally
+     */
+    private void publishOrderCreatedEvent(Order order) {
+        OrderCreatedEvent event = OrderCreatedEvent.builder()
+            .orderId(order.getId())
+            .userId(order.getUserId())
+            .totalAmount(order.getTotalAmount())
+            .timestamp(Instant.now())
+            .build();
+        
+        // Send to Kafka - External messaging service
+        kafkaTemplate.send("order-created", order.getUserId(), event);
+        log.debug("Order created event published: {}", event.getOrderId());
+    }
+    
+    private void publishOrderPaidEvent(Order order) {
+        OrderPaidEvent event = OrderPaidEvent.builder()
+            .orderId(order.getId())
+            .paymentId(order.getPaymentId())
+            .amount(order.getTotalAmount())
+            .timestamp(Instant.now())
+            .build();
+        
+        kafkaTemplate.send("order-paid", order.getUserId(), event);
+        log.debug("Order paid event published: {}", event.getOrderId());
+    }
+    
+    /**
+     * Calculate total - Pure function, no side effects
+     */
+    private BigDecimal calculateTotal(List<OrderItem> items) {
+        return items.stream()
+            .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}
+java
+// Session management - No sticky sessions required
+@Configuration
+public class SessionConfig {
+    
+    /**
+     * Session configuration for stateless processing
+     * No HTTP session affinity - All instances are identical
+     */
+    @Bean
+    public SessionRepositoryFilter<?> sessionRepositoryFilter() {
+        // Spring Session with Redis - Session data externalized
+        // Multiple instances can serve any user
+        return new SessionRepositoryFilter<>(redisIndexedSessionRepository());
+    }
+    
+    /**
+     * Use Redis for session storage - External backing service
+     * Enables stateless horizontal scaling
+     */
+    @Bean
+    public RedisIndexedSessionRepository redisIndexedSessionRepository(
+            RedisConnectionFactory connectionFactory) {
+        return new RedisIndexedSessionRepository(connectionFactory);
+    }
+}
+7. Port Binding - Export Services via Port Binding
+java
+// WebServerConfig.java
+package com.example.order.config;
+
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Port Binding Configuration - Implements 12-Factor Factor VII: Port Binding
+ * 
+ * The app is self-contained and exports HTTP as a service by binding to a port.
+ * Port is configured via environment variable for cloud-native deployment.
+ */
+@Configuration
+public class WebServerConfig {
+    
+    /**
+     * Configure web server to bind to port from environment
+     * This makes the app completely self-contained - no separate web server needed
+     */
+    @Bean
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> webServerFactoryCustomizer() {
+        return factory -> {
+            // Port is provided by environment (${PORT:8080})
+            // In cloud platforms (Heroku, Cloud Foundry, Kubernetes), PORT env var is provided
+            factory.setPort(getPortFromEnvironment());
+            
+            // Bind to all interfaces - Allows cloud load balancers to connect
+            factory.setAddress(null); // null = 0.0.0.0 (all interfaces)
+            
+            // Customize connector
+            factory.addConnectorCustomizers(connector -> {
+                connector.setProperty("bindOnInit", "false");
+                connector.setProperty("acceptorThreadCount", "2");
+            });
+        };
+    }
+    
+    private int getPortFromEnvironment() {
+        String port = System.getenv("PORT");
+        if (port != null && !port.isEmpty()) {
+            return Integer.parseInt(port);
+        }
+        // Fallback to application.properties value
+        return 8080;
+    }
+}
+
+/**
+ * Application entry point with port binding
+ */
+@SpringBootApplication
+public class OrderServiceApplication {
+    
+    public static void main(String[] args) {
+        // Spring Boot automatically binds to port specified in environment
+        // No external web server required
+        SpringApplication app = new SpringApplication(OrderServiceApplication.class);
+        
+        // Set default properties from environment
+        Properties defaults = new Properties();
+        defaults.put("server.port", System.getenv().getOrDefault("PORT", "8080"));
+        defaults.put("server.address", "0.0.0.0");
+        
+        app.setDefaultProperties(defaults);
+        app.run(args);
+        
+        log.info("Order Service started and bound to port: {}", 
+                 System.getenv().getOrDefault("PORT", "8080"));
+    }
+}
+8. Concurrency - Scale Out via the Process Model
+yaml
+# kubernetes/deployment.yaml - Horizontal scaling configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  labels:
+    app: order-service
+spec:
+  # Scale horizontally - Multiple processes
+  replicas: 3  # Scale based on load
+  
+  selector:
+    matchLabels:
+      app: order-service
+  
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: order-service:${RELEASE_VERSION}
+        
+        # Concurrency management
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        
+        # Environment configuration
+        env:
+        - name: PORT
+          value: "8080"
+        - name: SPRING_PROFILES_ACTIVE
+          value: "production"
+        - name: ORDER_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: url
+        - name: ORDER_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: username
+        - name: ORDER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: password
+        
+        # Liveness and readiness probes
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+        
+        # Graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sh", "-c", "sleep 10"]
+        
+---
+# Horizontal Pod Autoscaler - Automatic scaling based on metrics
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+9. Disposability - Maximize Robustness with Fast Startup and Graceful Shutdown
+java
+// GracefulShutdownConfig.java
+package com.example.order.config;
+
+import org.springframework.context.event.ContextClosedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Disposability Configuration - Implements 12-Factor Factor IX: Disposability
+ * 
+ * Processes can be started or stopped at any time.
+ * Key features:
+ * - Fast startup (seconds, not minutes)
+ * - Graceful shutdown (complete ongoing requests)
+ * - Robust against sudden death
+ */
+@Component
+@Slf4j
+public class GracefulShutdownConfig {
+    
+    private final ExecutorService taskExecutor = Executors.newFixedThreadPool(10);
+    
+    /**
+     * Handle graceful shutdown on application context close
+     * Waits for in-flight requests to complete before shutdown
+     */
+    @EventListener
+    public void onApplicationEvent(ContextClosedEvent event) {
+        log.info("Received shutdown signal. Starting graceful shutdown...");
+        
+        // 1. Stop accepting new requests
+        shutdownWebServer();
+        
+        // 2. Complete existing requests
+        waitForRequestsToComplete();
+        
+        // 3. Clean up resources
+        cleanupResources();
+        
+        log.info("Graceful shutdown completed.");
+    }
+    
+    private void shutdownWebServer() {
+        // Tomcat will stop accepting new connections
+        log.info("Stopping HTTP server from accepting new connections");
+        // Implementation depends on web server
+    }
+    
+    private void waitForRequestsToComplete() {
+        log.info("Waiting for in-flight requests to complete...");
+        
+        try {
+            // Give existing requests time to complete
+            taskExecutor.shutdown();
+            
+            boolean terminated = taskExecutor.awaitTermination(30, TimeUnit.SECONDS);
+            
+            if (!terminated) {
+                log.warn("Some tasks did not complete within timeout. Forcing shutdown.");
+                taskExecutor.shutdownNow();
+            }
+            
+        } catch (InterruptedException e) {
+            log.error("Interrupted while waiting for shutdown", e);
+            Thread.currentThread().interrupt();
+        }
+    }
+    
+    private void cleanupResources() {
+        // Close database connections
+        // Close Kafka producers/consumers
+        // Release file handles
+        log.info("Resources cleaned up successfully");
+    }
+    
+    /**
+     * Fast startup verification
+     * Spring Boot actuators expose startup metrics
+     */
+    @Component
+    public class StartupMetrics {
+        
+        private final long startupTime = System.currentTimeMillis();
+        
+        @EventListener(ApplicationReadyEvent.class)
+        public void onApplicationReady() {
+            long startupDuration = System.currentTimeMillis() - startupTime;
+            log.info("Application started in {} ms", startupDuration);
+            
+            if (startupDuration > 10000) { // More than 10 seconds
+                log.warn("Startup time exceeds recommended threshold: {} ms", startupDuration);
+            }
+        }
+    }
+}
+yaml
+# Kubernetes graceful shutdown configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  template:
+    spec:
+      containers:
+      - name: order-service
+        # Graceful shutdown settings
+        terminationGracePeriodSeconds: 60  # Time for graceful shutdown
+        
+        lifecycle:
+          preStop:
+            exec:
+              command: 
+              - /bin/sh
+              - -c
+              - |
+                # Signal application to start graceful shutdown
+                curl -X POST http://localhost:8080/actuator/shutdown || true
+                # Wait for shutdown to complete
+                sleep 30
+10. Dev/Prod Parity - Keep Development, Staging, and Production as Similar as Possible
+bash
+# docker-compose.dev.yml - Development environment
+version: '3.8'
+
+services:
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    volumes:
+      # Mount source code for hot reload in dev
+      - ./order-service/src:/app/src
+      - ./order-service/target:/app/target
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - ORDER_DB_URL=jdbc:postgresql://postgres:5432/orderdb
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    ports:
+      - "8080:8080"
+      - "5005:5005"  # Debug port
+    command: >
+      java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+           -jar /app/app.jar
+bash
+# docker-compose.prod.yml - Production environment (same services, different config)
+version: '3.8'
+
+services:
+  order-service:
+    image: order-service:${RELEASE_VERSION}  # Fixed version, no build
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - ORDER_DB_URL=${PROD_DB_URL}
+      - KAFKA_BOOTSTRAP_SERVERS=${PROD_KAFKA_SERVERS}
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: order-service
+        awslogs-region: us-east-1
+java
+// Environment-aware configuration
+@Configuration
+@Profile("!test")  // Not loaded in tests
+public class EnvironmentConfig {
+    
+    @Bean
+    public EnvironmentPostProcessor environmentPostProcessor() {
+        return (environment, application) -> {
+            // Ensure dev/prod parity
+            String activeProfile = environment.getProperty("spring.profiles.active");
+            String databaseUrl = environment.getProperty("spring.datasource.url");
+            
+            if ("production".equals(activeProfile)) {
+                // Verify production-specific requirements
+                assert databaseUrl.contains("prod") : "Production DB URL must contain 'prod'";
+                assert environment.getProperty("spring.datasource.password") != null;
+            }
+        };
+    }
+}
+
+// Same code runs in all environments
+@Service
+public class OrderProcessor {
+    // Business logic identical across all environments
+    // Only configuration changes
+}
+11. Logs - Treat Logs as Event Streams
+java
+// LoggingConfig.java
+package com.example.order.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.logging.LoggingSystem;
+import ch.qos.logback.classic.AsyncAppender;
+import ch.qos.logback.classic.LoggerContext;
+import net.logstash.logback.appender.LogstashTcpSocketAppender;
+import net.logstash.logback.encoder.LogstashEncoder;
+
+/**
+ * Logging Configuration - Implements 12-Factor Factor XI: Logs
+ * 
+ * Logs are treated as event streams:
+ * - Write to stdout/stderr only
+ * - No log file management in app
+ * - Execution environment handles log routing
+ */
+@Configuration
+public class LoggingConfig {
+    
+    @Bean
+    public LoggingSystem loggingSystem() {
+        return LoggingSystem.get(ClassLoader.getSystemClassLoader());
+    }
+    
+    /**
+     * Configure logging to write only to stdout
+     * No file appenders - Let environment handle aggregation
+     */
+    @Configuration
+    public static class LogbackConfig {
+        
+        @Value("${logging.json.enabled:false}")
+        private boolean jsonLoggingEnabled;
+        
+        @Value("${logging.console.enabled:true}")
+        private boolean consoleLoggingEnabled;
+        
+        @Bean
+        public LoggerContext loggerContext() {
+            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+            
+            // Clear existing appenders - No file appenders
+            context.reset();
+            
+            if (consoleLoggingEnabled) {
+                if (jsonLoggingEnabled) {
+                    // JSON format for structured logging
+                    addJsonConsoleAppender(context);
+                } else {
+                    // Human-readable format for development
+                    addHumanReadableConsoleAppender(context);
+                }
+            }
+            
+            // No file appenders - Logs go to stdout only
+            
+            // Set root logger level from environment
+            String logLevel = System.getenv("LOG_LEVEL");
+            if (logLevel != null) {
+                context.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(
+                    Level.toLevel(logLevel, Level.INFO)
+                );
+            }
+            
+            return context;
+        }
+        
+        private void addHumanReadableConsoleAppender(LoggerContext context) {
+            ConsoleAppender<ILoggingEvent> consoleAppender = new ConsoleAppender<>();
+            consoleAppender.setContext(context);
+            consoleAppender.setName("STDOUT");
+            
+            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+            encoder.setContext(context);
+            encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n");
+            encoder.start();
+            
+            consoleAppender.setEncoder(encoder);
+            consoleAppender.start();
+            
+            context.getLogger(Logger.ROOT_LOGGER_NAME).addAppender(consoleAppender);
+        }
+        
+        private void addJsonConsoleAppender(LoggerContext context) {
+            ConsoleAppender<ILoggingEvent> consoleAppender = new ConsoleAppender<>();
+            consoleAppender.setContext(context);
+            consoleAppender.setName("STDOUT-JSON");
+            
+            LogstashEncoder encoder = new LogstashEncoder();
+            encoder.setContext(context);
+            
+            // Add service context
+            Map<String, String> customFields = new HashMap<>();
+            customFields.put("service", "order-service");
+            customFields.put("version", System.getenv("RELEASE_VERSION"));
+            encoder.setCustomFields(new ObjectMapper().writeValueAsString(customFields));
+            
+            encoder.start();
+            
+            consoleAppender.setEncoder(encoder);
+            consoleAppender.start();
+            
+            context.getLogger(Logger.ROOT_LOGGER_NAME).addAppender(consoleAppender);
+        }
+    }
+}
+
+// Logging usage example
+@Service
+@Slf4j
+public class OrderProcessor {
+    
+    public void processOrder(Order order) {
+        // Logs go to stdout
+        log.info("Processing order: id={}, userId={}", order.getId(), order.getUserId());
+        
+        try {
+            // Business logic
+            orderService.process(order);
+            
+            // Structured logging with context
+            MDC.put("orderId", order.getId().toString());
+            log.info("Order processed successfully");
+            MDC.clear();
+            
+        } catch (Exception e) {
+            // Error logs to stdout
+            log.error("Failed to process order: id={}", order.getId(), e);
+            throw e;
+        }
+    }
+}
+bash
+# In production - Log aggregation with Fluentd
+# fluentd-daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+spec:
+  template:
+    spec:
+      containers:
+      - name: fluentd
+        image: fluent/fluentd-kubernetes-daemonset:v1-debian-elasticsearch
+        env:
+        - name: FLUENT_ELASTICSEARCH_HOST
+          value: "elasticsearch.logging.svc.cluster.local"
+        - name: FLUENT_ELASTICSEARCH_PORT
+          value: "9200"
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: dockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: dockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+12. Admin Processes - Run Admin/Maintenance Tasks as One-Off Processes
+java
+// DatabaseMigrationRunner.java
+package com.example.order.admin;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Database Migration - Implements 12-Factor Factor XII: Admin Processes
+ * 
+ * Admin processes are run in the same environment as the app:
+ * - One-off migrations
+ * - Data fixes
+ * - Reporting scripts
+ * 
+ * These run against production databases using the same codebase and config
+ */
+@Component
+@Profile("migration")  // Activated only for migration tasks
+@Slf4j
+public class DatabaseMigrationRunner implements CommandLineRunner {
+    
+    private final DataSource dataSource;
+    private final MigrationService migrationService;
+    
+    public DatabaseMigrationRunner(DataSource dataSource, MigrationService migrationService) {
+        this.dataSource = dataSource;
+        this.migrationService = migrationService;
+    }
+    
+    @Override
+    public void run(String... args) throws Exception {
+        log.info("Running database migration as one-off process");
+        
+        try {
+            // Connect to production database using same configuration
+            Connection connection = dataSource.getConnection();
+            log.info("Connected to database: {}", connection.getMetaData().getURL());
+            
+            // Run migrations
+            migrationService.runMigrations();
+            
+            log.info("Database migration completed successfully");
+            
+        } catch (Exception e) {
+            log.error("Migration failed", e);
+            System.exit(1);  // Exit with error code
+        }
+        
+        // Exit after completion
+        System.exit(0);
+    }
+}
+
+/**
+ * Data Fix Script - One-off process to fix production data
+ */
+@Component
+@Profile("fix-order-data")
+@Slf4j
+public class OrderDataFixRunner implements CommandLineRunner {
+    
+    private final OrderRepository orderRepository;
+    
+    @Override
+    public void run(String... args) {
+        log.info("Running order data fix as one-off process");
+        
+        // Find orders with issues
+        List<Order> problematicOrders = orderRepository.findOrdersWithMissingPaymentInfo();
+        
+        log.info("Found {} orders requiring fix", problematicOrders.size());
+        
+        int fixed = 0;
+        for (Order order : problematicOrders) {
+            try {
+                // Fix data
+                order.setPaymentInfo(fetchPaymentInfo(order.getPaymentId()));
+                orderRepository.save(order);
+                fixed++;
+            } catch (Exception e) {
+                log.error("Failed to fix order: {}", order.getId(), e);
+            }
+        }
+        
+        log.info("Fixed {} orders successfully", fixed);
+    }
+}
+bash
+# Running admin processes in Kubernetes
+
+# Database migration job
+# k8s/migration-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: order-db-migration
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migration
+        image: order-service:latest
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "migration,production"  # Run migration profile
+        - name: ORDER_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: url
+        - name: ORDER_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: username
+        - name: ORDER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: password
+bash
+# Script to run one-off admin tasks
+#!/bin/bash
+# run-admin-task.sh
+
+TASK=${1:-"migration"}
+ENVIRONMENT=${2:-"production"}
+
+echo "Running admin task: ${TASK} in ${ENVIRONMENT}"
+
+# Run one-off container with specific profile
+docker run --rm \
+  -e SPRING_PROFILES_ACTIVE="${TASK},${ENVIRONMENT}" \
+  -e ORDER_DB_URL="${ORDER_DB_URL}" \
+  -e ORDER_DB_USERNAME="${ORDER_DB_USERNAME}" \
+  -e ORDER_DB_PASSWORD="${ORDER_DB_PASSWORD}" \
+  order-service:latest \
+  --spring.profiles.active="${TASK},${ENVIRONMENT}"
+
+echo "Admin task completed"
+Complete Kafka Event Flow Example
+java
+// Event-driven architecture with Kafka
+@Configuration
+@EnableKafka
+public class KafkaEventConfig {
+    
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory = 
+            new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        factory.setConcurrency(3);  // Concurrency within process
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        return factory;
+    }
+}
+
+@Component
+@Slf4j
+public class OrderEventProcessor {
+    
+    @KafkaListener(topics = "order-created", groupId = "order-service-group")
+    public void handleOrderCreated(OrderCreatedEvent event, Acknowledgment ack) {
+        log.info("Processing order created event: {}", event.getOrderId());
+        
+        // Process event - Stateless, idempotent
+        try {
+            orderService.initializeOrder(event);
+            ack.acknowledge();
+        } catch (Exception e) {
+            log.error("Failed to process order event", e);
+            // Do not acknowledge - Kafka will redeliver
+        }
+    }
+    
+    @KafkaListener(topics = "payment-completed", groupId = "payment-group")
+    public void handlePaymentCompleted(PaymentCompletedEvent event) {
+        log.info("Payment completed for order: {}", event.getOrderId());
+        orderService.updateOrderStatus(event.getOrderId(), OrderStatus.CONFIRMED);
+    }
+}
+Deployment Script
+bash
+#!/bin/bash
+# deploy.sh - Full deployment pipeline implementing 12 factors
+
+set -e
+
+# Configuration from environment
+ENVIRONMENT=${1:-development}
+VERSION=$(git rev-parse --short HEAD)
+
+echo "Deploying version ${VERSION} to ${ENVIRONMENT}"
+
+# 1. Build stage (Factor V)
+echo "Building application..."
+./mvnw clean package -DskipTests
+
+# 2. Create release (Factor V)
+echo "Creating Docker image..."
+docker build -t order-service:${VERSION} .
+docker tag order-service:${VERSION} order-service:${ENVIRONMENT}
+
+# 3. Push to registry
+docker push order-service:${VERSION}
+
+# 4. Run stage (Factor V)
+echo "Deploying to ${ENVIRONMENT}..."
+kubectl set image deployment/order-service order-service=order-service:${VERSION}
+
+# 5. Wait for readiness
+kubectl rollout status deployment/order-service
+
+echo "Deployment complete!"
+This comprehensive implementation demonstrates all 12 factors:
+
+Codebase: Single Git repo per app
+
+Dependencies: Explicit declaration in pom.xml
+
+Config: Environment variables and external config
+
+Backing Services: Treat as attached resources
+
+Build, Release, Run: Strict separation with Docker
+
+Processes: Stateless, share-nothing processes
+
+Port Binding: Self-contained web servers
+
+Concurrency: Horizontal scaling with Kubernetes
+
+Disposability: Fast startup/graceful shutdown
+
+Dev/Prod Parity: Same code across environments
+
+Logs: Write to stdout, aggregated by platform
+
+Admin Processes: One-off tasks in same environment
+

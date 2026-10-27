@@ -1,0 +1,2300 @@
+
+
+**Spring Transaction chapters**
+========================================
+
+📘 Spring Transactions – Complete Chapters
+
+1️⃣ Introduction to Transactions
+Topics:
+
+What is a Transaction?
+
+ACID properties
+
+Why transactions are needed in applications
+
+Database transaction basics
+
+ACID Properties
+Atomicity – All operations succeed or all fail
+
+Consistency – DB remains valid after transaction
+
+Isolation – Transactions don't interfere
+
+Durability – Data persists after commit
+
+Example:
+
+transferMoney(fromAccount, toAccount, amount)
+Steps:
+
+Debit account A
+
+Credit account B
+
+If step 2 fails → step 1 must rollback.
+
+2️⃣ Transaction Management Types in Spring
+
+1️⃣ Programmatic Transaction
+Manual transaction management.
+
+TransactionTemplate template;
+
+template.execute(status -> {
+    accountRepository.debit();
+    accountRepository.credit();
+    return null;
+});
+❌ Not recommended.
+
+2️⃣ Declarative Transaction (Most used)
+Using @Transactional
+
+@Service
+public class PaymentService {
+
+    @Transactional
+    public void transfer() {
+        debit();
+        credit();
+    }
+}
+Spring automatically:
+
+Start transaction
+
+Execute method
+
+Commit / rollback
+
+3️⃣ Spring Transaction Architecture
+Key components:
+
+Application
+     │
+     ▼
+@Transactional
+     │
+     ▼
+Spring AOP Proxy
+     │
+     ▼
+Transaction Manager
+     │
+     ▼
+Database
+Main classes:
+
+Component	Purpose
+TransactionManager	Handles commit/rollback
+PlatformTransactionManager	Core transaction interface
+DataSourceTransactionManager	JDBC transactions
+JpaTransactionManager	JPA/Hibernate transactions
+Example configuration:
+
+@Bean
+public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
+    return new JpaTransactionManager(emf);
+}
+4️⃣ @Transactional Annotation Deep Dive
+Basic usage
+
+@Transactional
+public void createOrder() {
+}
+Important Attributes
+Attribute	Meaning
+propagation	transaction behavior
+isolation	isolation level
+rollbackFor	rollback rules
+readOnly	read optimization
+timeout	transaction timeout
+Example
+
+@Transactional(
+    propagation = Propagation.REQUIRED,
+    isolation = Isolation.READ_COMMITTED,
+    rollbackFor = Exception.class,
+    timeout = 5
+)
+
+5️⃣ Propagation Types (Very Important)
+Defines how transactions behave when one method calls another.
+
+1️⃣ REQUIRED (Default)
+Use existing transaction
+or create new
+Example:
+
+A() -> B()
+If A has transaction → B joins it.
+
+2️⃣ REQUIRES_NEW
+Always creates new transaction
+
+A() -> B()
+B runs in separate transaction
+
+Example:
+
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+Use case:
+
+Audit logs.
+
+3️⃣ SUPPORTS
+Run with transaction if exists
+Otherwise run without transaction
+4️⃣ NOT_SUPPORTED
+Run without transaction
+
+5️⃣ MANDATORY
+Must run inside existing transaction.
+
+6️⃣ NEVER
+Fails if transaction exists.
+
+7️⃣ NESTED
+Creates nested transaction with savepoints.
+
+6️⃣ Isolation Levels
+Controls concurrent transaction visibility
+
+Isolation Level	Problem Prevented
+READ_UNCOMMITTED	nothing
+READ_COMMITTED	Dirty read
+REPEATABLE_READ	Non-repeatable read
+SERIALIZABLE	Phantom read
+Example
+
+@Transactional(isolation = Isolation.SERIALIZABLE)
+
+7️⃣ Transaction Rollback Rules
+Default rule:
+
+✔ Rollback on RuntimeException
+❌ Not rollback on Checked Exception
+
+Example
+
+@Transactional(rollbackFor = Exception.class)
+Example code
+
+@Transactional
+public void placeOrder() throws Exception {
+    orderRepository.save(order);
+
+    if(true)
+        throw new Exception("Failure");
+}
+Without rollbackFor → transaction won't rollback.
+
+8️⃣ Transaction Lifecycle
+Flow:
+
+1 Start Transaction
+2 Execute Business Logic
+3 Commit OR Rollback
+4 Release Connection
+Spring internally uses:
+
+TransactionInterceptor
+TransactionAspectSupport
+PlatformTransactionManager
+
+9️⃣ Spring Transaction with JPA / Hibernate
+Example:
+
+@Service
+public class UserService {
+
+    @Autowired
+    UserRepository repo;
+
+    @Transactional
+    public void createUser() {
+        repo.save(new User("Rakesh"));
+    }
+}
+Behind the scenes:
+
+Hibernate Session
+↓
+Flush
+↓
+Commit
+🔟 LazyInitializationException & Transactions
+Problem:
+
+LazyInitializationException
+Occurs when:
+
+Session closed before lazy fetch
+Example:
+
+Controller
+   ↓
+Service (@Transactional)
+   ↓
+Entity Lazy field
+Solution:
+
+Keep transaction at service layer
+
+1️⃣1️⃣ Transaction in Microservices
+Problem:
+
+Distributed transaction
+Example:
+
+Order Service
+Payment Service
+Inventory Service
+If payment fails → order rollback.
+
+Traditional solution:
+
+2PC (Two Phase Commit)
+Modern solution:
+
+✔ SAGA Pattern
+Types:
+
+1️⃣ Choreography
+2️⃣ Orchestration
+
+Example flow
+
+Order Created
+     ↓
+Payment Process
+     ↓
+Inventory Update
+Failure → compensation transaction
+
+1️⃣2️⃣ Transaction + Kafka (Exactly Once)
+Advanced concept.
+
+Use:
+
+Kafka Transaction
+Transactional Outbox Pattern
+Flow:
+
+DB Transaction
+     +
+Kafka Event
+Guarantee:
+
+Exactly once event
+
+1️⃣3️⃣ Transactional Outbox Pattern
+Problem:
+
+DB commit succeeded
+Kafka publish failed
+Solution:
+
+Write event to OUTBOX table
+Process:
+
+Application → DB + OUTBOX
+CDC → Kafka
+
+1️⃣4️⃣ Spring Transaction Proxy Problem
+Common mistake:
+
+Self invocation
+Example:
+
+public void methodA(){
+    methodB();
+}
+
+@Transactional
+public void methodB(){
+}
+❌ Transaction not applied.
+
+Why?
+
+Spring uses Proxy
+Internal calls bypass proxy
+Solution:
+
+Call through another service
+
+1️⃣5️⃣ Transaction Best Practices
+
+✔ Put @Transactional at service layer
+✔ Keep transactions short
+✔ Avoid remote calls inside transaction
+✔ Use readOnly=true for queries
+✔ Use REQUIRES_NEW for audit logs
+
+🚀 Advanced Topics (Interview Level)
+
+1️⃣ Spring AOP Transaction Internals
+Proxy → TransactionInterceptor → TransactionManager
+
+2️⃣ Transaction Synchronization
+Used in:
+
+Hibernate Session
+Kafka Producer
+JMS
+
+3️⃣ Transaction Events
+@TransactionalEventListener
+Example
+
+@TransactionalEventListener
+public void afterCommit(OrderCreated event){
+}
+🎯 Real Microservice Example
+Order creation.
+
+Client
+  │
+  ▼
+OrderService (@Transactional)
+  │
+  ├── Save Order
+  ├── Deduct Inventory
+  └── Publish Kafka Event
+📊 Complete Spring Transaction Roadmap
+BEGINNER
+---------
+Transactions basics
+ACID
+@Transactional
+
+INTERMEDIATE
+-------------
+Propagation
+Isolation
+Rollback rules
+JPA transactions
+
+ADVANCED
+----------
+Transaction proxy
+Lazy loading
+Self invocation
+Transaction lifecycle
+
+MICROSERVICES
+--------------
+SAGA
+Distributed transactions
+Kafka transactions
+Transactional Outbox
+
+
+1️⃣ Spring Transaction Internal Flow (Proxy + AOP + TransactionInterceptor)
+2️⃣ Complete Propagation Example (REQUIRED vs REQUIRES_NEW)
+3️⃣ Spring Transaction + Kafka (Exactly Once)
+4️⃣ SAGA Pattern with Spring Boot Microservices
+5️⃣ Transactional Outbox Pattern Implementation
+
+These are very common in senior Java / microservices interviews.
+
+
+Spring Transaction Internal Flow (Proxy + AOP + TransactionInterceptor) using spring boot
+
+the internal working of Spring Transactions using Proxy + AOP + TransactionInterceptor with a complete Spring Boot example and step-by-step flow. This is one of the most important internal concepts in Spring transactions. 🚀
+
+1️⃣ What Happens When We Use @Transactional
+Example:
+
+@Service
+public class OrderService {
+
+    @Transactional
+    public void placeOrder() {
+        saveOrder();
+        processPayment();
+    }
+}
+When this method is called, Spring does NOT call the method directly.
+
+Instead:
+
+Client
+   │
+   ▼
+Spring AOP Proxy
+   │
+   ▼
+TransactionInterceptor
+   │
+   ▼
+PlatformTransactionManager
+   │
+   ▼
+Actual Method Execution
+
+2️⃣ Spring Transaction Internal Architecture
+Client
+  │
+  ▼
+Proxy (JDK / CGLIB)
+  │
+  ▼
+TransactionInterceptor
+  │
+  ▼
+TransactionAspectSupport
+  │
+  ▼
+PlatformTransactionManager
+  │
+  ▼
+Database
+Main components:
+
+Component	Purpose
+AOP Proxy	Intercepts method call
+TransactionInterceptor	Handles transaction logic
+TransactionAspectSupport	Core transaction logic
+PlatformTransactionManager	Commit / Rollback
+
+3️⃣ Step-by-Step Internal Flow
+
+Step 1 — Client Calls Service
+
+orderService.placeOrder();
+But actually:
+
+Proxy.placeOrder()
+Spring injects proxy instead of real bean.
+
+Step 2 — Proxy Intercepts Method
+Proxy checks:
+
+Is method annotated with @Transactional?
+If yes → invoke TransactionInterceptor
+
+Step 3 — TransactionInterceptor Starts Transaction
+TransactionInterceptor internally calls:
+
+PlatformTransactionManager.getTransaction()
+Example:
+
+JpaTransactionManager
+or
+DataSourceTransactionManager
+This does:
+
+1 Get DB connection
+2 Disable auto commit
+3 Start transaction
+
+Step 4 — Execute Business Logic
+Now actual method executes:
+
+public void placeOrder() {
+
+    orderRepository.save(order);
+
+    paymentService.processPayment();
+}
+
+Step 5 — Commit or Rollback
+If success:
+
+transactionManager.commit()
+If exception:
+
+transactionManager.rollback()
+
+4️⃣ Visual Flow Diagram
+Client
+  │
+  ▼
+Proxy (AOP)
+  │
+  ▼
+TransactionInterceptor
+  │
+  ▼
+Start Transaction
+  │
+  ▼
+Call Actual Method
+  │
+  ▼
+Success? ── Yes ──► Commit
+     │
+     No
+     ▼
+Rollback
+
+5️⃣ Spring Boot Example
+
+Step 1 — Dependency
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+Step 2 — Entity
+
+@Entity
+public class Order {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String product;
+}
+
+Step 3 — Repository
+
+public interface OrderRepository extends JpaRepository<Order, Long> {
+}
+
+Step 4 — Service With Transaction
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private OrderRepository repository;
+
+    @Transactional
+    public void placeOrder() {
+
+        Order order = new Order();
+        order.setProduct("Laptop");
+
+        repository.save(order);
+
+        if(true) {
+            throw new RuntimeException("Payment Failed");
+        }
+    }
+}
+
+Step 5 — Controller
+
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+    @Autowired
+    OrderService service;
+
+    @GetMapping("/create")
+    public String createOrder() {
+
+        service.placeOrder();
+
+        return "order placed";
+    }
+}
+
+6️⃣ What Happens When Exception Occurs
+Flow:
+
+Controller
+   │
+   ▼
+Proxy intercepts
+   │
+   ▼
+TransactionInterceptor
+   │
+   ▼
+Start Transaction
+   │
+   ▼
+placeOrder()
+   │
+   ▼
+RuntimeException
+   │
+   ▼
+Rollback Transaction
+Database result:
+
+❌ Order NOT saved
+
+7️⃣ Internal Classes Used by Spring
+Main internal classes:
+
+Class	Role
+TransactionInterceptor	Intercepts transactional method
+TransactionAspectSupport	Core transaction logic
+PlatformTransactionManager	Commit/rollback
+TransactionStatus	Current transaction status
+Internal code (simplified):
+
+public Object invoke(MethodInvocation invocation) {
+
+    TransactionStatus status =
+        transactionManager.getTransaction(definition);
+
+    try {
+
+        Object result = invocation.proceed();
+
+        transactionManager.commit(status);
+
+        return result;
+
+    } catch (Exception ex) {
+
+        transactionManager.rollback(status);
+
+        throw ex;
+    }
+}
+
+8️⃣ How Spring Creates Transaction Proxy
+Two ways:
+
+1️⃣ JDK Dynamic Proxy
+Used when:
+
+Class implements interface
+Example:
+
+OrderService implements OrderServiceInterface
+
+2️⃣ CGLIB Proxy
+Used when:
+
+No interface
+Spring creates subclass at runtime.
+
+Example:
+
+OrderService$$EnhancerBySpringCGLIB
+
+9️⃣ Very Important Problem (Self Invocation)
+Example:
+
+@Service
+public class PaymentService {
+
+    public void methodA(){
+        methodB();
+    }
+
+    @Transactional
+    public void methodB(){
+    }
+}
+Problem:
+
+methodB transaction NOT applied
+Why?
+
+Internal method call bypasses proxy
+Correct solution:
+
+@Autowired
+PaymentService paymentService;
+
+public void methodA(){
+    paymentService.methodB();
+}
+🔟 Real Production Flow
+Controller
+   │
+   ▼
+Service (@Transactional)
+   │
+   ▼
+Repository (JPA/Hibernate)
+   │
+   ▼
+EntityManager
+   │
+   ▼
+Database
+
+1️⃣1️⃣ Transaction Lifecycle Internally
+1 Proxy intercepts method
+2 TransactionInterceptor triggered
+3 TransactionManager starts transaction
+4 Business logic executes
+5 Commit OR rollback
+6 Connection released
+
+1️⃣2️⃣ Transaction Logging Example
+Enable logging:
+
+logging.level.org.springframework.transaction=DEBUG
+Logs will show:
+
+Creating new transaction
+Acquired Connection
+Initiating transaction commit
+🎯 Key Interview Points
+Always remember:
+
+✔ @Transactional works using AOP proxy
+✔ TransactionInterceptor manages transactions
+✔ Uses PlatformTransactionManager
+✔ RuntimeException triggers rollback
+✔ Self invocation breaks transactions
+
+✅ also explain three very advanced Spring transaction topics with diagrams and code:
+
+1️⃣ Spring Transaction Propagation (REQUIRED vs REQUIRES_NEW) deep example
+2️⃣ Spring Transaction + Microservices (SAGA pattern implementation)
+3️⃣ Spring Transaction + Kafka (Transactional Outbox Pattern)
+
+These are very commonly asked in senior Java / microservices interviews.
+
+
+Complete Propagation Example using spring boot?
+
+Below is a complete Spring Boot example demonstrating Transaction Propagation, especially the most important ones used in real applications:
+
+REQUIRED
+
+REQUIRES_NEW
+
+SUPPORTS
+
+MANDATORY
+
+NOT_SUPPORTED
+
+NEVER
+
+NESTED
+
+working code + execution behavior + DB results so you clearly understand how propagation works.
+
+1️⃣ What is Transaction Propagation
+Propagation defines how a transaction behaves when one transactional method calls another transactional method.
+
+Example scenario:
+
+OrderService.createOrder()
+        |
+        |---- PaymentService.processPayment()
+Now question:
+
+👉 Should processPayment() use the same transaction or start a new transaction?
+
+That behavior is controlled by Propagation.
+
+2️⃣ Spring Boot Project Structure
+src/main/java
+   |
+   |-- entity
+   |     └── Order.java
+   |
+   |-- repository
+   |     └── OrderRepository.java
+   |
+   |-- service
+   |     ├── OrderService.java
+   |     └── AuditService.java
+   |
+   |-- controller
+   |     └── OrderController.java
+   
+3️⃣ Entity
+@Entity
+public class OrderEntity {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String product;
+}
+
+4️⃣ Repository
+public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
+}
+
+5️⃣ Service Example (Propagation REQUIRED)
+REQUIRED = Join existing transaction or create new
+
+@Service
+public class OrderService {
+
+    @Autowired
+    OrderRepository repository;
+
+    @Autowired
+    AuditService auditService;
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createOrder() {
+
+        OrderEntity order = new OrderEntity();
+        order.setProduct("Laptop");
+
+        repository.save(order);
+
+        auditService.auditLog();
+
+        throw new RuntimeException("Order failure");
+    }
+}
+
+6️⃣ Service with REQUIRES_NEW
+REQUIRES_NEW = Always create new transaction
+
+@Service
+public class AuditService {
+
+    @Autowired
+    OrderRepository repository;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void auditLog() {
+
+        OrderEntity audit = new OrderEntity();
+        audit.setProduct("AUDIT_LOG");
+
+        repository.save(audit);
+    }
+}
+
+7️⃣ Execution Flow
+Call:
+
+/orders/create
+Flow:
+
+Controller
+   |
+   v
+OrderService.createOrder()  (Transaction A)
+   |
+   |-- save(order)
+   |
+   |-- AuditService.auditLog()
+           |
+           |-- start Transaction B
+           |-- save(audit)
+           |-- commit B
+   |
+   |-- RuntimeException
+   |
+rollback A
+
+8️⃣ Database Result
+Record	Saved?
+Order	❌ No (rolled back)
+Audit Log	✅ Yes
+Because:
+
+auditLog() used REQUIRES_NEW
+
+9️⃣ REQUIRED vs REQUIRES_NEW Diagram
+REQUIRED
+--------
+
+ServiceA (Tx1)
+   |
+   ---> ServiceB joins Tx1
+
+
+REQUIRES_NEW
+------------
+
+ServiceA (Tx1)
+   |
+   ---> ServiceB (Tx2)
+
+Tx2 commits independently
+
+🔟 SUPPORTS Example
+SUPPORTS = Join transaction if exists, otherwise run without transaction.
+
+@Transactional(propagation = Propagation.SUPPORTS)
+public void viewOrder(){
+    repository.findAll();
+}
+Behavior:
+
+Caller	Result
+With Transaction	join
+Without Transaction	no transaction
+
+1️⃣1️⃣ MANDATORY Example
+MANDATORY = Must run inside existing transaction.
+
+@Transactional(propagation = Propagation.MANDATORY)
+public void updateInventory(){
+}
+If no transaction exists:
+
+TransactionRequiredException
+
+1️⃣2️⃣ NOT_SUPPORTED Example
+
+Runs without transaction.
+
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
+public void generateReport(){
+}
+Flow:
+
+Existing transaction suspended
+Run method without transaction
+Resume transaction
+
+1️⃣3️⃣ NEVER Example
+Fails if transaction exists.
+
+@Transactional(propagation = Propagation.NEVER)
+
+public void healthCheck(){
+}
+If transaction exists:
+
+IllegalTransactionStateException
+
+1️⃣4️⃣ NESTED Example
+Creates nested transaction using savepoints.
+
+@Transactional(propagation = Propagation.NESTED)
+public void nestedOperation(){
+}
+Flow:
+
+Parent Transaction
+      |
+      |-- Nested transaction
+      |     |
+      |     |-- rollback only nested part
+Example:
+
+OrderService
+   |
+   |-- PaymentService (nested)
+Payment fails → only nested rollback.
+
+1️⃣5️⃣ Full Propagation Summary 
+
+Propagation	Behavior
+
+REQUIRED	Join existing or create new
+REQUIRES_NEW	Always new transaction
+SUPPORTS	Join if exists
+MANDATORY	Must have transaction
+NOT_SUPPORTED	Run without transaction
+NEVER	Fail if transaction exists
+NESTED	Savepoint transaction
+
+1️⃣6️⃣ Real World Use Cases
+
+Scenario	Propagation
+Order Processing	REQUIRED
+Audit Logging	REQUIRES_NEW
+Read-only Query	SUPPORTS
+Transaction Validation	MANDATORY
+Report Generation	NOT_SUPPORTED
+
+1️⃣7️⃣ Real Microservice Example
+
+Order Service
+   |
+   |-- Save Order (REQUIRED)
+   |
+   |-- Payment Service (REQUIRES_NEW)
+   |
+   |-- Audit Service (REQUIRES_NEW)
+Benefits:
+
+Audit logs saved even if order fails
+🎯 Interview Tip
+Most used propagations in production:
+
+REQUIRED
+REQUIRES_NEW
+SUPPORTS
+🚀 If you'd like, I can also show a VERY IMPORTANT real production example:
+Bank Transfer Example
+AccountService.transferMoney()
+        |
+        |-- DebitAccount()
+        |
+        |-- CreditAccount()
+        |
+        |-- AuditLog()
+Using
+
+REQUIRED + REQUIRES_NEW
+with complete Spring Boot code + database result + flow diagram.
+
+
+Which propagation support partial rollback transactyion?
+
+The propagation that supports partial rollback in Spring transactions is:
+
+✅ Propagation.NESTED
+NESTED allows partial rollback using database savepoints.
+
+That means:
+
+Parent transaction continues
+
+Only the nested part rolls back
+
+1️⃣ Concept of Partial Rollback
+Example scenario:
+
+Place Order
+   |
+   |-- Save Order
+   |-- Process Payment
+   |-- Send Notification
+If notification fails, we may want:
+
+✔ Order saved
+✔ Payment completed
+
+❌ Notification rolled back
+This is partial rollback.
+
+2️⃣ How NESTED Works Internally
+NESTED creates a savepoint inside the parent transaction.
+
+Main Transaction
+      |
+      |--- Savepoint
+              |
+              |--- Nested Transaction
+If nested fails:
+
+Rollback to savepoint
+Parent transaction continues
+
+3️⃣ Flow Diagram
+Transaction A
+     |
+     |--- Save Order
+     |
+     |--- Savepoint
+             |
+             |--- Payment (Nested)
+             |
+             |--- Exception
+             |
+         Rollback to savepoint
+     |
+     |--- Continue transaction
+     |
+Commit A
+
+4️⃣ Spring Boot Example
+
+Parent Service
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
+    private OrderRepository repository;
+
+    @Transactional
+    public void placeOrder() {
+
+        Order order = new Order();
+        order.setProduct("Laptop");
+
+        repository.save(order);
+
+        try {
+            paymentService.processPayment();
+        } catch (Exception e) {
+            System.out.println("Payment failed but order continues");
+        }
+    }
+}
+
+Nested Transaction
+@Service
+public class PaymentService {
+
+    @Transactional(propagation = Propagation.NESTED)
+    public void processPayment() {
+
+        System.out.println("Processing payment");
+
+        if(true)
+            throw new RuntimeException("Payment failed");
+    }
+}
+
+5️⃣ Execution Flow
+Controller
+   |
+   v
+placeOrder()  (Transaction A)
+   |
+   |-- Save Order
+   |
+   |-- processPayment()  (Nested)
+   |        |
+   |        |-- Exception
+   |        |
+   |    Rollback nested
+   |
+   |-- Continue
+   |
+Commit Transaction A
+
+6️⃣ Database Result
+Operation	Result
+Order Saved	✅ Yes
+Payment	❌ Rolled back
+
+7️⃣ Important Requirements
+NESTED works only if:
+
+✔ Database supports Savepoints
+✔ Using DataSourceTransactionManager
+
+⚠ With JPA:
+
+JpaTransactionManager may not fully support NESTED
+
+8️⃣ Difference: REQUIRES_NEW vs NESTED
+Feature	REQUIRES_NEW	NESTED
+Transaction	New transaction	Same transaction
+Rollback	Independent	Partial rollback
+Commit dependency	Independent	Parent dependent
+Mechanism	Suspend parent	Savepoint
+
+9️⃣ Visual Comparison
+REQUIRES_NEW
+Tx1
+   |
+Suspend Tx1
+   |
+Tx2
+Commit Tx2
+Resume Tx1
+NESTED
+Tx1
+   |
+Savepoint
+   |
+Nested Tx
+Rollback to Savepoint
+Continue Tx1
+
+🔟 Real Production Use Cases
+NESTED is used when:
+
+Use Case	Why
+Batch Processing	rollback single record
+Payment attempts	retry logic
+File processing	skip failed records
+Order workflow	partial failure allowed
+
+🎯 Interview Answer (Best Answer)
+Question:
+Which propagation supports partial rollback?
+
+Answer:
+
+Propagation.NESTED supports partial rollback in Spring transactions.
+It creates a savepoint inside the parent transaction, allowing rollback to that savepoint without rolling back the entire transaction.
+
+✅ If you'd like, I can also explain a very important real interview scenario:
+
+Partial Rollback in Bank Transfer System
+Transfer Money
+    |
+    |-- Debit Account
+    |-- Credit Account
+    |-- Send Notification
+Using:
+
+REQUIRED + NESTED
+with complete Spring Boot code + database tables + execution diagram.
+
+
+SAGA Pattern with Spring Boot Microservices using complete and parial rollback with appropriate propagation?
+
+#explain SAGA Pattern in Spring Boot Microservices with:
+
+Complete rollback
+
+Partial rollback
+
+Correct transaction propagation
+
+Microservice architecture
+
+Spring Boot code example
+
+This is a very common senior microservices interview topic. 🚀
+
+1️⃣ Problem: Distributed Transaction in Microservices
+Example system:
+
+Order Service
+Payment Service
+Inventory Service
+Notification Service
+Workflow:
+
+Create Order
+    ↓
+Process Payment
+    ↓
+Reserve Inventory
+    ↓
+Send Notification
+Problem:
+
+Payment succeeds
+Inventory fails
+Now we must rollback previous steps.
+
+Traditional solution:
+
+Two Phase Commit (2PC)
+Problem:
+
+Very slow
+Not scalable
+Not used in microservices
+Solution:
+
+✅ SAGA Pattern:
+
+2️⃣ What is SAGA Pattern
+A Saga is a sequence of local transactions.
+
+Each service:
+
+1 performs a transaction
+2 publishes an event
+3 next service continues
+If failure occurs:
+
+compensation transaction executed
+
+3️⃣ Types of SAGA
+1️⃣ Choreography
+Services communicate via events (Kafka).
+
+Order → Event → Payment → Event → Inventory
+
+2️⃣ Orchestration
+Central Saga Orchestrator controls flow.
+
+Saga Orchestrator
+       |
+       ↓
+Order → Payment → Inventory
+We'll implement Orchestration example.
+
+4️⃣ Microservice Architecture
+Client
+  |
+  v
+Order Service
+  |
+  v
+Saga Orchestrator
+  |
+  |---- Payment Service
+  |
+  |---- Inventory Service
+  |
+  |---- Notification Service
+  
+5️⃣ Database Tables
+
+Order Table
+id
+status
+product
+Status:
+
+CREATED
+PAYMENT_FAILED
+COMPLETED
+CANCELLED
+Payment Table
+id
+orderId
+status
+Inventory Table
+id
+product
+reserved
+
+6️⃣ Transaction Strategy
+
+Service	Transaction	Propagation
+Order Service	create order	REQUIRED
+Payment Service	process payment	REQUIRES_NEW
+Inventory Service	reserve inventory	REQUIRES_NEW
+Notification	send notification	NESTED
+Why?
+
+REQUIRES_NEW = independent service transactions
+NESTED = partial rollback
+
+7️⃣ Order Service (Spring Boot)
+@Service
+public class OrderService {
+
+    @Autowired
+    OrderRepository repository;
+
+    @Transactional
+    public Order createOrder() {
+
+        Order order = new Order();
+        order.setStatus("CREATED");
+
+        return repository.save(order);
+    }
+
+    @Transactional
+    public void cancelOrder(Long orderId) {
+
+        Order order = repository.findById(orderId).get();
+        order.setStatus("CANCELLED");
+
+        repository.save(order);
+    }
+}
+
+Propagation:
+
+REQUIRED
+
+8️⃣ Payment Service
+@Service
+public class PaymentService {
+
+    @Autowired
+    PaymentRepository repository;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processPayment(Long orderId) {
+
+        Payment payment = new Payment();
+        payment.setOrderId(orderId);
+        payment.setStatus("SUCCESS");
+
+        repository.save(payment);
+
+        if(true)
+            throw new RuntimeException("Payment gateway failed");
+    }
+}
+Why:
+
+REQUIRES_NEW ensures independent transaction
+
+9️⃣ Inventory Service
+@Service
+public class InventoryService {
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void reserveInventory(String product) {
+
+        System.out.println("Inventory reserved");
+
+        if(true)
+            throw new RuntimeException("Inventory unavailable");
+    }
+}
+
+🔟 Notification Service (Partial Rollback)
+@Service
+public class NotificationService {
+
+    @Transactional(propagation = Propagation.NESTED)
+    public void sendNotification() {
+
+        System.out.println("Sending email");
+
+        if(true)
+            throw new RuntimeException("Email failed");
+    }
+}
+Result:
+
+Notification rollback only
+Order remains completed
+
+1️⃣1️⃣ Saga Orchestrator
+@Service
+public class SagaOrchestrator {
+
+    @Autowired
+    OrderService orderService;
+
+    @Autowired
+    PaymentService paymentService;
+
+    @Autowired
+    InventoryService inventoryService;
+
+    @Autowired
+    NotificationService notificationService;
+
+    public void executeSaga() {
+
+        Order order = orderService.createOrder();
+
+        try {
+
+            paymentService.processPayment(order.getId());
+
+            inventoryService.reserveInventory(order.getProduct());
+
+            notificationService.sendNotification();
+
+            System.out.println("Order Completed");
+
+        } catch(Exception e) {
+
+            System.out.println("Saga failed. Running compensation");
+
+            orderService.cancelOrder(order.getId());
+        }
+    }
+}
+
+1️⃣2️⃣ Saga Execution Flow
+Success flow:
+
+Order Created
+     ↓
+Payment Success
+     ↓
+Inventory Reserved
+     ↓
+Notification Sent
+     ↓
+Order Completed
+Failure flow:
+
+Order Created
+     ↓
+Payment Success
+     ↓
+Inventory FAILED
+     ↓
+Compensation Triggered
+     ↓
+Cancel Order
+
+1️⃣3️⃣ Complete Rollback vs Partial Rollback
+
+Complete Rollback
+Inventory fails
+→ cancel order
+→ reverse payment
+Partial Rollback
+Notification fails
+→ only notification rollback
+→ order still successful
+
+1️⃣4️⃣ Saga Flow Diagram
+Create Order
+   |
+   v
+Payment Service
+   |
+   v
+Inventory Service
+   |
+   v
+Notification Service
+Failure:
+
+Inventory Failure
+   |
+   v
+Compensation
+   |
+   v
+Cancel Order
+
+1️⃣5️⃣ Real Production Implementation
+Instead of direct calls:
+
+Kafka
+RabbitMQ
+Event flow:
+
+OrderCreatedEvent
+      ↓
+PaymentProcessedEvent
+      ↓
+InventoryReservedEvent
+
+1️⃣6️⃣ Propagation Strategy for Saga
+Step	Propagation
+Order Creation	REQUIRED
+Payment	REQUIRES_NEW
+Inventory	REQUIRES_NEW
+Notification	NESTED
+
+1️⃣7️⃣ Key Interview Points
+Never use:
+
+Distributed transactions
+Instead use:
+
+SAGA + compensation transactions
+Propagation rule:
+
+REQUIRES_NEW for service transactions
+NESTED for partial rollback steps
+
+can also show an advanced real production implementation:
+Spring Boot + Kafka + Saga + Transactional Outbox Pattern
+with:
+
+Order Service
+Payment Service
+Inventory Service
+Kafka Events
+Outbox Table
+CDC (Debezium)
+This is how companies like Amazon / Uber implement Saga transactions.
+
+
+Spring Transaction + Kafka using CQRS And Saga Design Pattern using spring boot complete code and example with comments step wise step?
+=========================================================
+Below is a step-by-step production style example showing how to combine:
+
+Spring Transactions
+
+Kafka
+
+CQRS
+
+Saga Pattern
+
+Microservices
+
+Spring Boot
+
+This architecture is commonly used in large distributed systems.
+
+I’ll explain:
+
+1️⃣ Architecture
+2️⃣ Transaction flow
+3️⃣ CQRS separation
+4️⃣ Saga orchestration
+5️⃣ Kafka events
+6️⃣ Spring Boot code
+7️⃣ Compensation rollback
+
+1️⃣ Architecture Overview
+Example system:
+
+Client
+  |
+  v
+Order Service (Command)
+  |
+  v
+Kafka Topic
+  |
+  v
+Payment Service
+  |
+  v
+Inventory Service
+  |
+  v
+Notification Service
+Using:
+
+CQRS + Saga + Kafka + Spring Transactions
+
+2️⃣ CQRS Concept
+CQRS separates write operations and read operations.
+
+COMMAND SIDE
+------------
+Create Order
+Update Order
+
+QUERY SIDE
+----------
+Get Order
+Get Order Status
+Architecture:
+
+Command Service → Kafka → Read Service
+
+3️⃣ Saga Transaction Flow
+Example order creation flow.
+
+Create Order
+     |
+     v
+Process Payment
+     |
+     v
+Reserve Inventory
+     |
+     v
+Send Notification
+If failure occurs:
+
+Compensation triggered
+Example:
+
+Inventory fails
+↓
+Refund Payment
+↓
+Cancel Order
+
+4️⃣ Kafka Topics
+order-created
+payment-success
+payment-failed
+inventory-success
+inventory-failed
+
+5️⃣ Project Structure
+order-service
+payment-service
+inventory-service
+notification-service
+Each service:
+
+Spring Boot
+Spring Transaction
+Kafka Producer/Consumer
+PostgreSQL
+
+6️⃣ Maven Dependencies
+spring-boot-starter-web
+spring-boot-starter-data-jpa
+spring-kafka
+postgresql
+lombok
+Example:
+
+<dependency>
+ <groupId>org.springframework.kafka</groupId>
+ <artifactId>spring-kafka</artifactId>
+</dependency>
+
+7️⃣ Kafka Configuration
+@Configuration
+public class KafkaConfig {
+
+ @Bean
+ public ProducerFactory<String,Object> producerFactory(){
+
+   Map<String,Object> config = new HashMap<>();
+
+   config.put(
+     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+     "localhost:9092"
+   );
+
+   config.put(
+     ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+     StringSerializer.class
+   );
+
+   config.put(
+     ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+     JsonSerializer.class
+   );
+
+   return new DefaultKafkaProducerFactory<>(config);
+ }
+
+ @Bean
+ public KafkaTemplate<String,Object> kafkaTemplate(){
+     return new KafkaTemplate<>(producerFactory());
+ }
+
+}
+
+8️⃣ Order Entity
+@Entity
+@Data
+public class Order {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private String product;
+
+ private String status;
+}
+
+9️⃣ Order Repository
+public interface OrderRepository
+ extends JpaRepository<Order,Long> {
+}
+🔟 Order Service (Command Side)
+Uses Spring Transaction + Kafka event publishing
+
+@Service
+public class OrderService {
+
+ @Autowired
+ private OrderRepository repository;
+
+ @Autowired
+ private KafkaTemplate<String,Object> kafkaTemplate;
+
+ /**
+  * Create order transaction
+  */
+ @Transactional
+ public Order createOrder(String product){
+
+     Order order = new Order();
+
+     order.setProduct(product);
+     order.setStatus("CREATED");
+
+     repository.save(order);
+
+     // publish saga event
+     kafkaTemplate.send(
+       "order-created",
+       order
+     );
+
+     return order;
+ }
+}
+
+1️⃣1️⃣ Order Controller
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+ @Autowired
+ private OrderService service;
+
+ @PostMapping
+ public Order createOrder(){
+
+   return service.createOrder("Laptop");
+ }
+}
+
+1️⃣2️⃣ Payment Service (Saga Step)
+Consumes order-created event
+
+@Service
+public class PaymentConsumer {
+
+ @Autowired
+ private KafkaTemplate<String,Object> kafkaTemplate;
+
+ @KafkaListener(
+  topics="order-created",
+  groupId="payment-group"
+ )
+ public void processPayment(Order order){
+
+   try{
+
+     System.out.println("Processing payment");
+
+     // simulate success
+     boolean success=true;
+
+     if(success){
+
+        kafkaTemplate.send(
+         "payment-success",
+         order
+        );
+
+     }else{
+
+        kafkaTemplate.send(
+         "payment-failed",
+         order
+        );
+     }
+
+   }catch(Exception e){
+
+     kafkaTemplate.send(
+       "payment-failed",
+       order
+     );
+   }
+
+ }
+}
+
+1️⃣3️⃣ Inventory Service
+@Service
+public class InventoryConsumer {
+
+ @Autowired
+ private KafkaTemplate<String,Object> kafkaTemplate;
+
+ @KafkaListener(
+   topics="payment-success",
+   groupId="inventory-group"
+ )
+ public void reserveInventory(Order order){
+
+   try{
+
+      System.out.println("Reserving inventory");
+
+      kafkaTemplate.send(
+       "inventory-success",
+       order
+      );
+
+   }catch(Exception e){
+
+      kafkaTemplate.send(
+       "inventory-failed",
+       order
+      );
+   }
+ }
+}
+
+1️⃣4️⃣ Notification Service
+@Service
+public class NotificationConsumer {
+
+ @KafkaListener(
+   topics="inventory-success",
+   groupId="notification-group"
+ )
+ public void notifyUser(Order order){
+
+   System.out.println(
+     "Sending email for order "+order.getId()
+   );
+ }
+}
+
+1️⃣5️⃣ Saga Compensation Example
+If inventory fails.
+
+Kafka listener:
+
+@KafkaListener(
+ topics="inventory-failed",
+ groupId="order-group"
+)
+public void rollbackOrder(Order order){
+
+ System.out.println("Rolling back order");
+
+ order.setStatus("CANCELLED");
+
+ repository.save(order);
+}
+Compensation flow:
+
+Inventory Failed
+      ↓
+Refund Payment
+      ↓
+Cancel Order
+
+1️⃣6️⃣ Transaction Flow
+Client
+ |
+ v
+OrderService (Transaction)
+ |
+ v
+Save Order
+ |
+ v
+Publish Event → Kafka
+Saga continues:
+
+Payment Service
+ |
+ v
+Inventory Service
+ |
+ v
+Notification Service
+
+1️⃣7️⃣ CQRS Query Service
+Query side service reads order data.
+
+@Service
+public class OrderQueryService {
+
+ @Autowired
+ private OrderRepository repository;
+
+ public Order getOrder(Long id){
+    return repository.findById(id).orElseThrow();
+ }
+}
+Controller:
+
+@GetMapping("/{id}")
+public Order getOrder(@PathVariable Long id){
+   return queryService.getOrder(id);
+}
+
+1️⃣8️⃣ Full Saga Diagram
+Create Order
+     |
+     v
+Kafka: order-created
+     |
+     v
+Payment Service
+     |
+     v
+Kafka: payment-success
+     |
+     v
+Inventory Service
+     |
+     v
+Kafka: inventory-success
+     |
+     v
+Notification Service
+Failure path:
+
+Inventory Failure
+      |
+      v
+Kafka: inventory-failed
+      |
+      v
+Cancel Order
+Refund Payment
+
+1️⃣9️⃣ Key Spring Transaction Points
+Service	Transaction
+Order Service	REQUIRED
+Payment	REQUIRES_NEW
+Inventory	REQUIRES_NEW
+Notification	NESTED
+
+2️⃣0️⃣ Production Improvement
+Real systems also use:
+
+Transactional Outbox Pattern
+Kafka Exactly Once
+Dead Letter Topic
+Retry Topic
+🚀 If you'd like, I can also show the most advanced production architecture used by companies:
+Spring Boot + Kafka + CQRS + Saga + Transactional Outbox + Debezium CDC
+
+with:
+
+complete microservice diagram
+docker setup
+kafka topics
+database schema
+full code
+This is exactly how large fintech and e-commerce systems are built.
+
+
+Provide all isolation level with spring boot example using spring transaction?
+
+Below is a complete guide to Spring Transaction Isolation Levels with Spring Boot examples.
+will explain:
+
+1️⃣ What isolation levels are
+2️⃣ Problems in concurrent transactions
+3️⃣ All isolation levels
+4️⃣ Spring Boot examples
+5️⃣ Execution scenarios
+
+1️⃣ What is Transaction Isolation
+Isolation defines how transactions interact with each other when running concurrently.
+
+Example:
+
+User A updates account balance
+User B reads account balance
+Isolation level controls what User B sees.
+
+2️⃣ Common Concurrency Problems
+1️⃣ Dirty Read
+Transaction reads uncommitted data.
+
+Example:
+
+Tx1 updates balance = 1000
+Tx2 reads balance = 1000
+Tx1 rollback
+Tx2 read invalid data.
+
+2️⃣ Non-Repeatable Read
+Same row read twice gives different values.
+
+Example:
+
+Tx1 reads price = 100
+Tx2 updates price = 200
+Tx1 reads again = 200
+
+3️⃣ Phantom Read
+New rows appear during transaction.
+
+Example:
+
+Tx1: SELECT * FROM orders WHERE price > 100
+Tx2 inserts new order
+Tx1 runs query again → new row appears
+
+3️⃣ Spring Isolation Levels
+Spring uses:
+
+org.springframework.transaction.annotation.Isolation
+Levels:
+
+Isolation Level	Prevents
+READ_UNCOMMITTED	Nothing
+READ_COMMITTED	Dirty Read
+REPEATABLE_READ	Dirty + Non-repeatable
+SERIALIZABLE	All problems
+
+4️⃣ Spring Boot Project Structure
+entity
+Account.java
+
+repository
+AccountRepository.java
+
+service
+AccountService.java
+
+controller
+AccountController.java
+
+5️⃣ Entity Example
+@Entity
+public class Account {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String name;
+
+    private Double balance;
+}
+
+6️⃣ Repository
+public interface AccountRepository
+        extends JpaRepository<Account, Long> {
+}
+
+7️⃣ READ_UNCOMMITTED Example
+Allows dirty reads.
+
+@Service
+public class AccountService {
+
+    @Autowired
+    AccountRepository repository;
+
+    @Transactional(isolation = Isolation.READ_UNCOMMITTED)
+    public void readUncommittedExample() {
+
+        Account account = repository.findById(1L).get();
+
+        System.out.println("Balance: " + account.getBalance());
+    }
+}
+Scenario:
+
+Tx1 updates balance
+Tx2 reads uncommitted value
+Tx1 rollback
+Tx2 read dirty data.
+
+8️⃣ READ_COMMITTED Example
+Prevents dirty reads.
+
+@Transactional(isolation = Isolation.READ_COMMITTED)
+public void readCommittedExample() {
+
+    Account account = repository.findById(1L).get();
+
+    System.out.println(account.getBalance());
+}
+Behavior:
+
+Tx2 can read only committed data
+But still allows:
+
+Non-repeatable reads
+
+9️⃣ REPEATABLE_READ Example
+Prevents:
+
+Dirty reads
+Non-repeatable reads
+Example:
+
+@Transactional(isolation = Isolation.REPEATABLE_READ)
+public void repeatableReadExample(){
+
+    Account acc1 = repository.findById(1L).get();
+
+    // another transaction updates record
+
+    Account acc2 = repository.findById(1L).get();
+
+    System.out.println(acc1.getBalance());
+    System.out.println(acc2.getBalance());
+}
+Result:
+
+Both values remain same
+
+🔟 SERIALIZABLE Example
+Highest isolation level.
+
+@Transactional(isolation = Isolation.SERIALIZABLE)
+public void serializableExample(){
+
+    List<Account> accounts =
+            repository.findAll();
+
+    System.out.println(accounts);
+}
+Prevents:
+
+Dirty read
+Non-repeatable read
+Phantom read
+But performance is slow.
+
+1️⃣1️⃣ Full Service Example
+@Service
+public class TransactionService {
+
+    @Autowired
+    AccountRepository repository;
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void updateBalance(Long id, Double amount){
+
+        Account acc = repository.findById(id).get();
+
+        acc.setBalance(acc.getBalance() + amount);
+
+        repository.save(acc);
+    }
+
+}
+
+1️⃣2️⃣ Controller Example
+@RestController
+@RequestMapping("/accounts")
+public class AccountController {
+
+    @Autowired
+    TransactionService service;
+
+    @GetMapping("/update")
+    public String update(){
+
+        service.updateBalance(1L,500.0);
+
+        return "updated";
+    }
+}
+
+1️⃣3️⃣ Isolation Level Comparison
+
+Isolation	Dirty Read	Non Repeatable	Phantom
+READ_UNCOMMITTED	✔	✔	✔
+READ_COMMITTED	❌	✔	✔
+REPEATABLE_READ	❌	❌	✔
+SERIALIZABLE	❌	❌	❌
+
+1️⃣4️⃣ Real Database Defaults
+
+Database	Default Isolation
+PostgreSQL	READ_COMMITTED
+MySQL	REPEATABLE_READ
+Oracle	READ_COMMITTED
+
+1️⃣5️⃣ Isolation with Propagation Example
+
+@Transactional(
+    propagation = Propagation.REQUIRED,
+    isolation = Isolation.REPEATABLE_READ
+)
+public void transferMoney(){
+}
+
+1️⃣6️⃣ Real Banking Example
+Money transfer:
+
+Tx1 debit account
+Tx2 read account balance
+Recommended isolation:
+
+REPEATABLE_READ
+or
+
+SERIALIZABLE
+
+1️⃣7️⃣ Best Practices
+Use:
+
+Use Case	Isolation
+General queries	READ_COMMITTED
+Financial transactions	REPEATABLE_READ
+Critical systems	SERIALIZABLE
+
+
+READ_COMMITTED
+REPEATABLE_READ
+Avoid:
+
+READ_UNCOMMITTED
+
+✅ can also explain a very important advanced topic often asked:
+
+Spring Transaction + Isolation + Propagation combined example
+
+Example:
+
+OrderService(REQUIRED)
+   |
+   → PaymentService(REQUIRES_NEW + SERIALIZABLE)
+with full Spring Boot code + concurrent transaction simulation.
+
+====
+
+

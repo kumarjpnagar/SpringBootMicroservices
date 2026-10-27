@@ -1,0 +1,1441 @@
+
+CI/CD with Canary Deployment
+
+Great 👍 Let’s explain end-to-end CI/CD with Canary Deployment using Harness.io, based on your diagram:
+
+Developer → GitHub → GitHub Actions (CI) → Docker Image → Docker Hub → Kubernetes → Canary (10% → 90%) → Monitoring → Promote/Rollback
+
+We’ll build a real example using:
+
+GitHub
+
+GitHub Actions (CI)
+
+Docker
+
+Docker Hub
+
+Kubernetes (EKS or any K8s)
+
+Harness.io (CD with Canary)
+
+Prometheus + Grafana (for monitoring)
+===============================================================
+
+🔷 1️⃣ Architecture Overview (With Harness Canary)
+Flow:
+Developer pushes code to GitHub
+
+GitHub Actions:
+
+Run tests
+
+Run SonarQube
+
+Build Docker image
+
+Push to Docker Hub
+
+Harness:
+
+Pulls Docker image
+
+Deploys to Kubernetes
+
+Canary 10% traffic to v2
+
+Monitor metrics
+
+Promote to 100% or Rollback
+
+=========================================================
+
+🔷 2️⃣ Sample Application (Spring Boot Example)
+Simple REST App
+@RestController
+@RequestMapping("/api")
+public class HelloController {
+
+    @GetMapping("/version")
+    public String version() {
+        return "Version 2 - Canary Release";
+    }
+
+    @GetMapping("/health")
+    public String health() {
+        return "UP";
+    }
+}
+
+🔷 3️⃣ Dockerfile
+FROM eclipse-temurin:17-jdk-alpine
+
+WORKDIR /app
+COPY target/demo.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-jar","app.jar"]
+
+=========================================================
+🔷 4️⃣ GitHub Actions CI Pipeline
+Create:
+
+.github/workflows/ci.yml
+
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build Project
+        run: mvn clean package
+
+      - name: Run SonarQube
+        run: mvn sonar:sonar
+
+      - name: Login to DockerHub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Build Docker Image
+        run: docker build -t yourdockerhub/demo:${{ github.sha }} .
+
+      - name: Push Image
+        run: docker push yourdockerhub/demo:${{ github.sha }}
+=============================================================================		
+🔷 5️⃣ Kubernetes Deployment (Base Manifests)
+deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+        - name: demo
+          image: yourdockerhub/demo:latest
+          ports:
+            - containerPort: 8080
+=============================================================			
+			
+🔷 6️⃣ Harness.io Setup (Canary Deployment)
+Now the important part 🔥
+
+✔Step 1: Create Harness Project
+
+In Harness:
+
+Create Project
+
+Add Kubernetes Connector
+
+Connect to EKS or K8s cluster
+
+Provide Kubeconfig
+
+✔Step 2: Create Service
+
+Service contains:
+
+Docker image
+
+K8s manifests
+
+✔Artifact Configuration:
+
+Docker Registry: Docker Hub
+Image: yourdockerhub/demo
+Tag: <+artifact.tag>
+Harness dynamically picks image tag from CI.
+
+==================================================================
+
+✔Step 3: Create Environment
+
+Example:
+
+Name: staging
+
+Infrastructure: Kubernetes Cluster
+
+==========================================================
+
+🔷 7️⃣ Harness Canary Deployment Pipeline
+Now we create a pipeline in Harness.
+
+✔Pipeline Stages:
+1️⃣ Fetch Artifact
+2️⃣ Deploy Canary
+3️⃣ Verify (Prometheus/Grafana)
+4️⃣ Promote or Rollback
+
+🔥 Harness Canary Configuration
+Choose:
+
+Deployment Type → Kubernetes
+Strategy → Canary
+
+Example Canary configuration:
+
+First Step: 10% traffic
+
+Second Step: 50%
+
+Final: 100%
+
+Harness YAML Pipeline (Full Example)
+pipeline:
+  name: demo-canary
+  identifier: demo_canary
+  stages:
+    - stage:
+        name: Canary Deployment
+        identifier: canary_stage
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: demo_service
+          environment:
+            environmentRef: staging_env
+          execution:
+            steps:
+              - step:
+                  type: K8sCanaryDeploy
+                  name: Canary Deploy 10%
+                  spec:
+                    instanceSelection:
+                      type: Count
+                      spec:
+                        count: 1
+
+              - step:
+                  type: Verify
+                  name: Verify Metrics
+                  spec:
+                    monitoringTool: Prometheus
+                    duration: 5m
+
+              - step:
+                  type: K8sCanaryDelete
+                  name: Cleanup Canary
+				  
+============================================================
+				  
+🔷 8️⃣ Traffic Splitting (How Canary Works)
+
+Harness does this using:
+
+Replica-based splitting
+
+Or Service Mesh (Istio)
+
+Example:
+
+If total replicas = 10
+Canary replicas = 1
+Stable replicas = 9
+
+10% → new version
+90% → old version
+
+========================================================
+
+🔷 9️⃣ Monitoring (Prometheus + Grafana)
+
+Harness connects to:
+
+Prometheus
+
+Datadog
+
+NewRelic
+
+CloudWatch
+
+✔Example Prometheus metric:
+
+rate(http_server_requests_seconds_count[1m])
+If:
+
+Error rate > 5%
+
+Latency > threshold
+
+👉 Harness automatically rolls back.
+
+🔷 🔟 Rollback Mechanism
+
+If verification fails:
+
+Harness automatically:
+
+Scales down v2
+
+Restores v1 replicas
+
+Sends alert
+
+=================================================
+
+🔷 11️⃣ End-to-End Flow Summary
+
+Developer → GitHub
+        ↓
+GitHub Actions (Build + Test + Sonar)
+        ↓
+Docker Image
+        ↓
+Docker Hub
+        ↓
+Harness Pipeline Trigger
+        ↓
+Deploy v2 (10%)
+        ↓
+Monitor Metrics
+        ↓
+Promote to 100% OR Rollback
+
+=====================================================
+
+🔷 12️⃣ Real Production-Level Advanced Canary
+ 
+✔We can also configure:
+
+Progressive Canary (10% → 25% → 50% → 100%)
+
+Automated approval gates
+
+Manual approval stage
+
+Slack notifications
+
+Feature flags integration
+
+=============================================================
+
+🔷 13️⃣ Comparison: Harness vs Argo Rollouts
+
+Feature	Harness	Argo Rollouts
+UI	Enterprise UI	Kubernetes Native
+Verification	Built-in AI	Manual
+Rollback	Automatic	Manual/Config
+Ease	Very Easy	Medium
+Harness includes AI-based verification (CV - Continuous Verification) which automatically analyzes metrics.
+
+🚀 Final Result✔
+
+We now have:
+
+CI (GitHub Actions)
+
+Docker image automation
+
+Kubernetes deployment
+
+Harness Canary 10%-90%
+
+Auto verification
+
+Auto rollback
+
+=====================================================
+
+✔next, we have:
+
+🔥 Complete EKS + Terraform setup
+
+🔥 Harness + Istio traffic-based canary
+
+🔥 Full Production Ready Architecture Diagram
+
+🔥 Microservices Canary with API Gateway
+
+🔥 Blue-Green vs Canary deep comparison
+
+=========================================================
+
+✔Harness Pipeline Studio showing a GKE/Kubernetes Canary deployment pipeline with stages like:
+
+initialize
+
+rc_inputs
+
+deploy
+
+canary
+
+route_traffic
+
+conditional_post_deploy
+
+cleanup
+
+automate
+
+promote
+
+-> FULL WORKING HARNESS YAML CONFIGURATION for all these stages for:
+
+✔Spring Boot app
+
+✔Docker image from DockerHub
+
+✔Kubernetes (GKE / EKS)
+
+✔Canary deployment
+
+✔Traffic shift
+
+✔Verification
+
+✔Promote / Rollback
+
+==============================================================
+
+🔷 1️⃣ Assumptions
+
+✔We already created in Harness:
+
+✅ Kubernetes Connector
+✅ DockerHub Connector
+✅ Prometheus Connector (optional for verification)
+✅ Service (demo-service)
+✅ Environment (staging-env)
+
+🔷 2️⃣ Full Production-Level Harness Canary Pipeline YAML
+
+✔This covers:
+
+Initialize
+
+Runtime Inputs
+
+Deploy
+
+Canary
+
+Route Traffic
+
+Conditional Post Deploy
+
+Cleanup
+
+Promote
+
+Rollback
+
+pipeline:
+  name: gke-canary-full
+  identifier: gke_canary_full
+  projectIdentifier: demo_project
+  orgIdentifier: default
+  stages:
+
+    - stage:
+        name: Canary_Deployment
+        identifier: canary_stage
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: demo_service
+          environment:
+            environmentRef: staging_env
+            deployToAll: false
+
+          execution:
+            steps:
+
+              #################################################
+              # 1️⃣ INITIALIZE
+              #################################################
+              - step:
+                  type: K8sCanaryDeploy
+                  name: initialize
+                  identifier: initialize
+                  spec:
+                    instanceSelection:
+                      type: Count
+                      spec:
+                        count: 1
+
+              #################################################
+              # 2️⃣ RUNTIME INPUTS (Optional Shell Validation)
+              #################################################
+              - step:
+                  type: ShellScript
+                  name: rc_inputs
+                  identifier: rc_inputs
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Validating runtime inputs..."
+                          echo "Artifact Tag: <+artifact.tag>"
+                    environmentVariables: []
+
+              #################################################
+              # 3️⃣ DEPLOY STABLE VERSION
+              #################################################
+              - step:
+                  type: K8sRollingDeploy
+                  name: deploy
+                  identifier: deploy
+                  spec:
+                    skipDryRun: false
+
+              #################################################
+              # 4️⃣ CANARY DEPLOY (10%)
+              #################################################
+              - step:
+                  type: K8sCanaryDeploy
+                  name: canary
+                  identifier: canary
+                  spec:
+                    instanceSelection:
+                      type: Percentage
+                      spec:
+                        percentage: 10
+
+              #################################################
+              # 5️⃣ ROUTE TRAFFIC (If using Istio)
+              #################################################
+              - step:
+                  type: K8sTrafficShift
+                  name: route_traffic
+                  identifier: route_traffic
+                  spec:
+                    trafficSplit:
+                      percentage: 10
+
+              #################################################
+              # 6️⃣ VERIFY (Prometheus Monitoring)
+              #################################################
+              - step:
+                  type: Verify
+                  name: verify
+                  identifier: verify
+                  spec:
+                    type: Prometheus
+                    spec:
+                      monitoringTool: prometheus_connector
+                      sensitivity: MEDIUM
+                      duration: 5m
+
+              #################################################
+              # 7️⃣ CONDITIONAL POST DEPLOY
+              #################################################
+              - step:
+                  type: HarnessApproval
+                  name: conditional_post_deploy
+                  identifier: conditional_post_deploy
+                  spec:
+                    approvalMessage: "Approve promotion to 100%?"
+                    includePipelineExecutionHistory: true
+                    approvers:
+                      userGroups:
+                        - account._account_all_users
+                      minimumCount: 1
+
+              #################################################
+              # 8️⃣ PROMOTE TO 100%
+              #################################################
+              - step:
+                  type: K8sCanaryDelete
+                  name: promote
+                  identifier: promote
+
+              #################################################
+              # 9️⃣ CLEANUP OLD VERSION
+              #################################################
+              - step:
+                  type: K8sRollingRollback
+                  name: cleanup
+                  identifier: cleanup
+                  when:
+                    stageStatus: Failure
+
+              #################################################
+              # 🔟 AUTOMATION (Slack Notification)
+              #################################################
+              - step:
+                  type: ShellScript
+                  name: automate
+                  identifier: automate
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Deployment Completed Successfully"
+======================================================================						  
+						  
+🔷 3️⃣ What Each Stage Actually Does
+
+✔Stage	What It Does
+initialize	Prepares new ReplicaSet
+rc_inputs	Validates runtime parameters
+deploy	Deploys stable version
+canary	Deploys 10% new version
+route_traffic	Shifts 10% traffic
+verify	Checks metrics
+conditional_post_deploy	Manual gate
+promote	Moves to 100%
+cleanup	Rollback on failure
+automate	Post deployment automation
+
+===============================================================
+
+🔷 4️⃣ How Traffic Split Works (Replica Based)
+
+If total replicas = 10
+
+After canary:
+
+9 pods → v1
+
+1 pod → v2
+
+After promote:
+
+10 pods → v2
+
+0 pods → v1
+
+====================================================
+
+🔷 5️⃣ Automatic Rollback Logic
+If:
+
+Error rate > threshold
+
+CPU spike
+
+Latency spike
+
+Manual rejection
+
+Harness automatically:
+
+Scale down v2
+Restore v1
+Send notification
+
+========================================================================
+🔷 6️⃣ If Using Istio (Advanced Traffic Split)
+
+✔Instead of replica-based split, we can use:
+
+strategy:
+  canary:
+    steps:
+      - setWeight: 10
+      - pause: {}
+      - setWeight: 50
+      - pause: {}
+      - setWeight: 100
+This gives precise traffic routing.
+====================================================================
+🔷 7️⃣ CI → CD Integration
+
+✔In GitHub Actions:
+
+Trigger Harness using webhook:
+
+curl -X POST \
+  https://app.harness.io/gateway/pipeline/api/webhook/custom \
+  -H "x-api-key: HARNESS_API_KEY" \
+  -d '{"tag":"'$GITHUB_SHA'"}'
+Harness picks artifact:
+
+ourdockerhub/demo:<+artifact.tag>
+================================================================
+🔷 8️⃣ Final Real Production Flow
+
+Developer → GitHub
+↓
+GitHub Actions
+↓
+DockerHub
+↓
+Harness Trigger
+↓
+Deploy v2 (10%)
+↓
+Verify
+↓
+Approve
+↓
+Promote to 100%
+OR
+Rollback
+==================================================================
+🔷 9️⃣ Enterprise-Grade Additions You Can Enable
+
+✔AI Continuous Verification
+
+Auto Canary Analysis
+
+Service Mesh Traffic Split
+
+Feature Flags Integration
+
+Multi-region deployment
+
+Slack / Teams notification
+
+Jira change approval
+
+we have to see:
+
+🔥 Complete GKE Terraform + Harness Setup
+🔥 Istio + Advanced Traffic Routing
+🔥 Multi-Microservice Canary Strategy
+🔥 Blue-Green vs Canary full comparison
+🔥 Production-grade monitoring dashboard setup
+
+==============================================================
+
+✔Docker commands:
+
+🐳 1️⃣ Docker Installation Check
+docker --version
+docker info
+---------------------------------
+🐳 2️⃣ Docker Image Commands
+
+🔹 Build Image
+
+docker build -t demo-app:1.0 .
+
+With specific Dockerfile:
+
+docker build -f Dockerfile.prod -t demo-app:1.0 .
+
+🔹 List Images
+
+docker images
+
+🔹 Remove Image
+
+docker rmi demo-app:1.0
+
+Force remove:
+
+docker rmi -f demo-app:1.0
+=================================================================
+🐳 3️⃣ Docker Container Commands
+
+🔹 Run Container
+
+docker run -d -p 8080:8080 --name demo-container demo-app:1.0
+
+Explanation:
+
+-d → detached mode
+
+-p → port mapping
+
+--name → container name
+
+🔹 Run with Environment Variables
+
+docker run -d -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  --name demo-container demo-app:1.0
+  
+🔹 List Running Containers
+docker ps
+
+All containers:
+docker ps -a
+
+🔹 Stop Container
+docker stop demo-container
+
+🔹 Start Container
+docker start demo-container
+
+🔹 Restart Container
+docker restart demo-container
+
+🔹 Remove Container
+docker rm demo-container
+
+Force remove:
+docker rm -f demo-container
+
+🐳 4️⃣ Docker Logs & Debugging
+
+🔹 View Logs
+docker logs demo-container
+
+Follow logs (like tail -f):
+docker logs -f demo-container
+
+🔹 Exec into Container
+docker exec -it demo-container sh
+
+If bash available:
+docker exec -it demo-container bash
+==================================================================
+🐳 5️⃣ Docker Hub Commands (CI/CD Important)
+
+🔹 Login to Docker Hub
+
+docker login
+Or:
+docker login -u username
+
+🔹 Tag Image
+docker tag demo-app:1.0 yourdockerhub/demo-app:1.0
+
+🔹 Push Image
+docker push yourdockerhub/demo-app:1.0
+
+🔹 Pull Image
+docker pull yourdockerhub/demo-app:1.0
+=================================================================
+🐳 6️⃣ Docker Network Commands
+
+🔹 List Networks
+docker network ls
+
+🔹 Create Network
+docker network create demo-network
+
+🔹 Run Container in Network
+docker run -d --network demo-network \
+  --name app-container demo-app:1.0
+  
+🐳 7️⃣ Docker Volume Commands
+
+🔹 List Volumes
+docker volume ls
+
+🔹 Create Volume
+docker volume create demo-volume
+
+🔹 Run with Volume
+docker run -d \
+  -v demo-volume:/data \
+  demo-app:1.0
+===================================================  
+🐳 8️⃣ Docker Compose Commands
+
+✔If using docker-compose.yml
+
+🔹 Start Services
+docker compose up -d
+
+🔹 Stop Services
+docker compose down
+
+🔹 Rebuild
+docker compose up --build
+===================================================
+🐳 9️⃣ Cleanup Commands (Very Important)
+
+🔹 Remove Stopped Containers
+docker container prune
+
+🔹 Remove Unused Images
+docker image prune
+
+🔹 Remove Everything Unused
+docker system prune -a
+
+⚠️ Use carefully in production
+
+🐳 🔟 Useful for Canary Testing
+Check which version is running
+curl http://localhost:8080/api/version
+Scale containers manually
+docker run -d demo-app:1.0
+docker run -d demo-app:2.0
+Simulating 90% v1 and 10% v2.
+
+🚀 Real CI/CD Flow Commands Example
+
+mvn clean package
+
+docker build -t demo-app:2.0 .
+
+docker tag demo-app:2.0 yourdockerhub/demo-app:2.0
+
+docker push yourdockerhub/demo-app:2.0
+Then Harness picks the new image tag for Canary deployment.
+
+🎯 Most Used Commands in Interviews
+docker build
+docker run
+docker ps
+docker logs
+docker exec
+docker images
+docker rmi
+docker tag
+docker push
+docker pull
+docker compose up
+docker system prune
+===================================================
+
+🔥 Docker commands with real microservices example
+🔥 Docker + Kubernetes comparison commands
+🔥 Advanced Docker interview questions
+🔥 Docker networking deep explanation
+🔥 Multi-stage Dockerfile example
+====================================================
+We’ll cover:
+
+1️⃣ Build Docker Image
+2️⃣ Push Image to Docker Hub
+3️⃣ Pull & Deploy Container
+4️⃣ Kubernetes Deployment (Optional Advanced)
+
+🐳 Step 1: Create Docker Image
+
+📦 What is a Docker Image?
+A Docker Image =
+
+Application Code
++ Runtime (Java, Node, Python etc.)
++ OS Libraries
++ Dependencies
+It is created using a Dockerfile.
+===================================================
+📝 Example: Spring Boot App
+Dockerfile
+FROM eclipse-temurin:17-jdk-alpine
+
+WORKDIR /app
+COPY target/demo.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-jar","app.jar"]
+==============================================
+🔨 Build the Image
+docker build -t demo-app:1.0 .
+
+📊 Diagram – Image Creation
+
+Source Code
+   |
+   |  docker build
+   v
++-------------------+
+|   Docker Engine   |
++-------------------+
+         |
+         v
++-------------------+
+|   demo-app:1.0    |
+|  (Docker Image)   |
++-------------------+
+Check image:
+
+docker images
+===============================================
+🐳 Step 2: Push Image to Docker Hub
+
+🌍 What is Docker Hub?
+It is a cloud registry where Docker images are stored.
+
+Official: Docker
+Registry Platform: Docker Hub
+
+🔐 Login to Docker Hub
+docker login
+
+🏷 Tag the Image
+Before pushing, we must tag it with our Docker Hub username:
+
+docker tag demo-app:1.0 yourusername/demo-app:1.0
+
+🚀 Push to Docker Hub
+docker push yourusername/demo-app:1.0
+
+📊 Diagram – Push Flow
+
+Local Machine
++-------------------+
+| demo-app:1.0      |
++-------------------+
+        |
+        | docker push
+        v
++-----------------------+
+|     Docker Hub        |
+| ourusername/demo-app |
++-----------------------+
+Now image is stored in cloud.
+========================================================
+🐳 Step 3: Deploy Using Docker (Simple Deployment)
+Now any machine can pull and run it.
+
+📥 Pull Image
+docker pull ourusername/demo-app:1.0
+
+▶ Run Container
+docker run -d -p 8080:8080 --name demo-container yourusername/demo-app:1.0
+
+Open browser:
+
+http://localhost:8080
+
+📊 Diagram – Deployment Flow
+
+Docker Hub
+     |
+     | docker pull
+     v
+Target Server
++---------------------+
+| Docker Engine       |
+|  Container Running  |
++---------------------+
+        |
+        v
+      Users
+	  
+======================================================	  
+🐳 Step 4: Full CI/CD Flow Diagram
+Developer
+   |
+   | Code
+   v
+GitHub
+   |
+   | CI Pipeline
+   v
+docker build
+   |
+docker push
+   |
+   v
+Docker Hub
+   |
+   | Deployment Tool (Harness / Kubernetes)
+   v
+Kubernetes Cluster
+   |
+   v
+Users
+==================================================
+🐳 Step 5: Deploy in Kubernetes (Production)
+
+✔Instead of docker run, production uses Kubernetes.
+
+📝 deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+        - name: demo
+          image: yourusername/demo-app:1.0
+          ports:
+            - containerPort: 8080
+Deploy:
+
+kubectl apply -f deployment.yaml
+
+📊 Kubernetes Deployment Diagram
+
+Docker Hub
+     |
+     | kubectl apply
+     v
++-----------------------+
+|   Kubernetes Cluster  |
+|   Pod1 (v1)           |
+|   Pod2 (v1)           |
+|   Pod3 (v1)           |
++-----------------------+
+        |
+        v
+      Users
+=============================================	  
+🐳 Complete End-to-End Flow✔
+
+1. docker build
+2. docker tag
+3. docker push
+4. docker pull
+5. docker run  (OR kubectl apply)
+
+🧠 Real Interview Explanation (Short Version)
+👉 We create Docker image using Dockerfile
+👉 Tag image with Docker Hub username
+👉 Push image to Docker Hub
+👉 Deployment server pulls image
+👉 Container runs using docker run or Kubernetes
+
+🎯 Important Commands Summary
+docker build -t demo-app:1.0 .
+docker tag demo-app:1.0 username/demo-app:1.0
+docker login
+docker push username/demo-app:1.0
+docker pull username/demo-app:1.0
+docker run -d -p 8080:8080 username/demo-app:1.0
+============================================================
+we have also below:
+
+🔥 Multi-stage Dockerfile example
+🔥 Private Docker registry setup
+🔥 Docker + Kubernetes + Harness complete architecture
+🔥 Canary deployment diagram
+🔥 Real enterprise production architecture
+
+====================================================
+
+🔥 Docker commands with real microservices example
+🔥 Docker + Kubernetes comparison commands
+🔥 Advanced Docker interview questions
+🔥 Docker networking deep explanation
+🔥 Multi-stage Dockerfile example
+
+===================================================
+
+We’ll cover:
+
+1️⃣ Docker commands with real microservices
+2️⃣ Docker vs Kubernetes command comparison
+3️⃣ Advanced Docker interview questions
+4️⃣ Docker networking deep explanation
+5️⃣ Multi-stage Dockerfile example
+
+🔥 1️⃣ Docker Commands – Real Microservices Example
+
+✔Scenario:
+
+We have 3 microservices:
+
+user-service (Spring Boot)
+
+order-service (Spring Boot)
+
+mysql database
+
+✔Architecture:
+
+User Service  →  Order Service  →  MySQL
+Step 1: Create Docker Network
+docker network create micro-net
+Check:
+
+docker network ls
+
+Step 2: Run MySQL Container
+docker run -d \
+  --name mysql-db \
+  --network micro-net \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_DATABASE=orders \
+  -p 3306:3306 \
+  mysql:8
+  
+Step 3: Build User Service Image
+docker build -t user-service:1.0 .
+Run:
+
+docker run -d \
+  --name user-service \
+  --network micro-net \
+  -p 8081:8080 \
+  user-service:1.0
+  
+Step 4: Build Order Service Image
+docker build -t order-service:1.0 .
+Run:
+
+docker run -d \
+  --name order-service \
+  --network micro-net \
+  -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/orders \
+  -p 8082:8080 \
+  order-service:1.0
+  
+✔Notice:
+
+👉 mysql-db is used as hostname
+Because all containers share micro-net
+
+Microservices Docker Architecture Diagram
+               +------------------+
+               |   Docker Engine  |
+               |------------------|
+               |  micro-net       |
+               |                  |
+               |  user-service    |
+               |  order-service   |
+               |  mysql-db        |
+               +------------------+
+			   
+🔥 2️⃣ Docker vs Kubernetes Command Comparison:
+
+✔Purpose	Docker	Kubernetes:
+
+Run container	docker run	kubectl apply -f deployment.yaml
+List containers	docker ps	kubectl get pods
+Logs	docker logs	kubectl logs pod-name
+Exec into container	docker exec -it	kubectl exec -it
+Scale	Run more containers manually	kubectl scale deployment
+Restart	docker restart	kubectl rollout restart
+Remove	docker rm	kubectl delete pod
+=====================================
+Example: Scaling
+Docker
+docker run -d user-service:1.0
+docker run -d user-service:1.0
+docker run -d user-service:1.0
+Manual and painful ❌
+
+Kubernetes
+kubectl scale deployment user-service --replicas=3
+Automatic & smart ✅
+=========================================
+🔥 3️⃣ Advanced Docker Interview Questions
+Q1: What is difference between Image and Container?
+Image = Template
+Container = Running instance
+
+Q2: What happens when we run docker build?
+Docker reads Dockerfile
+
+Creates image layers
+
+Caches each layer
+
+Produces final image
+
+Q3: What is Docker layer caching?
+Each instruction creates a layer:
+
+FROM
+RUN
+COPY
+RUN
+If nothing changes → cached layer reused.
+
+Q4: Difference between CMD and ENTRYPOINT?
+
+CMD	                         ENTRYPOINT
+
+Default command	             Main executable
+Can override	             Hard to override
+
+Q5: How Docker networking works internally?
+
+Docker creates:
+
+Bridge network
+
+Virtual Ethernet interfaces
+
+iptables rules
+
+Internal DNS server
+
+Q6: What is difference between:
+
+bridge
+
+host
+
+none
+
+overlay
+
+(Explained below)
+======================================================
+🔥 4️⃣ Docker Networking Deep Explanation
+
+✔When Docker installs, it creates:
+
+docker network ls
+Default network:
+
+bridge
+host
+none
+
+🔹 Bridge Network (Default)
+Containers get private IPs:
+
+172.17.0.2
+172.17.0.3
+They communicate using:
+
+IP
+
+Container name (if custom network)
+
+Example:
+
+docker network create app-net
+Containers on app-net can talk via:
+
+http://order-service:8080
+🔹 Host Network
+Container shares host IP.
+
+docker run --network host nginx
+
+No port mapping needed.
+
+🔹 None Network
+No networking.
+
+docker run --network none nginx
+Used for high security.
+
+🔹 Overlay Network (Swarm / Multi-host)
+
+Used for multi-server communication.
+
+Networking Architecture Diagram
+          Host OS
+             |
+     +----------------+
+     | Docker Engine  |
+     |----------------|
+     |  Bridge Net    |
+     |  172.17.0.2    |
+     |  172.17.0.3    |
+     +----------------+
+======================================================	 
+🔥 5️⃣ Multi-Stage Dockerfile (Production Optimized)
+Problem:
+
+Normal Docker image size = 800MB ❌
+Multi-stage reduces to = 120MB ✅
+
+❌ Normal Dockerfile
+FROM maven:3.9.0-jdk-17
+
+WORKDIR /app
+COPY . .
+RUN mvn clean package
+
+CMD ["java","-jar","target/demo.jar"]
+Large image ❌
+
+✅ Multi-Stage Dockerfile
+# Stage 1 - Build
+FROM maven:3.9.0-jdk-17 AS build
+
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+# Stage 2 - Runtime
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+COPY --from=build /app/target/demo.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-jar","app.jar"]
+How Multi-Stage Works
+Stage 1 → Build jar
+Stage 2 → Copy only jar
+Final Image → No Maven, No Source Code
+Smaller, secure, production-ready.
+
+🔥 Full Microservices + Docker Architecture
+Developer
+   |
+docker build
+   |
+docker push
+   |
+Docker Hub
+   |
+docker pull
+   |
+Docker Engine
+   |
+micro-net
+   |
+User → Order → DB
+🎯 Real Architect-Level Understanding
+Docker = Container Runtime
+Kubernetes = Container Orchestrator
+
+Docker solves:
+
+Packaging
+
+Isolation
+
+Portability
+
+Kubernetes solves:
+
+Scaling
+
+Self-healing
+
+Rolling updates
+
+Canary
+
+Auto-scheduling
+
+=================================================
+
+We have also below:
+
+🔥 Docker Swarm full example
+🔥 Kubernetes production microservices setup
+🔥 CI/CD with Docker + Harness + Canary
+🔥 Docker security best practices
+🔥 50 DevOps Docker interview Q&A
+
+=================================================
+
+

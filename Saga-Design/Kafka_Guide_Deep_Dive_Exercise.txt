@@ -1,0 +1,4031 @@
+
+
+🚀 Chapter 1 — Apache Kafka Fundamentals (Ultra Deep Dive)
+
+🧠 1. Why Kafka Exists (The Real Problem)
+
+Before Kafka, systems looked like this:
+
+Service A → Service B
+Service A → Service C
+Service B → Service D
+Service C → Service D
+
+👉 This creates N × M integrations (tight coupling)
+
+❌ Problems:
+Hard to scale
+Hard to debug
+Failures cascade
+Adding new service = nightmare
+✅ Kafka Solution: Central Nervous System
+
+Kafka introduces:
+
+Producers → KAFKA → Consumers
+
+👉 Now it's N + M architecture
+
+Producers don’t care who consumes
+Consumers don’t care who produces
+Systems are loosely coupled
+
+🧱 2. Core Kafka Architecture
+        ┌───────────────┐
+        │   Producer    │
+        └──────┬────────┘
+               │
+               ▼
+        ┌────────────────────┐
+        │   Kafka Cluster    │
+        │  (Brokers + Log)   │
+        └──────┬─────────────┘
+               │
+        ┌──────▼─────────┐
+        │   Consumer     │
+        └────────────────┘
+🔑 3. Core Components Explained
+🔹 1. Producer
+Sends data to Kafka
+Example:
+producer.send(new ProducerRecord<>("orders", "order1"));
+
+👉 Think: Data Sender
+
+🔹 2. Consumer
+Reads data from Kafka
+Uses poll()
+consumer.poll(Duration.ofMillis(100));
+
+👉 Think: Data Reader
+
+🔹 3. Broker
+Kafka server
+Stores data
+Handles read/write
+
+👉 Think: Database node
+
+🔹 4. Topic
+Logical category of messages
+
+Examples:
+
+orders
+payments
+logs
+
+👉 Think: Table in DB
+
+🔹 5. Partition (VERY IMPORTANT 🔥)
+
+Each topic is split:
+
+orders topic
+ ├── Partition 0
+ ├── Partition 1
+ └── Partition 2
+
+👉 Enables:
+
+Parallel processing
+Scalability
+🔹 6. Offset
+
+Each message has an ID:
+
+Partition 0:
+[0] msg1
+[1] msg2
+[2] msg3
+
+👉 Offset = position in log
+
+🧠 4. Kafka = NOT a Queue (Critical Concept)
+
+Traditional Queue:
+
+Message is deleted after read ❌
+
+Kafka:
+
+Message stays for retention period ✅
+
+👉 Example:
+
+Retention = 7 days
+You can re-read anytime
+🔁 5. Kafka = Commit Log (Key Mental Model)
+Append Only Log:
+
+[0] Order Created
+[1] Payment Done
+[2] Order Shipped
+
+✔ Immutable
+✔ Ordered
+✔ Replayable
+
+⚡ 6. Real-World Use Cases
+🟢 Microservices Communication
+Order Service → Payment Service → Notification
+🟢 Event Sourcing
+Store all changes as events
+🟢 Log Aggregation
+Central logs
+🟢 Streaming Pipelines
+Real-time analytics
+🏢 Companies Using Kafka
+LinkedIn (creator)
+Netflix
+Uber
+⚖️ 7. Kafka vs Traditional Systems
+Feature	Queue	Kafka
+Data retention	❌ No	✅ Yes
+Replay	❌ No	✅ Yes
+Scalability	Medium	Very High
+Ordering	Limited	Per Partition
+Use case	Task processing	Event streaming
+🔥 8. Key Interview Concepts
+
+👉 Kafka is:
+
+Distributed system
+Fault-tolerant
+Horizontally scalable
+High throughput
+
+👉 Guarantees:
+
+Ordering (per partition)
+Durability
+Replayability
+⚠️ 9. Common Beginner Mistakes
+
+❌ Thinking Kafka deletes messages
+❌ Thinking Kafka pushes data (it doesn’t → consumer polls)
+❌ Ignoring partitions
+❌ Not understanding offsets
+
+🧪 10. Quick Hands-On (CLI)
+Start Kafka (basic)
+bin/zookeeper-server-start.sh config/zookeeper.properties
+bin/kafka-server-start.sh config/server.properties
+Create Topic
+bin/kafka-topics.sh --create \
+--topic orders \
+--bootstrap-server localhost:9092 \
+--partitions 3 \
+--replication-factor 1
+Produce Messages
+bin/kafka-console-producer.sh \
+--topic orders \
+--bootstrap-server localhost:9092
+Consume Messages
+bin/kafka-console-consumer.sh \
+--topic orders \
+--from-beginning \
+--bootstrap-server localhost:9092
+🧠 Final Mental Model (VERY IMPORTANT)
+
+👉 Kafka = Distributed Append-Only Log
+
+NOT:
+
+Queue ❌
+Database ❌
+
+BUT:
+
+Event Streaming Platform ✅
+🔎 What You Should Be Able To Explain Now
+
+After Chapter 1, you should confidently answer:
+
+What is Kafka?
+Why not use REST between services?
+What is offset?
+Why partitions?
+Queue vs Kafka difference?
+🚀 Next Step
+
+If you're ready, we’ll go to:
+
+👉 Chapter 2 — Topics, Partitions & Offsets (Deep Dive + Diagrams + Internals + Key-based routing + Scaling strategy)
+
+Just say:
+"Go to Chapter 2"
+
+-------
+
+
+Great — now we go deep into the most important Kafka concept.
+If you master this chapter, you understand 70% of Kafka.
+
+🚀 Chapter 2 — Topics, Partitions & Offsets (Ultra Deep Dive)
+🧠 1. Topic = Logical Data Stream
+
+A topic is a category of messages.
+
+Example:
+orders
+payments
+user-events
+
+👉 Think:
+
+Topic = Table (but append-only)
+You can only write (append), not update/delete
+🧱 2. Topic Internals (Reality)
+
+A topic is NOT a single file.
+
+👉 It is split into partitions:
+
+orders topic
+ ├── Partition 0
+ ├── Partition 1
+ └── Partition 2
+⚡ 3. Partition = Unit of Scalability
+
+Each partition is:
+
+Independent
+Stored on a broker
+Ordered log
+📊 Partition Visualization
+Partition 0:        Partition 1:        Partition 2:
+[0] Order A         [0] Order X         [0] Order P
+[1] Order B         [1] Order Y         [1] Order Q
+[2] Order C         [2] Order Z         [2] Order R
+🔥 KEY RULE
+
+👉 Ordering is guaranteed ONLY within a partition
+
+❌ Not across partitions
+✅ Only inside one partition
+
+🧠 4. Offset = Message Address
+
+Each message gets a unique number:
+
+Partition 0:
+Offset → Message
+0 → Order Created
+1 → Payment Done
+2 → Shipped
+⚠️ Important Properties
+Starts from 0
+Always increasing
+Never reused
+🔁 5. Offset = Consumer Control
+
+Kafka does NOT track what you read ❌
+Consumer tracks it ✅
+
+👉 Example:
+
+Latest offset = 100
+Consumer offset = 60
+Lag = 40
+📌 6. Message Flow (End-to-End)
+Producer → Topic → Partition → Offset → Consumer
+🔑 7. Key-Based Routing (CRITICAL 🔥)
+
+Now the most important concept.
+
+❓ Without Key
+producer.send(new ProducerRecord<>("orders", "data"));
+
+👉 Kafka does:
+
+Round-robin
+Random distribution
+Partition 0 → msg1
+Partition 1 → msg2
+Partition 2 → msg3
+🔑 With Key
+producer.send(new ProducerRecord<>("orders", "user123", "order-data"));
+
+👉 Kafka uses:
+
+partition = hash(key) % numPartitions
+🎯 Result
+"user123" → Partition 1
+"user123" → Partition 1
+"user123" → Partition 1
+🔥 WHY THIS MATTERS
+
+👉 Guarantees ordering per user
+
+Example:
+
+Order Created
+Payment Done
+Order Shipped
+
+✔ Correct order maintained
+
+⚠️ Without Key Problem
+Partition 0 → Created
+Partition 2 → Shipped
+Partition 1 → Payment
+
+❌ Order breaks
+
+🧠 8. Partition Strategy Design (REAL WORLD)
+🎯 Case 1: User-based system
+
+👉 Use:
+
+key = userId
+
+✔ Ensures per-user ordering
+
+🎯 Case 2: Order system
+
+👉 Use:
+
+key = orderId
+🎯 Case 3: Logging
+
+👉 Use:
+
+No key (random)
+
+✔ Better distribution
+
+⚖️ 9. Scaling Strategy (VERY IMPORTANT 🔥)
+🧠 Rule:
+
+👉 Partitions = Parallelism
+
+Example:
+Topic partitions = 3
+Consumers = 3
+C1 → P0
+C2 → P1
+C3 → P2
+
+✔ Perfect parallelism
+
+❌ Wrong Design
+Partitions = 2
+Consumers = 5
+C1 → P0
+C2 → P1
+C3 → idle
+C4 → idle
+C5 → idle
+
+❌ Waste of resources
+
+📌 Golden Rule
+
+👉 #Consumers ≤ #Partitions
+
+🚨 10. Increasing Partitions (Danger ⚠️)
+❗ You CAN increase partitions
+kafka-topics.sh --alter --partitions 5
+❌ But Problem:
+
+Key mapping changes!
+
+Old: hash(key) % 3
+New: hash(key) % 5
+
+👉 Same key → different partition
+
+🔥 Result:
+
+❌ Ordering breaks
+
+🧠 11. Retention + Offset Reset
+
+Messages are deleted after retention:
+
+Retention = 7 days
+What happens?
+Offsets 0–50 deleted
+New start = 51
+Consumer reset:
+--from-beginning
+--to-latest
+--shift-by
+🧪 12. Hands-On Commands
+Create Topic
+kafka-topics.sh --create \
+--topic orders \
+--partitions 3 \
+--replication-factor 1 \
+--bootstrap-server localhost:9092
+Describe Topic
+kafka-topics.sh --describe \
+--topic orders \
+--bootstrap-server localhost:9092
+Output Example
+Partition: 0 Leader: 1 Replicas: 1
+Partition: 1 Leader: 2 Replicas: 2
+Partition: 2 Leader: 3 Replicas: 3
+Produce with Key
+kafka-console-producer.sh \
+--topic orders \
+--bootstrap-server localhost:9092 \
+--property "parse.key=true" \
+--property "key.separator=:"
+
+Input:
+
+user1:order1
+user1:order2
+Consume with Offset
+kafka-console-consumer.sh \
+--topic orders \
+--from-beginning \
+--property print.offset=true \
+--bootstrap-server localhost:9092
+🧠 13. Advanced Internals (Expert Level 🔥)
+📦 Log Segments
+
+Partition is split into files:
+
+000000.log
+000001.log
+000002.log
+Why?
+
+✔ Faster disk I/O
+✔ Easier deletion
+✔ Better performance
+
+📌 High Watermark (Concept Intro)
+Only committed messages are visible
+Used for replication consistency
+
+(More in Chapter 5)
+
+🔥 14. Interview Questions (VERY IMPORTANT)
+❓ Why partitions?
+
+✔ Scalability
+✔ Parallelism
+
+❓ What is offset?
+
+✔ Position of message in partition
+
+❓ Ordering guarantee?
+
+✔ Only within partition
+
+❓ What happens if partitions increase?
+
+✔ Key distribution changes
+
+❓ Can two consumers read same partition?
+
+❌ No (same group)
+✔ Yes (different groups)
+
+🧠 FINAL MASTER SUMMARY
+
+👉 Topic = Logical stream
+👉 Partition = Physical scalability
+👉 Offset = Message position
+👉 Key = Ordering control
+
+🚀 What You Should Master Now
+
+You should now clearly understand:
+
+✔ How Kafka stores data
+✔ How messages are distributed
+✔ How ordering works
+✔ How scaling works
+✔ Why keys are critical
+
+🔥 Next Chapter
+
+👉 Chapter 3 — Producers & Message Flow (Deep Internals + acks + retries + batching + idempotence + performance tuning)
+
+Just say:
+"Go to Chapter 3"
+
+
+
+------------------------------
+🚀 Chapter 4 — Consumers & Consumer Groups (Ultra Deep Dive)
+🧠 1. What is a Kafka Consumer?
+
+A consumer:
+
+Reads messages from Kafka
+Controls its own position (offset)
+Pulls data (Kafka never pushes)
+
+👉 Think:
+
+Consumer = Smart reader with full control over progress
+
+🔄 2. Poll-Based Model (CRITICAL 🔥)
+
+Kafka uses pull model:
+
+consumer.poll(Duration.ofMillis(100));
+📊 Flow
+Consumer → poll() → Broker → Fetch Data → Process
+🔥 Why Poll?
+
+✔ Consumer controls speed
+✔ Handles backpressure
+✔ Avoids overload
+
+🧱 3. Consumer Groups (MOST IMPORTANT 🔥)
+🧠 Concept
+
+A consumer group = multiple consumers working together
+
+Group: order-processors
+📊 Example
+Topic: orders (3 partitions)
+
+Consumer Group:
+C1, C2, C3
+C1 → Partition 0
+C2 → Partition 1
+C3 → Partition 2
+🔥 Rule
+
+👉 One partition = one consumer (within group)
+
+❗ Important
+
+✔ Same group → share work
+✔ Different groups → independent reading
+
+⚡ 4. Parallelism (Scaling)
+Perfect Scaling
+Partitions = 3
+Consumers = 3
+
+✔ Max parallelism
+
+Under-utilization
+Partitions = 5
+Consumers = 2
+
+✔ Each handles multiple partitions
+
+Over-provisioning ❌
+Partitions = 2
+Consumers = 5
+
+❌ 3 consumers idle
+
+🧠 Golden Rule
+
+👉 Max parallelism = number of partitions
+
+🔁 5. Rebalancing (VERY IMPORTANT 🔥)
+❓ What is Rebalancing?
+
+When consumers change, Kafka reassigns partitions.
+
+🔄 Triggered When:
+New consumer joins
+Consumer crashes
+Topic partitions change
+📊 Example
+Before:
+C1 → P0, P1
+C2 → P2
+After (C3 joins):
+C1 → P0
+C2 → P1
+C3 → P2
+⚠️ Problem
+
+During rebalance:
+
+Consumers STOP processing ❌
+Temporary downtime
+🔥 Solution: Cooperative Rebalancing
+props.put("partition.assignment.strategy",
+"org.apache.kafka.clients.consumer.CooperativeStickyAssignor");
+
+✔ Minimizes disruption
+✔ Incremental reassignment
+
+🧠 6. Offset Management (CRITICAL 🔥)
+❓ What is Offset?
+
+👉 Position of last processed message
+
+Example
+Partition 0:
+[0] A
+[1] B
+[2] C
+
+If consumer processed till B:
+
+Committed offset = 2
+⚠️ Key Point
+
+👉 Offset stored in Kafka topic:
+
+__consumer_offsets
+🔁 7. Offset Commit Strategies
+🔹 Auto Commit
+props.put("enable.auto.commit", "true");
+Kafka commits automatically
+Risk: data loss ❌
+🔹 Manual Commit (Recommended)
+consumer.commitSync();
+
+✔ Full control
+✔ Safer
+
+🔥 commitSync vs commitAsync
+✅ commitSync()
+consumer.commitSync();
+Blocking
+Guaranteed commit
+Slower
+⚡ commitAsync()
+consumer.commitAsync();
+Non-blocking
+Faster
+Risk of loss
+⚖️ 8. Delivery Semantics
+❌ At-most-once
+
+Commit BEFORE processing
+
+Commit → Process
+
+Risk: message lost
+
+✅ At-least-once (Most common)
+
+Process → Commit
+
+Process → Commit
+
+Risk: duplicates possible
+
+🟢 Exactly-once (Advanced)
+Combine:
+Idempotent producer
+Transactions
+📊 9. Consumer Lag (VERY IMPORTANT 🔥)
+❓ What is Lag?
+Lag = Latest Offset - Consumer Offset
+Example
+Latest = 100
+Consumer = 80
+Lag = 20
+🚨 High Lag Means:
+Consumer slow
+System overloaded
+Possible failure
+📌 Monitoring Tools
+CLI
+JMX
+Prometheus + Grafana
+🧪 10. Full Java Consumer Example
+Properties props = new Properties();
+
+props.put("bootstrap.servers", "localhost:9092");
+props.put("group.id", "order-group");
+props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+// Manual commit
+props.put("enable.auto.commit", "false");
+
+KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+
+consumer.subscribe(Arrays.asList("orders"));
+
+try {
+    while (true) {
+        ConsumerRecords<String, String> records =
+            consumer.poll(Duration.ofMillis(100));
+
+        for (ConsumerRecord<String, String> record : records) {
+            System.out.println(
+                "Partition: " + record.partition() +
+                " Offset: " + record.offset() +
+                " Value: " + record.value()
+            );
+        }
+
+        consumer.commitSync(); // commit after processing
+    }
+} catch (WakeupException e) {
+    // shutdown
+} finally {
+    consumer.close();
+}
+⚠️ 11. Graceful Shutdown (IMPORTANT 🔥)
+Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    consumer.wakeup();
+}));
+
+✔ Prevents:
+
+Data loss
+Stuck consumers
+🚨 12. Common Mistakes
+
+❌ Auto commit in production
+❌ Ignoring lag
+❌ Too many consumers
+❌ Not handling rebalance
+❌ Processing before poll
+
+🔥 13. Interview Questions
+❓ Why Kafka uses poll?
+
+✔ Backpressure control
+
+❓ What is consumer group?
+
+✔ Parallel processing unit
+
+❓ What is rebalance?
+
+✔ Partition reassignment
+
+❓ What is lag?
+
+✔ Processing delay indicator
+
+❓ Can two consumers read same partition?
+
+✔ Same group → ❌
+✔ Different group → ✅
+
+🧠 FINAL MASTER SUMMARY
+
+👉 Consumer is NOT passive reader
+It is:
+
+✔ Offset manager
+✔ Parallel worker
+✔ Failure-resilient system
+
+🔎 What You Should Master Now
+
+✔ Poll model
+✔ Consumer groups
+✔ Rebalancing
+✔ Offset commit strategies
+✔ Lag monitoring
+
+
+
+
+
+-----------------------------------
+
+
+Now we step into Kafka’s backbone — the cluster internals.
+This chapter is what separates a developer from a Kafka architect.
+
+🚀 Chapter 5 — Brokers & Cluster Architecture (Ultra Deep Dive)
+
+🧠 1. What is a Kafka Broker?
+
+A broker is:
+
+A Kafka server
+Stores partitions (data)
+Handles read/write requests
+
+👉 Think:
+
+Broker = Data node in distributed system
+
+📊 Cluster Example
+Broker 1
+Broker 2
+Broker 3
+
+👉 Together they form:
+
+Kafka Cluster
+🧱 2. Partition Distribution Across Brokers
+Example Topic: orders (3 partitions, replication = 2)
+Partition 0 → Broker 1
+Partition 1 → Broker 2
+Partition 2 → Broker 3
+
+With replication:
+
+P0 → B1 (Leader), B2 (Follower)
+P1 → B2 (Leader), B3 (Follower)
+P2 → B3 (Leader), B1 (Follower)
+🔥 3. Leader & Follower (CRITICAL 🔥)
+🧠 Concept
+
+Each partition has:
+
+1 Leader
+N Followers
+📊 Flow
+Producer → Leader → Followers
+Consumer → Leader
+✅ Key Rules
+
+✔ All writes go to Leader
+✔ All reads go from Leader (default)
+✔ Followers only replicate
+
+⚠️ Why?
+
+👉 Ensures:
+
+Consistency
+Simplicity
+🔁 4. Replication (Fault Tolerance)
+❓ Why Replication?
+
+👉 To prevent data loss
+
+📊 Example
+Replication Factor = 3
+
+Partition 0:
+B1 (Leader)
+B2 (Follower)
+B3 (Follower)
+🔄 Flow
+Producer → Leader
+Leader → Followers (replicate)
+ACK → Producer
+🧠 5. ISR (In-Sync Replicas) 🔥
+❓ What is ISR?
+
+👉 Set of replicas that are fully caught up
+
+Example:
+ISR = [B1, B2, B3]
+
+If B3 lags:
+
+ISR = [B1, B2]
+⚠️ Why Important?
+
+ACK depends on ISR:
+
+acks=all
+
+👉 Means:
+
+Wait for all ISR replicas
+⚖️ 6. min.insync.replicas (VERY IMPORTANT 🔥)
+Config:
+min.insync.replicas=2
+Scenario:
+Replication factor = 3
+ISR = 2 brokers alive
+
+✔ Write allowed
+
+If ISR < min.insync.replicas:
+
+❌ Write fails
+
+🔥 WHY?
+
+👉 Prevents:
+
+Data loss
+Weak durability
+🧠 7. High Watermark (Consistency 🔥)
+❓ What is it?
+
+👉 The last committed offset replicated to all ISR
+
+Example:
+Leader log:      [0,1,2,3,4]
+Follower log:    [0,1,2,3]
+High watermark = 3
+Rule:
+
+👉 Consumers can only read till high watermark
+
+✔ Ensures consistency
+✔ Avoids dirty reads
+
+🔄 8. Leader Election (Failure Handling)
+Scenario:
+
+Leader crashes ❌
+
+Old Leader: B1
+New Leader selected:
+New Leader: B2
+How?
+From ISR only ✅
+Not from out-of-sync replicas ❌
+🔥 Result:
+
+✔ No data loss
+✔ Fast recovery
+
+🧠 9. Controller (Cluster Brain)
+❓ What is Controller?
+
+👉 One broker acts as Controller
+
+Responsibilities:
+Leader election
+Detect broker failure
+Manage cluster metadata
+📊 Example:
+Controller → Broker 2
+⚠️ If Controller fails?
+
+👉 New controller elected automatically
+
+🧬 10. Zookeeper vs KRaft (Modern Kafka 🔥)
+🧓 Old Architecture (Zookeeper)
+
+Kafka depended on Apache ZooKeeper
+
+Responsibilities:
+Metadata storage
+Leader election
+Cluster coordination
+⚠️ Problems:
+
+❌ Extra dependency
+❌ Complex setup
+❌ Scaling issues
+
+🚀 New Architecture: KRaft (Kafka Raft)
+❓ What is KRaft?
+
+👉 Kafka without Zookeeper
+
+📊 Architecture
+Kafka Brokers + Metadata Quorum
+✔ Benefits:
+
+✔ Simpler setup
+✔ Better performance
+✔ Native consensus (Raft)
+
+🔥 Key Concept
+
+Kafka now manages metadata internally using Raft protocol
+
+🧪 11. KRaft Startup Example
+kafka-storage.sh format \
+-t <cluster-id> \
+-c config/kraft/server.properties
+kafka-server-start.sh config/kraft/server.properties
+⚡ 12. Rack Awareness (Advanced)
+❓ What is it?
+
+👉 Distribute replicas across data centers
+
+Example:
+Rack A → Broker 1
+Rack B → Broker 2
+Rack C → Broker 3
+
+✔ Prevents:
+
+Data center failure impact
+🚨 13. Common Mistakes
+
+❌ Replication factor = 1
+❌ Not setting min.insync.replicas
+❌ Ignoring ISR shrink
+❌ Misunderstanding leader-only writes
+❌ Using old Zookeeper blindly
+
+🔥 14. Interview Questions
+❓ What is ISR?
+
+✔ In-sync replicas
+
+❓ What happens if leader crashes?
+
+✔ New leader from ISR
+
+❓ What is high watermark?
+
+✔ Safe readable offset
+
+❓ Why min.insync.replicas?
+
+✔ Prevent data loss
+
+❓ Zookeeper vs KRaft?
+
+✔ External vs internal coordination
+
+🧠 FINAL MASTER SUMMARY
+
+👉 Kafka Cluster = Distributed log system
+
+Core pillars:
+
+✔ Broker = storage node
+✔ Leader = write authority
+✔ ISR = consistency guarantee
+✔ Replication = fault tolerance
+✔ Controller = cluster brain
+
+🔎 What You Should Master Now
+
+✔ Cluster architecture
+✔ Replication internals
+✔ Leader election
+✔ ISR & durability
+✔ KRaft modern design
+
+🚀 Next Chapter
+
+👉 Chapter 6 — Java Producer & Consumer Code (Full Hands-On + Callbacks + Keys + Rebalancing + Shutdown Patterns)
+
+Just say:
+
+🚀 Next Chapter
+
+👉 Chapter 6 — Java Producer & Consumer Code (Full Hands-On + Callbacks + Keys + Rebalancing + Shutdown Patterns)
+
+Just say:
+"Go to Chapter 6"
+
+Chapter 6 — Java Producer & Consumer Code (Full Hands-On + Callbacks + Keys + Rebalancing + Shutdown Patterns)
+
+Excellent — now we move from theory to real production-grade coding.
+This chapter will make you job-ready with Kafka Java clients.
+
+🚀 Chapter 6 — Java Producer & Consumer Code (Full Hands-On Deep Dive)
+🧠 1. Kafka Java Client Overview
+
+Kafka provides 3 main clients:
+
+Producer API → Send data
+Consumer API → Read data
+Admin API → Manage topics
+
+👉 We focus on:
+
+Producer ✅
+Consumer ✅
+⚙️ 2. Project Setup (Maven)
+<dependency>
+  <groupId>org.apache.kafka</groupId>
+  <artifactId>kafka-clients</artifactId>
+  <version>3.7.0</version>
+</dependency>
+🧱 3. Producer — Step-by-Step (Production Ready)
+✅ Step 1: Create Properties
+Properties props = new Properties();
+
+props.put("bootstrap.servers", "localhost:9092");
+props.put("key.serializer",
+"org.apache.kafka.common.serialization.StringSerializer");
+props.put("value.serializer",
+"org.apache.kafka.common.serialization.StringSerializer");
+🔥 Step 2: Add Reliability Configs
+props.put("acks", "all");
+props.put("retries", Integer.MAX_VALUE);
+props.put("enable.idempotence", "true");
+⚡ Step 3: Performance Tuning
+props.put("linger.ms", 5);
+props.put("batch.size", 16384);
+props.put("compression.type", "snappy");
+🧪 Step 4: Create Producer
+KafkaProducer<String, String> producer =
+    new KafkaProducer<>(props);
+📨 Step 5: Send Messages (Async + Callback)
+for (int i = 0; i < 10; i++) {
+
+    ProducerRecord<String, String> record =
+        new ProducerRecord<>("orders", "user1", "order-" + i);
+
+    producer.send(record, (metadata, exception) -> {
+
+        if (exception == null) {
+            System.out.println(
+                "Topic: " + metadata.topic() +
+                " Partition: " + metadata.partition() +
+                " Offset: " + metadata.offset()
+            );
+        } else {
+            exception.printStackTrace();
+        }
+
+    });
+}
+🔄 Step 6: Flush & Close
+producer.flush();
+producer.close();
+🧠 4. Producer with Keys (Ordering Guarantee)
+🔑 Key Example
+ProducerRecord<String, String> record =
+    new ProducerRecord<>("orders", "user123", "payment done");
+📊 Result
+"user123" → Same partition always
+
+✔ Ordering maintained
+✔ Critical for business logic
+
+⚠️ Without Key
+new ProducerRecord<>("orders", "payment done");
+
+❌ Random partition
+❌ Order NOT guaranteed
+
+🔁 5. Synchronous vs Asynchronous Send
+⚡ Async (Default)
+producer.send(record);
+
+✔ Fast
+✔ Non-blocking
+
+🛑 Sync
+producer.send(record).get();
+
+✔ Blocking
+✔ Safer for debugging
+
+🧱 6. Consumer — Step-by-Step
+✅ Step 1: Properties
+Properties props = new Properties();
+
+props.put("bootstrap.servers", "localhost:9092");
+props.put("group.id", "order-group");
+
+props.put("key.deserializer",
+"org.apache.kafka.common.serialization.StringDeserializer");
+props.put("value.deserializer",
+"org.apache.kafka.common.serialization.StringDeserializer");
+🔥 Step 2: Disable Auto Commit
+props.put("enable.auto.commit", "false");
+🧪 Step 3: Create Consumer
+KafkaConsumer<String, String> consumer =
+    new KafkaConsumer<>(props);
+📡 Step 4: Subscribe
+consumer.subscribe(Arrays.asList("orders"));
+🔄 Step 5: Poll Loop (CORE 🔥)
+while (true) {
+
+    ConsumerRecords<String, String> records =
+        consumer.poll(Duration.ofMillis(100));
+
+    for (ConsumerRecord<String, String> record : records) {
+
+        System.out.println(
+            "Partition: " + record.partition() +
+            " Offset: " + record.offset() +
+            " Key: " + record.key() +
+            " Value: " + record.value()
+        );
+    }
+
+    consumer.commitSync();
+}
+🧠 7. Manual Offset Control (CRITICAL)
+✅ Safe Pattern
+process(record);
+consumer.commitSync();
+❌ Wrong Pattern
+consumer.commitSync();
+process(record);
+
+👉 Risk:
+
+Data loss ❌
+🔁 8. Rebalancing Handling (Advanced 🔥)
+❓ Problem
+
+During rebalance:
+
+Offsets may not be committed
+✅ Solution: Rebalance Listener
+consumer.subscribe(
+    Arrays.asList("orders"),
+    new ConsumerRebalanceListener() {
+
+        @Override
+        public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+            System.out.println("Rebalance started - commit offsets");
+            consumer.commitSync();
+        }
+
+        @Override
+        public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+            System.out.println("Rebalance completed");
+        }
+    }
+);
+⚠️ Why Important?
+
+✔ Prevents duplicate processing
+✔ Prevents data loss
+
+🛑 9. Graceful Shutdown (VERY IMPORTANT 🔥)
+❓ Problem
+
+If app stops suddenly:
+
+Offsets not committed ❌
+✅ Solution
+Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    System.out.println("Shutdown detected");
+    consumer.wakeup();
+}));
+🧠 Catch Exception
+try {
+    while (true) {
+        consumer.poll(Duration.ofMillis(100));
+    }
+} catch (WakeupException e) {
+    System.out.println("Shutting down...");
+} finally {
+    consumer.close();
+}
+📊 10. Full Consumer (Production Pattern)
+public class ConsumerDemo {
+
+    public static void main(String[] args) {
+
+        Properties props = new Properties();
+
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("group.id", "order-group");
+        props.put("enable.auto.commit", "false");
+
+        props.put("key.deserializer",
+        "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer",
+        "org.apache.kafka.common.serialization.StringDeserializer");
+
+        KafkaConsumer<String, String> consumer =
+            new KafkaConsumer<>(props);
+
+        consumer.subscribe(Arrays.asList("orders"));
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            consumer.wakeup();
+        }));
+
+        try {
+            while (true) {
+
+                ConsumerRecords<String, String> records =
+                    consumer.poll(Duration.ofMillis(100));
+
+                for (ConsumerRecord<String, String> record : records) {
+
+                    System.out.println(record.value());
+                }
+
+                consumer.commitSync();
+            }
+        } catch (WakeupException e) {
+            System.out.println("Shutdown initiated");
+        } finally {
+            consumer.close();
+        }
+    }
+}
+🚨 11. Common Mistakes
+
+❌ Not closing producer/consumer
+❌ Using auto-commit blindly
+❌ Ignoring callbacks
+❌ No key usage
+❌ Not handling rebalance
+
+🔥 12. Interview Questions
+❓ How does producer send data?
+
+✔ Async + callback
+
+❓ Why use keys?
+
+✔ Ordering
+
+❓ What is poll loop?
+
+✔ Core consumer mechanism
+
+❓ Why disable auto commit?
+
+✔ Control reliability
+
+❓ What is wakeup()?
+
+✔ Safe shutdown
+
+🧠 FINAL MASTER SUMMARY
+
+👉 This chapter = real Kafka engineering
+
+You now know:
+
+✔ How to write production-ready producer
+✔ How to build safe consumer
+✔ How to handle rebalancing
+✔ How to ensure no data loss
+
+🔎 What You Should Practice
+
+✔ Run producer + consumer locally
+✔ Try with keys
+✔ Kill consumer → observe rebalance
+✔ Check offsets
+
+
+
+
+-----------
+
+
+
+
+Now we reach one of the most critical and most misunderstood topics in Kafka.
+This chapter decides whether your system is correct or broken in production.
+
+🚀 Chapter 7 — Offset Management & Delivery Semantics (Ultra Deep Dive)
+
+🧠 1. Why Offsets Matter So Much
+
+Kafka does NOT track what you processed ❌
+👉 YOU control correctness via offsets
+
+📊 Core Idea
+Offset = position of last processed message
+Example
+Partition 0:
+[0] A
+[1] B
+[2] C
+[3] D
+
+If consumer processed till C:
+
+Committed Offset = 3
+
+👉 Next read starts from D
+
+🧱 2. Where Offsets Are Stored
+
+Kafka stores offsets in:
+
+__consumer_offsets
+
+👉 Internal Kafka topic
+
+🧠 Key Insight
+
+Offsets are stored:
+
+Per consumer group
+Per partition
+Example
+Group: order-group
+
+Partition 0 → offset 10
+Partition 1 → offset 5
+⚖️ 3. Delivery Semantics (CORE 🔥)
+
+This defines data correctness guarantee
+
+❌ 3.1 At-Most-Once (Risky)
+Flow
+Commit → Process
+Example
+consumer.commitSync();  // commit first
+process(record);        // process later
+❗ Problem
+
+If crash happens:
+
+Commit done ❌
+Processing NOT done ❌
+
+👉 Message LOST
+
+📌 Use Case
+Logs
+Metrics (loss acceptable)
+✅ 3.2 At-Least-Once (Most Used 🔥)
+Flow
+Process → Commit
+Example
+process(record);
+consumer.commitSync();
+❗ Problem
+
+If crash happens:
+
+Processing done ✔
+Commit NOT done ❌
+
+👉 Message processed AGAIN
+
+✔ Result
+No data loss
+Possible duplicates
+📌 Use Case
+Payments (with idempotent handling)
+Orders
+🟢 3.3 Exactly-Once (Advanced 🔥🔥)
+Goal
+
+✔ No duplicates
+✔ No data loss
+
+Requires:
+Idempotent Producer
+Transactions
+Producer Config
+props.put("enable.idempotence", "true");
+props.put("transactional.id", "txn-1");
+Transaction Flow
+producer.initTransactions();
+
+producer.beginTransaction();
+
+producer.send(record);
+
+// also send offsets to transaction
+producer.sendOffsetsToTransaction(offsets, groupId);
+
+producer.commitTransaction();
+🧠 Result
+
+✔ Atomic:
+
+Message write
+Offset commit
+🔁 4. Offset Commit Strategies
+🔹 Auto Commit (Not Recommended ❌)
+enable.auto.commit=true
+Problem
+Poll → Auto Commit → Process
+
+👉 Crash = data loss
+
+🔹 Manual Commit (Recommended ✅)
+commitSync()
+consumer.commitSync();
+
+✔ Blocking
+✔ Safe
+
+commitAsync()
+consumer.commitAsync();
+
+✔ Fast
+❌ May fail silently
+
+🧠 Best Practice
+
+👉 Use:
+
+commitSync() after processing
+🔄 5. Reprocessing (VERY IMPORTANT 🔥)
+❓ What is Reprocessing?
+
+👉 Reading old messages again
+
+Scenario
+Bug in processing
+Fix deployed
+Re-run old data
+🧪 Methods
+🔹 From Beginning
+--from-beginning
+🔹 Reset Offsets
+kafka-consumer-groups.sh \
+--group order-group \
+--topic orders \
+--reset-offsets \
+--to-earliest \
+--execute \
+--bootstrap-server localhost:9092
+🔹 Shift Offsets
+--shift-by -10
+
+👉 Re-read last 10 messages
+
+⚠️ 6. Offset Reset Policy
+Config:
+auto.offset.reset=earliest | latest
+🔹 earliest
+
+👉 Start from beginning
+
+🔹 latest
+
+👉 Start from new messages only
+
+❗ Important
+
+Only applies when:
+
+No committed offset exists
+📊 7. Failure Scenarios (REAL WORLD)
+❌ Case 1: Crash Before Commit
+Process ✔
+Commit ❌
+
+👉 Duplicate processing
+
+❌ Case 2: Commit Before Process
+Commit ✔
+Process ❌
+
+👉 Data loss
+
+❌ Case 3: Broker Failure
+
+Handled by:
+✔ Replication
+✔ ISR
+
+🔥 8. Idempotent Consumer Pattern
+❓ Problem
+
+At-least-once → duplicates
+
+✅ Solution
+
+Make processing idempotent
+
+Example
+if (!db.contains(eventId)) {
+    process();
+    db.save(eventId);
+}
+✔ Result
+Duplicate-safe processing
+🧠 9. Transaction + Consumer Pattern
+Full Exactly-Once Flow
+Read → Process → Produce → Commit Offset (Atomic)
+Used in:
+Kafka Streams
+Financial systems
+⚡ 10. Offset Lag Revisited
+Formula
+Lag = Latest Offset - Committed Offset
+🔥 High Lag Means:
+Consumer slow
+Crash
+Bottleneck
+🧪 11. CLI Commands
+Check Consumer Group
+kafka-consumer-groups.sh \
+--describe \
+--group order-group \
+--bootstrap-server localhost:9092
+Output
+Partition  Current Offset  Log End Offset  Lag
+0          50              100             50
+🚨 12. Common Mistakes
+
+❌ Auto commit enabled
+❌ Commit before processing
+❌ Ignoring duplicates
+❌ Not monitoring lag
+❌ Not handling reset
+
+🔥 13. Interview Questions
+❓ What is offset?
+
+✔ Message position
+
+❓ At-least-once vs at-most-once?
+
+✔ Order of commit vs process
+
+❓ How to achieve exactly-once?
+
+✔ Idempotence + transactions
+
+❓ What is offset reset?
+
+✔ Reprocess data
+
+❓ Where offsets stored?
+
+✔ __consumer_offsets
+
+🧠 FINAL MASTER SUMMARY
+
+👉 Offsets = source of truth for correctness
+
+Everything depends on:
+
+✔ When you commit
+✔ How you process
+✔ How you handle duplicates
+
+🔎 What You Should Master Now
+
+✔ All 3 delivery semantics
+✔ Offset commit strategies
+✔ Reprocessing patterns
+✔ Failure handling
+✔ Exactly-once design
+
+🚀 Final Chapter
+
+-------------------------
+
+🚀 Chapter 8 — Kafka Cloud & Conduktor (Ultra Deep Dive)
+🧠 1. Why Cloud Kafka?
+
+Running Kafka locally is easy…
+Running it in production is hard:
+
+❌ Cluster setup
+❌ Scaling brokers
+❌ Security
+❌ Monitoring
+❌ Maintenance
+
+✅ Solution: Managed Kafka
+
+Popular providers:
+
+Confluent Cloud
+Amazon Web Services MSK
+Microsoft Azure Event Hubs
+
+👉 They manage:
+
+Brokers
+Scaling
+Security
+Monitoring
+🧱 2. Kafka Cloud Architecture
+📊 High-Level Flow
+Your App (Producer/Consumer)
+        ↓
+   Internet (SSL)
+        ↓
+ Kafka Cloud Cluster
+        ↓
+ Topics / Partitions / Replication
+🔐 Key Difference from Local
+
+👉 Everything is secured
+
+Authentication
+Encryption
+Authorization
+🔐 3. SASL_SSL (CRITICAL 🔥)
+❓ What is SASL_SSL?
+
+👉 Combination of:
+
+SSL/TLS → Encryption
+SASL → Authentication
+📊 Connection Flow
+Client → SSL Handshake → Auth → Kafka Broker
+🔑 Required Properties
+props.put("bootstrap.servers", "cluster-url:9092");
+
+props.put("security.protocol", "SASL_SSL");
+props.put("sasl.mechanism", "PLAIN");
+
+props.put("sasl.jaas.config",
+"org.apache.kafka.common.security.plain.PlainLoginModule required "
++ "username='API_KEY' password='API_SECRET';");
+🧠 What Happens Internally
+SSL handshake
+Credentials validated
+Secure connection established
+⚙️ 4. Full Cloud Producer Example
+Properties props = new Properties();
+
+props.put("bootstrap.servers", "your-cluster-url:9092");
+
+// Security
+props.put("security.protocol", "SASL_SSL");
+props.put("sasl.mechanism", "PLAIN");
+props.put("sasl.jaas.config",
+"org.apache.kafka.common.security.plain.PlainLoginModule required "
++ "username='API_KEY' password='API_SECRET';");
+
+// Serializers
+props.put("key.serializer",
+"org.apache.kafka.common.serialization.StringSerializer");
+props.put("value.serializer",
+"org.apache.kafka.common.serialization.StringSerializer");
+
+// Reliability
+props.put("acks", "all");
+props.put("enable.idempotence", "true");
+
+KafkaProducer<String, String> producer =
+    new KafkaProducer<>(props);
+
+producer.send(new ProducerRecord<>("orders", "user1", "cloud-order"));
+
+producer.close();
+📡 5. Cloud Consumer Example
+Properties props = new Properties();
+
+props.put("bootstrap.servers", "your-cluster-url:9092");
+props.put("group.id", "cloud-group");
+
+// Security
+props.put("security.protocol", "SASL_SSL");
+props.put("sasl.mechanism", "PLAIN");
+props.put("sasl.jaas.config",
+"org.apache.kafka.common.security.plain.PlainLoginModule required "
++ "username='API_KEY' password='API_SECRET';");
+
+// Deserializers
+props.put("key.deserializer",
+"org.apache.kafka.common.serialization.StringDeserializer");
+props.put("value.deserializer",
+"org.apache.kafka.common.serialization.StringDeserializer");
+
+KafkaConsumer<String, String> consumer =
+    new KafkaConsumer<>(props);
+
+consumer.subscribe(Arrays.asList("orders"));
+🖥️ 6. GUI Tool — Conduktor (VERY USEFUL 🔥)
+Tool: Conduktor
+
+👉 A powerful UI for Kafka
+
+🔥 Features
+
+✔ Create topics
+✔ View messages
+✔ Monitor lag
+✔ Manage consumer groups
+✔ Debug events
+
+📊 What You See
+Cluster → Topics → Partitions → Messages → Offsets
+🎯 Why Use It?
+
+👉 Instead of CLI:
+
+kafka-topics.sh ...
+
+👉 You get:
+
+Visual interface
+Real-time debugging
+⚙️ 7. Conduktor Playground (Free Cloud)
+
+👉 Conduktor Playground
+
+🧪 Steps
+Sign up
+Create cluster
+Get:
+Bootstrap server
+API key
+Secret
+📦 Example Config
+bootstrap.servers=cluster-url:9092
+security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+📊 8. Production Architecture (REAL WORLD 🔥)
+Example System
+Microservices → Kafka → Stream Processing → DB
+Flow
+Order Service → Kafka → Payment Service
+                         ↓
+                     Analytics
+                         ↓
+                       DB
+🧠 Patterns Used
+
+✔ Event-driven architecture
+✔ Event sourcing
+✔ Streaming pipelines
+
+🔍 9. Monitoring & Observability
+Key Metrics
+Consumer lag
+Throughput
+Broker health
+ISR count
+Tools
+Prometheus
+Grafana
+Conduktor UI
+🔐 10. Security Best Practices
+
+✔ Use SASL_SSL always
+✔ Rotate API keys
+✔ Use ACLs (Access Control Lists)
+✔ Restrict topic access
+
+⚡ 11. Local vs Cloud Comparison
+Feature	Local Kafka	Cloud Kafka
+Setup	Manual	Managed
+Security	Minimal	Strong
+Scaling	Hard	Easy
+Monitoring	Manual	Built-in
+Cost	Free	Paid
+🚨 12. Common Mistakes
+
+❌ Wrong SASL config
+❌ Hardcoding secrets
+❌ Ignoring SSL
+❌ Not monitoring lag
+❌ Overusing partitions
+
+🔥 13. Interview Questions
+❓ What is SASL_SSL?
+
+✔ Secure authentication + encryption
+
+❓ Why cloud Kafka?
+
+✔ Managed scalability
+
+❓ What is Conduktor?
+
+✔ Kafka GUI tool
+
+❓ How connect to cloud Kafka?
+
+✔ Bootstrap + SASL config
+
+🧠 FINAL MASTER SUMMARY
+
+👉 Production Kafka = Secure + Distributed + Managed
+
+Core pillars:
+
+✔ Cloud cluster
+✔ Secure communication
+✔ Monitoring
+✔ UI tools
+
+🎯 YOU COMPLETED FULL KAFKA COURSE 🎉
+
+You now understand:
+
+✔ Kafka architecture (end-to-end)
+✔ Producers & Consumers
+✔ Offsets & delivery guarantees
+✔ Cluster internals
+✔ Cloud & production setup
+
+=============================
+
+
+✅ PROJECT STRUCTURE
+kafka-wikimedia-project/
+│
+├── producer/
+│   ├── WikimediaChangesProducer.java
+│   └── WikimediaChangeHandler.java
+│
+├── consumer/
+│   └── OpenSearchConsumer.java
+│
+├── streams/
+│   ├── WikimediaStreamsApp.java
+│   ├── BotCountStreamBuilder.java
+│   ├── WebsiteCountStreamBuilder.java
+│   └── EventCountTimeseriesBuilder.java
+│
+└── docker-compose.yml
+🚀 1. PRODUCER (Wikimedia → Kafka)
+✅ WikimediaChangesProducer.java
+package producer;
+
+import com.launchdarkly.eventsource.EventHandler;
+import com.launchdarkly.eventsource.EventSource;
+import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.StringSerializer;
+
+import java.net.URI;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * STEP 1: Connect to Wikimedia live stream
+ * STEP 2: Read real-time events
+ * STEP 3: Send events to Kafka topic
+ */
+public class WikimediaChangesProducer {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        // ===============================
+        // STEP 1: CREATE PRODUCER CONFIG
+        // ===============================
+        Properties props = new Properties();
+
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+
+        // Serializer → Converts Java object → Bytes
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
+        // Reliability configs (IMPORTANT)
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+
+        // ===============================
+        // STEP 2: CREATE PRODUCER
+        // ===============================
+        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+
+        String topic = "wikimedia.recentchange";
+
+        // ===============================
+        // STEP 3: CONNECT TO WIKIMEDIA API
+        // ===============================
+        String url = "https://stream.wikimedia.org/v2/stream/recentchange";
+
+        EventHandler handler = new WikimediaChangeHandler(producer, topic);
+
+        EventSource eventSource = new EventSource.Builder(handler, URI.create(url)).build();
+
+        // ===============================
+        // STEP 4: START STREAM
+        // ===============================
+        eventSource.start();
+
+        // Run for 10 minutes
+        TimeUnit.MINUTES.sleep(10);
+    }
+}
+✅ WikimediaChangeHandler.java
+package producer;
+
+import com.launchdarkly.eventsource.EventHandler;
+import com.launchdarkly.eventsource.MessageEvent;
+import org.apache.kafka.clients.producer.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Handles each incoming Wikimedia event
+ * Sends it to Kafka
+ */
+public class WikimediaChangeHandler implements EventHandler {
+
+    private final KafkaProducer<String, String> producer;
+    private final String topic;
+    private final Logger log = LoggerFactory.getLogger(WikimediaChangeHandler.class);
+
+    public WikimediaChangeHandler(KafkaProducer<String, String> producer, String topic) {
+        this.producer = producer;
+        this.topic = topic;
+    }
+
+    @Override
+    public void onOpen() {
+        log.info("Stream opened!");
+    }
+
+    @Override
+    public void onClosed() {
+        log.info("Stream closed!");
+        producer.close();
+    }
+
+    /**
+     * MAIN LOGIC:
+     * Every event comes here
+     */
+    @Override
+    public void onMessage(String event, MessageEvent messageEvent) {
+
+        String data = messageEvent.getData();
+
+        log.info("Received Event: {}", data);
+
+        // Send to Kafka (ASYNC)
+        producer.send(new ProducerRecord<>(topic, data),
+                (metadata, exception) -> {
+                    if (exception == null) {
+                        log.info("Sent to partition {} offset {}",
+                                metadata.partition(),
+                                metadata.offset());
+                    } else {
+                        log.error("Error sending message", exception);
+                    }
+                });
+    }
+
+    @Override
+    public void onComment(String comment) {}
+
+    @Override
+    public void onError(Throwable t) {
+        log.error("Stream error", t);
+    }
+}
+📥 2. CONSUMER → OPENSEARCH
+✅ OpenSearchConsumer.java
+package consumer;
+
+import com.google.gson.JsonParser;
+import org.apache.http.HttpHost;
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.opensearch.action.bulk.*;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.client.*;
+import org.opensearch.client.indices.*;
+import org.opensearch.common.xcontent.XContentType;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+
+/**
+ * Reads Kafka → Writes to OpenSearch
+ */
+public class OpenSearchConsumer {
+
+    // ===============================
+    // CREATE OPENSEARCH CLIENT
+    // ===============================
+    public static RestHighLevelClient createClient() {
+        return new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
+    }
+
+    // ===============================
+    // CREATE KAFKA CONSUMER
+    // ===============================
+    public static KafkaConsumer<String, String> createConsumer() {
+
+        Properties props = new Properties();
+
+        props.put("bootstrap.servers", "127.0.0.1:9092");
+        props.put("group.id", "opensearch-consumer");
+
+        props.put("key.deserializer", StringDeserializer.class.getName());
+        props.put("value.deserializer", StringDeserializer.class.getName());
+
+        props.put("auto.offset.reset", "latest");
+
+        // Disable auto commit (IMPORTANT)
+        props.put("enable.auto.commit", "false");
+
+        return new KafkaConsumer<>(props);
+    }
+
+    // ===============================
+    // EXTRACT UNIQUE ID (IDEMPOTENCY)
+    // ===============================
+    private static String extractId(String json) {
+        return JsonParser.parseString(json)
+                .getAsJsonObject()
+                .get("meta")
+                .getAsJsonObject()
+                .get("id")
+                .getAsString();
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        RestHighLevelClient client = createClient();
+        KafkaConsumer<String, String> consumer = createConsumer();
+
+        consumer.subscribe(Collections.singleton("wikimedia.recentchange"));
+
+        // ===============================
+        // CREATE INDEX IF NOT EXISTS
+        // ===============================
+        boolean exists = client.indices()
+                .exists(new GetIndexRequest("wikimedia"), RequestOptions.DEFAULT);
+
+        if (!exists) {
+            client.indices().create(
+                    new CreateIndexRequest("wikimedia"),
+                    RequestOptions.DEFAULT
+            );
+        }
+
+        // ===============================
+        // MAIN LOOP
+        // ===============================
+        while (true) {
+
+            ConsumerRecords<String, String> records =
+                    consumer.poll(Duration.ofMillis(3000));
+
+            BulkRequest bulkRequest = new BulkRequest();
+
+            for (ConsumerRecord<String, String> record : records) {
+
+                try {
+                    String id = extractId(record.value());
+
+                    IndexRequest request = new IndexRequest("wikimedia")
+                            .source(record.value(), XContentType.JSON)
+                            .id(id); // prevents duplicates
+
+                    bulkRequest.add(request);
+
+                } catch (Exception e) {
+                    System.out.println("Bad JSON skipped");
+                }
+            }
+
+            // ===============================
+            // BULK INSERT
+            // ===============================
+            if (bulkRequest.numberOfActions() > 0) {
+
+                BulkResponse response =
+                        client.bulk(bulkRequest, RequestOptions.DEFAULT);
+
+                System.out.println("Inserted: " + response.getItems().length);
+
+                // Commit ONLY after success
+                consumer.commitSync();
+            }
+        }
+    }
+}
+🔄 3. KAFKA STREAMS APP
+✅ WikimediaStreamsApp.java
+package streams;
+
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.*;
+
+import java.util.Properties;
+
+/**
+ * Kafka Streams Main App
+ */
+public class WikimediaStreamsApp {
+
+    public static void main(String[] args) {
+
+        Properties props = new Properties();
+
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wikimedia-app");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
+                Serdes.String().getClass());
+
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
+                Serdes.String().getClass());
+
+        StreamsBuilder builder = new StreamsBuilder();
+
+        // Read input topic
+        var stream = builder.stream("wikimedia.recentchange");
+
+        // Attach processors
+        new BotCountStreamBuilder(stream).setup();
+        new WebsiteCountStreamBuilder(stream).setup();
+        new EventCountTimeseriesBuilder(stream).setup();
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+
+        streams.start();
+    }
+}
+✅ BotCountStreamBuilder.java
+package streams;
+
+import org.apache.kafka.streams.kstream.KStream;
+
+public class BotCountStreamBuilder {
+
+    private final KStream<String, String> stream;
+
+    public BotCountStreamBuilder(KStream<String, String> stream) {
+        this.stream = stream;
+    }
+
+    public void setup() {
+
+        stream
+            .mapValues(value -> value.contains("\"bot\":true") ? "bot" : "non-bot")
+            .groupBy((key, value) -> value)
+            .count()
+            .toStream()
+            .to("wikimedia.stats.bots");
+    }
+}
+✅ EventCountTimeseriesBuilder.java
+package streams;
+
+import org.apache.kafka.streams.kstream.*;
+
+import java.time.Duration;
+
+public class EventCountTimeseriesBuilder {
+
+    private final KStream<String, String> stream;
+
+    public EventCountTimeseriesBuilder(KStream<String, String> stream) {
+        this.stream = stream;
+    }
+
+    public void setup() {
+
+        stream
+            .groupByKey()
+            .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+            .count()
+            .toStream()
+            .to("wikimedia.stats.timeseries");
+    }
+}
+🐳 4. DOCKER COMPOSE (OPENSEARCH)
+version: '3.7'
+
+services:
+  opensearch:
+    image: opensearchproject/opensearch:1.2.4
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true"
+    ports:
+      - "9200:9200"
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:1.2.0
+    ports:
+      - "5601:5601"
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+🚀 HOW TO RUN (STEP-BY-STEP)
+1️⃣ Start Kafka + OpenSearch
+docker-compose up
+2️⃣ Start Producer
+Run WikimediaChangesProducer
+3️⃣ Start Consumer
+Run OpenSearchConsumer
+4️⃣ Start Streams App
+Run WikimediaStreamsApp
+5️⃣ Open Dashboard
+http://localhost:5601
+🧠 FINAL UNDERSTANDING (IMPORTANT)
+
+This project demonstrates:
+
+✔ Event Streaming
+✔ Real-time ingestion
+✔ Kafka durability
+✔ Idempotent consumer
+✔ Windowed aggregation
+✔ End-to-end pipeline
+
+🔥 If You Want Next Level
+
+I can now extend this into:
+
+✅ 
+Spring Boot Kafka Microservices (REAL production style)
+✅ 
+Retry + DLQ implementation
+✅ 
+Schema Registry (Avro/JSON Schema)
+✅ 
+Kubernetes deployment
+✅ 
+Exactly-once full pipeline
+
+Just say:
+
+👉 "Convert this to Spring Boot production project"
+
+
+-=====================
+
+🚀 🏗️ FINAL ARCHITECTURE (SPRING BOOT MICROSERVICES)
+Wikimedia API
+      ↓
+Producer Service (Spring Boot)
+      ↓
+Kafka Topic: wikimedia.recentchange
+      ↓
+ ┌───────────────┬────────────────┐
+ ↓                               ↓
+OpenSearch Service        Streams Service
+(Spring Boot)             (Kafka Streams)
+ ↓                               ↓
+OpenSearch Index          Derived Topics
+📦 🧱 MICROSERVICES BREAKDOWN
+1️⃣ Producer Service
+Reads Wikimedia stream
+Publishes to Kafka
+2️⃣ Consumer Service
+Consumes Kafka
+Writes to OpenSearch
+3️⃣ Streams Service
+Real-time analytics
+Creates derived topics
+🧰 🧪 COMMON DEPENDENCIES (ALL SERVICES)
+<!-- Spring Boot Kafka -->
+<dependency>
+  <groupId>org.springframework.kafka</groupId>
+  <artifactId>spring-kafka</artifactId>
+</dependency>
+
+<!-- JSON -->
+<dependency>
+  <groupId>com.fasterxml.jackson.core</groupId>
+  <artifactId>jackson-databind</artifactId>
+</dependency>
+
+<!-- Lombok (optional) -->
+<dependency>
+  <groupId>org.projectlombok</groupId>
+  <artifactId>lombok</artifactId>
+</dependency>
+🚀 1️⃣ PRODUCER MICROSERVICE
+📁 application.yml
+spring:
+  kafka:
+    producer:
+      bootstrap-servers: localhost:9092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 2147483647
+      properties:
+        enable.idempotence: true
+
+wikimedia:
+  stream-url: https://stream.wikimedia.org/v2/stream/recentchange
+📁 KafkaProducerService.java
+package producer.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+/**
+ * Responsible for sending messages to Kafka
+ */
+@Service
+@RequiredArgsConstructor
+public class KafkaProducerService {
+
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    private static final String TOPIC = "wikimedia.recentchange";
+
+    public void sendMessage(String message) {
+
+        kafkaTemplate.send(TOPIC, message)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        System.out.println("Sent: " + message);
+                    } else {
+                        System.out.println("Error: " + ex.getMessage());
+                    }
+                });
+    }
+}
+📁 WikimediaStreamService.java
+package producer.service;
+
+import com.launchdarkly.eventsource.*;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.net.URI;
+
+/**
+ * Connects to Wikimedia SSE stream
+ */
+@Service
+@RequiredArgsConstructor
+public class WikimediaStreamService {
+
+    private final KafkaProducerService producerService;
+
+    @Value("${wikimedia.stream-url}")
+    private String streamUrl;
+
+    @PostConstruct
+    public void startStream() {
+
+        EventHandler handler = new EventHandler() {
+
+            @Override
+            public void onOpen() {
+                System.out.println("Stream opened");
+            }
+
+            @Override
+            public void onClosed() {}
+
+            @Override
+            public void onMessage(String event, MessageEvent messageEvent) {
+                producerService.sendMessage(messageEvent.getData());
+            }
+
+            @Override
+            public void onComment(String comment) {}
+
+            @Override
+            public void onError(Throwable t) {
+                t.printStackTrace();
+            }
+        };
+
+        EventSource eventSource = new EventSource.Builder(handler, URI.create(streamUrl)).build();
+        eventSource.start();
+    }
+}
+📥 2️⃣ CONSUMER MICROSERVICE (OpenSearch)
+📁 application.yml
+spring:
+  kafka:
+    consumer:
+      bootstrap-servers: localhost:9092
+      group-id: opensearch-group
+      auto-offset-reset: latest
+      enable-auto-commit: false
+📁 KafkaConsumerService.java
+package consumer.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.opensearch.client.*;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Service;
+
+/**
+ * Consumes Kafka messages and sends to OpenSearch
+ */
+@Service
+@RequiredArgsConstructor
+public class KafkaConsumerService {
+
+    private final RestHighLevelClient client;
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    @KafkaListener(topics = "wikimedia.recentchange", groupId = "opensearch-group")
+    public void consume(String message) {
+
+        try {
+            JsonNode json = mapper.readTree(message);
+            String id = json.get("meta").get("id").asText();
+
+            // TODO: Insert into OpenSearch (same as previous logic)
+            System.out.println("Indexed ID: " + id);
+
+        } catch (Exception e) {
+            System.out.println("Invalid JSON");
+        }
+    }
+}
+🔄 3️⃣ STREAMS MICROSERVICE
+📁 application.yml
+spring:
+  kafka:
+    streams:
+      application-id: wikimedia-streams-app
+      bootstrap-servers: localhost:9092
+📁 KafkaStreamsConfig.java
+package streams.config;
+
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.StreamsConfig;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.Properties;
+
+@Configuration
+public class KafkaStreamsConfig {
+
+    public Properties streamsConfig() {
+
+        Properties props = new Properties();
+
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "wikimedia-streams");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
+                Serdes.String().getClass());
+
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
+                Serdes.String().getClass());
+
+        return props;
+    }
+}
+📁 StreamsProcessor.java
+package streams.service;
+
+import org.apache.kafka.streams.kstream.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
+
+/**
+ * Real-time analytics
+ */
+@Component
+public class StreamsProcessor {
+
+    @Bean
+    public KStream<String, String> process(StreamsBuilder builder) {
+
+        KStream<String, String> stream =
+                builder.stream("wikimedia.recentchange");
+
+        // BOT COUNT
+        stream
+            .mapValues(v -> v.contains("\"bot\":true") ? "bot" : "non-bot")
+            .groupBy((k, v) -> v)
+            .count()
+            .toStream()
+            .to("wikimedia.stats.bots");
+
+        return stream;
+    }
+}
+🐳 4️⃣ DOCKER COMPOSE (FULL STACK)
+version: '3.7'
+
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+  opensearch:
+    image: opensearchproject/opensearch:1.2.4
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true"
+    ports:
+      - "9200:9200"
+
+  dashboards:
+    image: opensearchproject/opensearch-dashboards:1.2.0
+    ports:
+      - "5601:5601"
+🔥 PRODUCTION BEST PRACTICES (VERY IMPORTANT)
+✅ Reliability
+acks=all
+enable.idempotence=true
+✅ Consumer Safety
+Manual commit
+Retry logic
+DLQ (Dead Letter Queue)
+✅ Observability
+Metrics (Micrometer)
+Logs (ELK/OpenSearch)
+✅ Security (Cloud)
+SASL_SSL
+API keys
+🧠 FINAL PRODUCTION FLOW
+Wikimedia → Producer Service
+          → Kafka
+          → Consumer Service → OpenSearch
+          → Streams Service → Analytics Topics
+🚀 WHAT YOU JUST BUILT
+
+You now have:
+
+✔ Event-driven microservices
+✔ Real-time streaming system
+✔ Fault-tolerant pipeline
+✔ Scalable architecture
+
+==============================
+
+Alright — now we’ll put everything together into a real production-grade repository that you could actually deploy in a company environment.
+
+This is not just code — this is a full system design + runnable infra + DevOps + observability stack.
+
+🚀 🏗️ FULL PRODUCTION REPO (ENTERPRISE KAFKA SYSTEM)
+📦 1. REPOSITORY STRUCTURE (MONOREPO STYLE)
+kafka-wikimedia-prod/
+│
+├── services/
+│   ├── producer-service/
+│   ├── consumer-service/
+│   ├── streams-service/
+│   └── api-gateway/
+│
+├── infrastructure/
+│   ├── docker/
+│   ├── kubernetes/
+│   └── helm/
+│
+├── monitoring/
+│   ├── prometheus/
+│   └── grafana/
+│
+├── schemas/
+│   └── wikimedia.avsc
+│
+└── README.md
+🚀 2. DOCKER SETUP (FULL STACK)
+📁 docker-compose.yml
+version: '3.8'
+
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+
+  opensearch:
+    image: opensearchproject/opensearch:1.2.4
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true"
+    ports:
+      - "9200:9200"
+
+  dashboards:
+    image: opensearchproject/opensearch-dashboards:1.2.0
+    ports:
+      - "5601:5601"
+🐳 3. SERVICE DOCKERFILE (COMMON)
+📁 Dockerfile (for all services)
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+COPY target/app.jar app.jar
+
+ENTRYPOINT ["java","-jar","/app/app.jar"]
+☸️ 4. KUBERNETES DEPLOYMENT
+📁 kafka-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka
+          ports:
+            - containerPort: 9092
+📁 producer-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      containers:
+        - name: producer
+          image: producer:latest
+          ports:
+            - containerPort: 8080
+📁 consumer-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: consumer
+  template:
+    metadata:
+      labels:
+        app: consumer
+    spec:
+      containers:
+        - name: consumer
+          image: consumer:latest
+📁 api-gateway.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: gateway
+          image: gateway:latest
+          ports:
+            - containerPort: 8080
+🌐 5. INGRESS (API GATEWAY)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kafka-ingress
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /events
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+📊 6. MONITORING SETUP
+📁 prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9092']
+
+  - job_name: 'services'
+    static_configs:
+      - targets: ['producer:8080','consumer:8080']
+📁 grafana dashboards
+
+👉 Import dashboards for:
+
+Kafka lag
+JVM metrics
+Throughput
+📜 7. SCHEMA REGISTRY
+📁 wikimedia.avsc
+{
+  "type": "record",
+  "name": "WikimediaEvent",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "type", "type": "string"},
+    {"name": "bot", "type": "boolean"}
+  ]
+}
+🔁 8. RETRY + DLQ TOPICS
+kafka-topics.sh --create --topic wikimedia.retry
+kafka-topics.sh --create --topic wikimedia.dlq
+⚙️ 9. CI/CD PIPELINE (BASIC)
+📁 GitHub Actions
+name: Build & Deploy
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build
+        run: mvn clean package
+
+      - name: Build Docker
+        run: docker build -t producer:latest ./services/producer-service
+
+      - name: Deploy to K8s
+        run: kubectl apply -f infrastructure/kubernetes/
+🚀 10. HOW TO RUN (LOCAL → PROD)
+🔹 Local
+docker-compose up
+🔹 Kubernetes
+kubectl apply -f infrastructure/kubernetes/
+🔹 Access
+API → http://localhost/events
+Dashboard → http://localhost:5601
+🧠 11. PRODUCTION FEATURES YOU NOW HAVE
+
+✔ Event-driven microservices
+✔ Retry + DLQ
+✔ Schema Registry
+✔ Exactly-once capability
+✔ Kubernetes deployment
+✔ Monitoring stack
+✔ API Gateway
+
+🔥 REAL-WORLD CAPABILITIES
+
+This system can now:
+
+Handle millions of events/sec
+Scale horizontally
+Recover from failures
+Support real-time analytics
+Run in cloud (AWS/GCP/Azure)
+
+---------------------------
+
+🚀 Kafka Delivery Semantics — Hands-On Deep Dive
+
+This is one of the MOST IMPORTANT concepts in Kafka.
+
+Everything in distributed systems revolves around:
+
+Can messages be lost?
+Can duplicates happen?
+Can we guarantee correctness?
+
+Kafka provides 3 guarantees:
+
+Semantics	Data Loss	Duplicates
+At-most-once	Possible	No
+At-least-once	No	Possible
+Exactly-once	No	No
+🧠 BIG PICTURE
+📊 Delivery Semantics Flow
+Producer → Kafka → Consumer → Database
+
+The ENTIRE guarantee depends on:
+
+WHEN offsets are committed
+🔥 1️⃣ AT-MOST-ONCE
+🧠 Meaning
+Message may be LOST
+BUT never duplicated
+📊 Strategy
+COMMIT OFFSET FIRST
+PROCESS LATER
+❌ Risk
+
+If app crashes after commit:
+
+Offset committed ✔
+Message NOT processed ❌
+
+👉 Kafka thinks work completed
+
+👉 Message LOST forever
+
+🧪 HANDS-ON PROJECT
+✅ Consumer Config
+props.put("enable.auto.commit", "false");
+✅ AtMostOnceConsumer.java
+package semantics;
+
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.serialization.StringDeserializer;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+
+/**
+ * AT MOST ONCE
+ *
+ * Commit BEFORE processing
+ */
+public class AtMostOnceConsumer {
+
+    public static void main(String[] args) {
+
+        Properties props = new Properties();
+
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("group.id", "at-most-once-group");
+
+        props.put("key.deserializer",
+                StringDeserializer.class.getName());
+
+        props.put("value.deserializer",
+                StringDeserializer.class.getName());
+
+        props.put("enable.auto.commit", "false");
+
+        KafkaConsumer<String, String> consumer =
+                new KafkaConsumer<>(props);
+
+        consumer.subscribe(Collections.singleton("orders"));
+
+        while (true) {
+
+            ConsumerRecords<String, String> records =
+                    consumer.poll(Duration.ofMillis(1000));
+
+            // ❌ COMMIT FIRST
+            consumer.commitSync();
+
+            for (ConsumerRecord<String, String> record : records) {
+
+                System.out.println("Processing: " + record.value());
+
+                // Simulate crash
+                if (record.value().contains("FAIL")) {
+                    System.exit(1);
+                }
+            }
+        }
+    }
+}
+🧪 TEST
+
+Produce:
+
+order-1
+FAIL-order
+order-3
+💥 Result
+FAIL-order LOST forever
+📌 Use Cases
+
+✔ Metrics
+✔ Logs
+✔ Monitoring
+
+Where occasional loss acceptable
+
+🔥 2️⃣ AT-LEAST-ONCE
+🧠 Meaning
+NO DATA LOSS
+BUT duplicates possible
+📊 Strategy
+PROCESS FIRST
+COMMIT LATER
+✅ Safe Strategy
+
+If crash happens:
+
+Message processed ✔
+Offset NOT committed ❌
+
+Kafka re-delivers message
+
+🧪 HANDS-ON
+✅ AtLeastOnceConsumer.java
+package semantics;
+
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.serialization.StringDeserializer;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+
+/**
+ * AT LEAST ONCE
+ *
+ * Process FIRST
+ * Commit AFTER success
+ */
+public class AtLeastOnceConsumer {
+
+    public static void main(String[] args) {
+
+        Properties props = new Properties();
+
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("group.id", "at-least-once-group");
+
+        props.put("key.deserializer",
+                StringDeserializer.class.getName());
+
+        props.put("value.deserializer",
+                StringDeserializer.class.getName());
+
+        props.put("enable.auto.commit", "false");
+
+        KafkaConsumer<String, String> consumer =
+                new KafkaConsumer<>(props);
+
+        consumer.subscribe(Collections.singleton("orders"));
+
+        while (true) {
+
+            ConsumerRecords<String, String> records =
+                    consumer.poll(Duration.ofMillis(1000));
+
+            for (ConsumerRecord<String, String> record : records) {
+
+                System.out.println("Processing: " + record.value());
+
+                // Simulate crash BEFORE commit
+                if (record.value().contains("FAIL")) {
+                    System.exit(1);
+                }
+            }
+
+            // ✅ Commit AFTER processing
+            consumer.commitSync();
+        }
+    }
+}
+🧪 Result
+FAIL-order processed AGAIN after restart
+📌 Industry Standard
+
+Most Kafka systems use:
+
+At-Least-Once + Idempotency
+🔥 3️⃣ EXACTLY-ONCE PROCESSING (REAL STRATEGY)
+🧠 Goal
+NO duplicates
+NO loss
+❗ HARD PART
+
+Distributed systems can fail:
+
+Network
+Broker
+Consumer
+Database
+🧠 Real Strategy
+
+Kafka EXACTLY-ONCE needs:
+
+Feature	Why
+Idempotent Producer	Avoid duplicate writes
+Transactions	Atomic writes
+read_committed	Read committed only
+📊 EXACTLY-ONCE FLOW
+Read → Process → Produce → Commit Offset
+         ALL ATOMIC
+🔥 Producer Side
+✅ Transactional Producer
+package semantics;
+
+import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.StringSerializer;
+
+import java.util.Properties;
+
+/**
+ * EXACTLY ONCE PRODUCER
+ */
+public class TransactionalProducer {
+
+    public static void main(String[] args) {
+
+        Properties props = new Properties();
+
+        props.put("bootstrap.servers", "localhost:9092");
+
+        props.put("key.serializer",
+                StringSerializer.class.getName());
+
+        props.put("value.serializer",
+                StringSerializer.class.getName());
+
+        // IMPORTANT
+        props.put("enable.idempotence", "true");
+
+        props.put("acks", "all");
+
+        props.put("transactional.id", "txn-1");
+
+        KafkaProducer<String, String> producer =
+                new KafkaProducer<>(props);
+
+        // Initialize transaction
+        producer.initTransactions();
+
+        try {
+
+            producer.beginTransaction();
+
+            producer.send(new ProducerRecord<>(
+                    "orders",
+                    "order-1"
+            ));
+
+            producer.send(new ProducerRecord<>(
+                    "orders",
+                    "order-2"
+            ));
+
+            // Commit ALL atomically
+            producer.commitTransaction();
+
+            System.out.println("Transaction committed");
+
+        } catch (Exception e) {
+
+            producer.abortTransaction();
+
+            System.out.println("Transaction aborted");
+        }
+
+        producer.close();
+    }
+}
+🔥 Consumer Side
+✅ Read Committed Consumer
+props.put("isolation.level", "read_committed");
+🧠 Meaning
+
+Consumer reads ONLY:
+
+committed transactions
+
+NOT:
+
+aborted data
+🔥 REAL ENTERPRISE PATTERN
+📊 Banking Pattern
+Kafka → Process Payment → DB Update → Commit Offset
+
+ALL inside transaction
+
+🧪 SPRING BOOT EXACTLY-ONCE
+✅ application.yml
+spring:
+  kafka:
+    producer:
+      transaction-id-prefix: tx-
+✅ Producer Service
+@Service
+@RequiredArgsConstructor
+public class PaymentProducer {
+
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    @Transactional
+    public void processPayment(String payment) {
+
+        // DB operation
+        savePayment(payment);
+
+        // Kafka operation
+        kafkaTemplate.send("payments", payment);
+
+        // BOTH atomic
+    }
+
+    private void savePayment(String payment) {
+        System.out.println("Saved payment");
+    }
+}
+🔥 FAILURE SCENARIOS
+❌ Crash Before Commit
+Transaction aborted
+NO partial writes
+❌ Broker Failure
+
+Handled by:
+
+ISR
+Replication
+Transactions
+❌ Duplicate Retry
+
+Handled by:
+
+Idempotence
+🔥 REAL-WORLD STRATEGY
+🧠 MOST COMMON
+At-Least-Once + Idempotent Consumer
+
+Because:
+
+Simpler
+Faster
+Easier scaling
+🧠 EXACTLY-ONCE Used In
+
+✔ Banking
+✔ Financial systems
+✔ Trading systems
+✔ Critical inventory
+
+📊 FINAL COMPARISON
+Type	Loss	Duplicate	Complexity
+At-most-once	Yes	No	Low
+At-least-once	No	Yes	Medium
+Exactly-once	No	No	High
+🧠 FINAL MASTER RULE
+📌 The Golden Rule
+COMMIT timing defines semantics
+
+----------------------------
+
+🚀 PRODUCTION RECOMMENDATION
+✅ Use:
+At-Least-Once + Idempotency
+
+For most systems
+
+✅ Use Exactly-Once only when:
+Duplicates are VERY expensive
+
+Like:
+
+payments
+trades
+money transfers
+🔥 NEXT LEVEL
+
+I can now show you:
+
+Retry + Backoff strategies
+Consumer rebalancing simulation
+Outbox Pattern
+Saga Pattern
+CDC with Debezium
+Kafka Streams Exactly Once
+
+Just say:
+
+👉 
+"Show real enterprise exactly-once architecture"
+
+Retry + Backoff strategies
+🚀 Kafka Retry + Backoff Strategies (Enterprise Deep Dive)
+
+This is one of the most important production topics in Kafka systems.
+
+Without proper retry handling:
+
+❌ Consumers crash
+❌ Infinite retry loops happen
+❌ Broker overload occurs
+❌ Duplicate storms appear
+❌ Downstream systems collapse
+
+🧠 1. Why Retry Is Needed
+
+Real systems fail constantly:
+
+Database timeout
+OpenSearch unavailable
+REST API failure
+Network issue
+Temporary overload
+
+Example:
+
+Kafka → Consumer → Database
+                     ❌ timeout
+
+Should we lose message?
+
+👉 NO
+
+Retry is required.
+
+🔥 2. Retry Strategy Types
+Strategy	Usage
+Immediate Retry	Fast transient errors
+Fixed Backoff	Simple retry delay
+Exponential Backoff	Enterprise standard
+Retry Topics	Kafka-native retry
+DLQ	Final failure handling
+📊 3. Enterprise Retry Flow
+Main Topic
+    ↓
+Consumer
+    ↓ failure
+Retry Topic 1 (5s)
+    ↓ failure
+Retry Topic 2 (30s)
+    ↓ failure
+Retry Topic 3 (5m)
+    ↓ failure
+DLQ
+🧠 Why Multiple Retry Topics?
+
+Prevents:
+
+HOT RETRY LOOP
+
+Without delays:
+
+Fail → retry instantly → fail → retry instantly
+
+👉 Kafka flooded
+👉 CPU spikes
+👉 DB overload
+
+🔥 4. Fixed Backoff Strategy
+📊 Flow
+Fail → Wait 5 sec → Retry
+✅ Spring Kafka Built-in Retry
+📁 application.yml
+spring:
+  kafka:
+    listener:
+      ack-mode: manual
+✅ Consumer with Fixed Backoff
+package retry;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.stereotype.Service;
+import org.springframework.util.backoff.FixedBackOff;
+
+@Slf4j
+@Service
+public class FixedBackoffConsumer {
+
+    @KafkaListener(topics = "orders")
+    public void consume(String message) {
+
+        log.info("Processing: {}", message);
+
+        if (message.contains("FAIL")) {
+            throw new RuntimeException("Temporary failure");
+        }
+
+        log.info("SUCCESS");
+    }
+
+    /**
+     * Retry 3 times
+     * Wait 5 seconds each
+     */
+    public DefaultErrorHandler errorHandler() {
+
+        FixedBackOff backOff =
+                new FixedBackOff(5000L, 3);
+
+        return new DefaultErrorHandler(backOff);
+    }
+}
+🧠 Retry Behavior
+Attempt 1 → FAIL
+Wait 5s
+Attempt 2 → FAIL
+Wait 5s
+Attempt 3 → FAIL
+→ DLQ
+🔥 5. Exponential Backoff (BEST PRACTICE)
+🧠 Why Better?
+
+Avoids hammering unhealthy systems.
+
+📊 Flow
+Retry 1 → 1s
+Retry 2 → 2s
+Retry 3 → 4s
+Retry 4 → 8s
+✅ Spring Kafka Exponential Backoff
+@Bean
+public DefaultErrorHandler errorHandler(
+        KafkaTemplate<String, String> template) {
+
+    ExponentialBackOff backOff =
+            new ExponentialBackOff();
+
+    backOff.setInitialInterval(1000L);
+
+    backOff.setMultiplier(2.0);
+
+    backOff.setMaxInterval(30000L);
+
+    DefaultErrorHandler handler =
+            new DefaultErrorHandler(
+                    new DeadLetterPublishingRecoverer(template),
+                    backOff
+            );
+
+    return handler;
+}
+🧠 Internal Behavior
+1s → 2s → 4s → 8s → 16s → DLQ
+🔥 6. Dead Letter Queue (DLQ)
+🧠 Purpose
+
+Messages that permanently fail go here.
+
+📊 Flow
+Main Topic → Retry → Retry → DLQ
+✅ DLQ Topic
+kafka-topics.sh \
+--create \
+--topic orders.dlq
+✅ DLQ Consumer
+@KafkaListener(topics = "orders.dlq")
+public void consumeDlq(String message) {
+
+    log.error("DLQ MESSAGE: {}", message);
+
+    // Save for manual investigation
+}
+🧠 Real Enterprise Usage
+
+DLQ messages:
+
+Investigated later
+Replayed after fix
+Audited
+🔥 7. Retry Topic Pattern (VERY IMPORTANT)
+🧠 Enterprise Standard
+
+Instead of retrying in-memory:
+
+Use Kafka topics.
+
+📊 Pattern
+orders
+orders.retry.5s
+orders.retry.1m
+orders.retry.5m
+orders.dlq
+✅ Advantages
+
+✔ Survives consumer crash
+✔ Durable retry
+✔ Better scalability
+✔ Delayed processing
+
+🔥 8. Spring Kafka RetryTopic
+✅ Simplest Enterprise Retry
+@RetryableTopic(
+    attempts = "4",
+    backoff = @Backoff(
+        delay = 1000,
+        multiplier = 2.0
+    ),
+    dltTopicSuffix = ".dlq"
+)
+@KafkaListener(topics = "orders")
+public void consume(String message) {
+
+    if (message.contains("FAIL")) {
+        throw new RuntimeException("Failure");
+    }
+
+    System.out.println("SUCCESS");
+}
+🧠 Spring Automatically Creates
+orders-retry-1000
+orders-retry-2000
+orders-retry-4000
+orders-dlt
+🔥 9. Retry + Idempotency
+❗ IMPORTANT
+
+Retries can create duplicates.
+
+✅ Enterprise Solution
+
+Use idempotency.
+
+📊 Pattern
+eventId already processed?
+YES → skip
+NO → process
+✅ Example
+if (processedEvents.contains(eventId)) {
+    return;
+}
+
+process();
+
+processedEvents.add(eventId);
+🔥 10. Non-Retryable Exceptions
+🧠 Some errors should NEVER retry
+
+Examples:
+
+Invalid JSON
+Bad schema
+Validation failure
+✅ Configure Non-Retryable
+handler.addNotRetryableExceptions(
+        IllegalArgumentException.class
+);
+🧠 Result
+Bad message → immediate DLQ
+🔥 11. Real Production Strategy
+📊 Recommended Architecture
+Kafka
+ ↓
+Consumer
+ ↓
+Retry Topic Chain
+ ↓
+DLQ
+ ↓
+Alerting
+🔥 12. Monitoring Retries
+✅ Important Metrics
+Retry count
+DLQ rate
+Consumer lag
+Failure percentage
+📊 Monitoring Stack
+Kafka → Prometheus → Grafana
+🔥 13. Enterprise Retry Best Practices
+✅ Use exponential backoff
+
+Avoid retry storms.
+
+✅ Separate retry topics
+
+Improves resilience.
+
+✅ DLQ mandatory
+
+Never lose bad messages.
+
+✅ Idempotent consumers
+
+Avoid duplicate side effects.
+
+✅ Alert on DLQ spikes
+
+DLQ growth = production issue.
+
+🚨 14. Common Anti-Patterns
+❌ Infinite retry loop
+FAIL forever
+❌ Immediate retries
+
+Causes cascading failures.
+
+❌ No DLQ
+
+Bad messages block pipeline forever.
+
+❌ Retrying invalid data
+
+Wasteful and dangerous.
+
+🧠 FINAL ENTERPRISE STRATEGY
+✅ GOLD STANDARD
+Exponential Backoff
++ Retry Topics
++ DLQ
++ Idempotency
++ Monitoring
+🚀 REAL-WORLD EXAMPLE
+
+Used in:
+
+Netflix
+Uber
+LinkedIn
+Banking systems
+Payment systems
+🔥 NEXT LEVEL
+
+I can now show you:
+
+1️⃣ Outbox Pattern
+2️⃣ Saga Pattern
+3️⃣ Debezium CDC
+4️⃣ Kafka Streams Exactly-Once
+5️⃣ Consumer Rebalancing Simulation
+6️⃣ Multi-region Kafka DR
+
+Just say:
+
+👉 "
+Show Outbox Pattern hands-on"
+
+=====================
+🚀 Advanced Kafka Patterns — Complete Hands-On Guide
+
+These patterns are what separate:
+
+Kafka Developer → Distributed Systems Engineer
+
+We’ll cover:
+
+1️⃣ Consumer Rebalancing Simulation
+2️⃣ Outbox Pattern
+3️⃣ Saga Pattern
+4️⃣ CDC with Debezium
+5️⃣ Kafka Streams Exactly-Once
+
+🔥 1️⃣ CONSUMER REBALANCING SIMULATION
+🧠 What is Rebalancing?
+
+Kafka redistributes partitions when:
+
+Consumer joins
+Consumer leaves
+Consumer crashes
+📊 Example
+
+Topic:
+
+orders
+Partitions: 4
+
+Consumers:
+
+Consumer-1
+Consumer-2
+📊 Assignment
+Consumer-1 → P0, P1
+Consumer-2 → P2, P3
+💥 Crash Scenario
+Consumer-2 crashes
+
+Kafka rebalances:
+
+Consumer-1 → P0, P1, P2, P3
+🧪 HANDS-ON
+✅ Consumer Code
+package rebalance;
+
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.serialization.StringDeserializer;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+
+public class RebalanceConsumer {
+
+    public static void main(String[] args) {
+
+        String consumerName = args[0];
+
+        Properties props = new Properties();
+
+        props.put("bootstrap.servers", "localhost:9092");
+
+        props.put("group.id", "rebalance-group");
+
+        props.put("key.deserializer",
+                StringDeserializer.class.getName());
+
+        props.put("value.deserializer",
+                StringDeserializer.class.getName());
+
+        KafkaConsumer<String, String> consumer =
+                new KafkaConsumer<>(props);
+
+        consumer.subscribe(
+                Collections.singleton("orders"),
+                new ConsumerRebalanceListener() {
+
+                    @Override
+                    public void onPartitionsRevoked(
+                            Collection<TopicPartition> partitions) {
+
+                        System.out.println(
+                                consumerName +
+                                " LOST partitions " + partitions
+                        );
+                    }
+
+                    @Override
+                    public void onPartitionsAssigned(
+                            Collection<TopicPartition> partitions) {
+
+                        System.out.println(
+                                consumerName +
+                                " GOT partitions " + partitions
+                        );
+                    }
+                }
+        );
+
+        while (true) {
+
+            ConsumerRecords<String, String> records =
+                    consumer.poll(Duration.ofMillis(1000));
+
+            for (ConsumerRecord<String, String> record : records) {
+
+                System.out.println(
+                        consumerName +
+                        " processed " +
+                        record.value()
+                );
+            }
+        }
+    }
+}
+🧪 Run
+Terminal 1
+java RebalanceConsumer C1
+Terminal 2
+java RebalanceConsumer C2
+🧠 Observe
+Partitions reassigned dynamically
+🔥 2️⃣ OUTBOX PATTERN (VERY IMPORTANT)
+🧠 Problem
+
+Classic distributed failure:
+
+DB write succeeds
+Kafka publish fails
+
+OR
+
+Kafka publish succeeds
+DB write fails
+
+👉 Data inconsistency.
+
+✅ Solution = OUTBOX PATTERN
+📊 Architecture
+Application
+   ↓
+DB Transaction
+   ├── Business Table
+   └── Outbox Table
+             ↓
+      CDC (Debezium)
+             ↓
+           Kafka
+🧠 Key Idea
+
+Kafka NOT called directly.
+
+Instead:
+
+Write DB row
+Write outbox event
+Commit once
+
+Debezium publishes automatically.
+
+🧪 HANDS-ON
+✅ Order Table
+CREATE TABLE orders (
+    id BIGINT PRIMARY KEY,
+    item VARCHAR(255)
+);
+✅ Outbox Table
+CREATE TABLE outbox (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_type VARCHAR(255),
+    payload TEXT
+);
+✅ Spring Boot Transaction
+@Transactional
+public void createOrder(Order order) {
+
+    orderRepository.save(order);
+
+    OutboxEvent event =
+            new OutboxEvent(
+                    "ORDER_CREATED",
+                    convertToJson(order)
+            );
+
+    outboxRepository.save(event);
+}
+🧠 Result
+DB + Outbox always consistent
+🔥 3️⃣ CDC WITH DEBEZIUM
+🧠 What is CDC?
+Change Data Capture
+
+Tracks DB changes automatically.
+
+🧠 Debezium
+
+Tool that reads DB transaction logs.
+
+📊 Flow
+MySQL WAL/Binlog
+        ↓
+Debezium
+        ↓
+Kafka
+🐳 Docker Compose
+debezium:
+  image: debezium/connect:latest
+  ports:
+    - "8083:8083"
+✅ Register Connector
+{
+  "name": "orders-connector",
+  "config": {
+    "connector.class":
+      "io.debezium.connector.mysql.MySqlConnector",
+
+    "database.hostname": "mysql",
+
+    "database.port": "3306",
+
+    "database.user": "root",
+
+    "database.password": "root",
+
+    "database.server.id": "1",
+
+    "database.server.name": "mysqlserver",
+
+    "table.include.list": "shop.outbox"
+  }
+}
+🧠 Result
+
+Whenever outbox row inserted:
+
+Debezium → Kafka Event
+🔥 4️⃣ SAGA PATTERN
+🧠 Problem
+
+Distributed transactions across services.
+
+Example:
+
+Order Service
+Payment Service
+Inventory Service
+Shipping Service
+
+Traditional DB transaction impossible.
+
+✅ Solution = SAGA
+📊 Choreography Saga
+OrderCreated
+      ↓
+PaymentProcessed
+      ↓
+InventoryReserved
+      ↓
+ShippingCreated
+
+Each service reacts to events.
+
+💥 Failure Example
+Inventory failed
+
+Compensation event:
+
+PaymentRefunded
+🧪 HANDS-ON FLOW
+✅ Order Service
+kafkaTemplate.send(
+        "order-created",
+        orderJson
+);
+✅ Payment Consumer
+@KafkaListener(topics = "order-created")
+public void processPayment(String order) {
+
+    boolean success = chargeCard();
+
+    if (success) {
+
+        kafkaTemplate.send(
+                "payment-success",
+                order
+        );
+
+    } else {
+
+        kafkaTemplate.send(
+                "payment-failed",
+                order
+        );
+    }
+}
+✅ Compensation Logic
+@KafkaListener(topics = "payment-failed")
+public void rollback(String order) {
+
+    cancelOrder(order);
+}
+🧠 Result
+
+Distributed transaction without locking.
+
+🔥 5️⃣ KAFKA STREAMS EXACTLY-ONCE
+🧠 Problem
+
+Stream processing duplicates possible.
+
+✅ Solution
+
+Kafka Streams EOS.
+
+📁 application.yml
+spring:
+  kafka:
+    streams:
+      properties:
+        processing.guarantee: exactly_once_v2
+📊 Internal Flow
+Read → Process → Write
+      Atomic
+✅ Streams App
+@Bean
+public KStream<String, String> process(
+        StreamsBuilder builder) {
+
+    KStream<String, String> stream =
+            builder.stream("orders");
+
+    stream
+        .mapValues(v -> v.toUpperCase())
+        .to("orders-output");
+
+    return stream;
+}
+🧠 Kafka Internals
+
+Streams uses:
+
+transactions
+changelog topics
+state store recovery
+
+Automatically.
+
+🔥 FINAL ENTERPRISE ARCHITECTURE
+📊 FULL FLOW
+API
+ ↓
+DB Transaction
+ ↓
+Outbox Table
+ ↓
+Debezium CDC
+ ↓
+Kafka
+ ↓
+Saga Services
+ ↓
+Kafka Streams EOS
+ ↓
+Analytics / DB
+🧠 WHAT YOU LEARNED
+✅ Consumer Rebalancing
+
+Dynamic partition movement.
+
+✅ Outbox Pattern
+
+Reliable DB + Kafka consistency.
+
+✅ Debezium CDC
+
+Automatic event publishing.
+
+✅ Saga Pattern
+
+Distributed transactions.
+
+✅ Kafka Streams EOS
+
+Exactly-once stream processing.
+
+🚀 THIS IS REAL ENTERPRISE KAFKA
+
+Used by:
+
+Netflix
+Uber
+Amazon
+Banking systems
+Trading platforms

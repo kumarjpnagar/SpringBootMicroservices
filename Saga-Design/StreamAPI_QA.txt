@@ -1,0 +1,807 @@
+
+
+What is Java Stream API?
+
+In Java, Stream API was introduced in Java 8 to process collections functionally and efficiently.
+
+Stream Pipeline
+Collection
+   |
+   v
+Stream Source
+   |
+Intermediate Operations (map, filter, sorted)
+   |
+Terminal Operation (collect, forEach, count)
+   |
+Result
+
+Example:
+
+List<Integer> numbers = List.of(1,2,3,4,5,6);
+
+List<Integer> even =
+        numbers.stream()
+               .filter(n -> n % 2 == 0)
+               .collect(Collectors.toList());
+
+System.out.println(even);
+
+Output
+
+[2,4,6]
+
+BASIC LEVEL QUESTIONS
+
+1 Filter Even Numbers
+
+Problem
+
+Filter even numbers from list.
+
+Code
+import java.util.*;
+import java.util.stream.*;
+
+public class EvenNumbers {
+    public static void main(String[] args) {
+
+        List<Integer> list = Arrays.asList(1,2,3,4,5,6,7,8);
+
+        List<Integer> even = list.stream()
+                .filter(n -> n % 2 == 0)
+                .collect(Collectors.toList());
+
+        System.out.println(even);
+    }
+}
+
+Stream Flow
+[1,2,3,4,5,6,7,8]
+        |
+     filter(n%2==0)
+        |
+     [2,4,6,8]
+	 
+2 Find Maximum Number
+Code
+Optional<Integer> max =
+        list.stream()
+            .max(Integer::compareTo);
+
+System.out.println(max.get());
+Diagram
+Stream → compare elements → keep highest
+
+3 Find Minimum Number
+Optional<Integer> min =
+        list.stream()
+            .min(Integer::compareTo);
+
+System.out.println(min.get());
+
+4 Count Strings Length > 3
+List<String> names = List.of("Ram","John","Alex","Tom");
+
+long count = names.stream()
+        .filter(s -> s.length() > 3)
+        .count();
+
+System.out.println(count);
+
+Pipeline
+
+["Ram","John","Alex","Tom"]
+          |
+     filter length>3
+          |
+     ["John","Alex"]
+          |
+         count
+
+Output
+
+2
+
+5 Convert List<String> → List<Integer>
+Example Input
+["10","20","30"]
+
+Code
+
+List<String> nums = List.of("10","20","30");
+
+List<Integer> numbers =
+        nums.stream()
+            .map(Integer::parseInt)
+            .collect(Collectors.toList());
+
+System.out.println(numbers);
+Flow
+["10","20","30"]
+        |
+      map()
+        |
+ [10,20,30]
+ 
+SCREEN 2 — Intermediate Level
+
+6 Find Duplicate Elements
+Logic
+
+Use Set to track duplicates.
+
+Code
+List<Integer> list = Arrays.asList(1,2,3,2,4,5,3);
+
+Set<Integer> seen = new HashSet<>();
+
+Set<Integer> duplicates =
+        list.stream()
+            .filter(n -> !seen.add(n))
+            .collect(Collectors.toSet());
+
+System.out.println(duplicates);
+
+Output
+
+[2,3]
+
+7 First Non-Repeated Character
+Example
+input = "stress"
+output = 't'
+Code
+String input = "stress";
+
+Character result =
+        input.chars()
+             .mapToObj(c -> (char)c)
+             .collect(Collectors.groupingBy(
+                     c -> c,
+                     LinkedHashMap::new,
+                     Collectors.counting()))
+             .entrySet()
+             .stream()
+             .filter(e -> e.getValue() == 1)
+             .map(Map.Entry::getKey)
+             .findFirst()
+             .get();
+
+System.out.println(result);
+
+8 Convert List → Map
+
+Example
+
+Employee
+id name
+1  Ram
+2  Sam
+Code
+Map<Integer,String> map =
+        employees.stream()
+                .collect(Collectors.toMap(
+                        Employee::getId,
+                        Employee::getName));
+
+Output
+
+{1=Ram, 2=Sam}
+
+9 Sort Employees by Salary
+employees.stream()
+        .sorted(Comparator.comparing(Employee::getSalary))
+        .forEach(System.out::println);
+
+Descending
+
+.sorted(Comparator.comparing(Employee::getSalary).reversed())
+
+10 Second Highest Number
+Code
+Optional<Integer> second =
+        list.stream()
+            .sorted(Comparator.reverseOrder())
+            .skip(1)
+            .findFirst();
+
+System.out.println(second.get());
+
+Pipeline
+
+[3,8,2,9,4]
+      |
+ sort desc
+      |
+[9,8,4,3,2]
+      |
+ skip(1)
+      |
+   8
+   
+SCREEN 3 — Advanced Level
+
+11 Group Employees by Department
+Code
+Map<String, List<Employee>> map =
+        employees.stream()
+                 .collect(Collectors.groupingBy(
+                         Employee::getDepartment));
+
+Diagram
+
+Employees
+   |
+groupingBy(department)
+   |
+{
+IT=[emp1,emp2],
+HR=[emp3]
+}
+
+12 Highest Salary in Each Department
+Map<String, Optional<Employee>> result =
+        employees.stream()
+                .collect(Collectors.groupingBy(
+                        Employee::getDepartment,
+                        Collectors.maxBy(
+                          Comparator.comparing(Employee::getSalary)
+                        )
+                ));
+				
+13 Character Frequency
+
+Input
+
+"hello"
+
+Output
+
+h=1 e=1 l=2 o=1
+
+Code
+
+Map<Character, Long> map =
+        input.chars()
+             .mapToObj(c -> (char)c)
+             .collect(Collectors.groupingBy(
+                     c -> c,
+                     Collectors.counting()));
+					 
+14 Merge Two Lists
+
+List<Integer> merged =
+        Stream.concat(list1.stream(), list2.stream())
+              .collect(Collectors.toList());
+
+Diagram
+
+List1: [1,2,3]
+List2: [4,5,6]
+
+        |
+     concat
+        |
+[1,2,3,4,5,6]
+
+SCREEN 4 — Expert Level
+
+16 Longest String
+Optional<String> longest =
+        list.stream()
+            .max(Comparator.comparing(String::length));
+
+System.out.println(longest.get());
+17 Partition Odd and Even
+Map<Boolean, List<Integer>> map =
+        list.stream()
+            .collect(Collectors.partitioningBy(n -> n%2==0));
+
+System.out.println(map);
+
+Output
+
+true=[2,4,6]
+false=[1,3,5]
+
+
+18 Sum of Even Numbers
+int sum =
+        list.stream()
+            .filter(n -> n%2==0)
+            .mapToInt(Integer::intValue)
+            .sum();
+19 Flatten Nested List
+
+Input
+
+[[1,2],[3,4],[5,6]]
+Code
+List<Integer> flat =
+        list.stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+
+Diagram
+
+[[1,2],[3,4],[5,6]]
+         |
+      flatMap
+         |
+[1,2,3,4,5,6]
+
+
+20 Top N Highest Numbers
+
+Example top 3
+
+List<Integer> top3 =
+        list.stream()
+            .sorted(Comparator.reverseOrder())
+            .limit(3)
+            .collect(Collectors.toList());
+
+System.out.println(top3);
+
+Output
+
+[9,8,7]
+
+
+SCREEN 5 — Git Cheat Sheet (Developer Workflow)
+
+Tool used with Git and GitHub
+
+Git Architecture
+Working Directory
+       |
+       v
+     Staging Area
+       |
+       v
+     Local Repo
+       |
+       v
+     Remote Repo
+	 
+Common Workflow
+
+Step 1 Initialize Repo
+git init
+Step 2 Clone Repo
+git clone https://github.com/project.git
+Step 3 Add Files
+git add .
+Step 4 Commit
+git commit -m "Added login feature"
+Step 5 Push
+git push origin main
+Branch Workflow
+main
+ |
+ +----feature-login
+ |
+ +----feature-payment
+
+Commands
+
+git branch feature-login
+git checkout feature-login
+git merge feature-login
+Stash (Temporary Save)
+git stash
+git stash pop
+
+Use case
+
+Working on Feature A
+Urgent Bug Comes
+Stash → Fix Bug → Apply Stash
+Real Developer Workflow
+
+Example working on Spring Boot microservice
+
+git checkout -b feature/kafka-integration
+
+# code changes
+
+git add .
+git commit -m "Added Kafka Producer"
+
+git push origin feature/kafka-integration
+==============================================
+Important topics:
+
+1️⃣ map vs flatMap
+
+map → one-to-one mapping
+flatMap → one-to-many flattening
+
+2️⃣ Intermediate vs Terminal
+
+Intermediate
+map()
+filter()
+sorted()
+
+Terminal
+collect()
+count()
+forEach()
+
+3️⃣ Lazy Evaluation
+
+Stream executes only when terminal operation occurs.
+
+Banking systems
+
+Microservices
+
+Log processing
+
+Event streaming
+
+Big data pipelines
+
+
+The scenario uses Spring Boot microservices calling external services over HTTP.
+
+1. Problem Scenario (What interviewer wants)
+
+we are building a Spring Boot microservice that calls multiple external APIs.
+
+Example services:
+
+Order Service
+   |
+   |---- Payment Service
+   |
+   |---- Shipping Service
+   |
+   |---- Fraud Detection API
+
+Architecture
+
+Client
+  |
+  v
+Order Service (Spring Boot)
+  |
+  +------ HTTP Call ------> Payment Service
+  |
+  +------ HTTP Call ------> Fraud Service
+  |
+  +------ HTTP Call ------> Shipping Service
+  
+2. Current Problem (Fixed Timeout)
+
+In the code we have , the timeout is fixed:
+
+factory.setConnectTimeout(2000);
+factory.setReadTimeout(2000);
+
+Meaning:
+
+Max wait = 2 seconds
+
+But real systems behave differently.
+
+Scenario 1 — Fast Service
+Payment Service response = 100ms
+Timeout = 2000ms
+
+Works fine.
+
+Scenario 2 — Temporary Slow Service
+Payment Service response = 2200ms
+Timeout = 2000ms
+
+Result
+
+Request fails
+But service would have responded after 200ms more.
+Scenario 3 — Very Slow Service
+Payment response = 10 seconds
+Timeout = 2000ms
+
+Here timeout is correct.
+
+3. Problems With Fixed Timeout
+Problem 1
+---------
+Requests terminate early
+
+Problem 2
+---------
+Sometimes wait too long
+
+Problem 3
+---------
+Cascading failures
+
+Service A waits
+Service B waits
+Service C waits
+
+System crashes
+4. What System Needs
+
+The question says:
+
+Adaptive Timeout
+Resiliency
+Avoid cascading failures
+Dynamic response adaptation
+
+Meaning the timeout should adjust based on:
+
+Historical response time
+Service health
+Load conditions
+Retry strategy
+
+5. our Current Code Explained
+
+Configuration Class
+
+@Configuration
+public class HttpClientConfig {
+
+Spring configuration class.
+
+HTTP Request Factory
+@Bean
+public ClientHttpRequestFactory clientHttpRequestFactory() {
+
+    SimpleClientHttpRequestFactory factory =
+            new SimpleClientHttpRequestFactory();
+
+    factory.setConnectTimeout(2000);
+    factory.setReadTimeout(2000);
+
+    return factory;
+}
+
+Explanation
+
+connectTimeout
+   |
+Time to establish TCP connection
+
+readTimeout
+   |
+Time waiting for response
+
+6. Declarative HTTP Client
+@Bean
+public PaymentClient paymentClient(RestClient.Builder builder) {
+
+Spring Boot creates a proxy client.
+
+RestClient creation
+RestClient restClient = builder
+        .baseUrl("https://payment-service")
+        .requestFactory(clientHttpRequestFactory())
+        .build();
+
+Meaning
+
+Base URL → payment-service
+Timeout → 2 seconds
+HTTP Service Proxy
+return HttpServiceProxyFactory
+        .builderFor(RestClientAdapter.create(restClient))
+        .build()
+        .createClient(PaymentClient.class);
+
+Spring generates implementation automatically.
+
+7. Payment Client Interface
+
+Example
+
+public interface PaymentClient {
+
+    @GetExchange("/payment/{id}")
+    PaymentResponse getPayment(@PathVariable String id);
+
+}
+
+Usage
+
+paymentClient.getPayment("123");
+8. Real Production Architecture
+
+In real microservices we add resilience layer.
+
+Order Service
+   |
+   v
+Resilience Layer
+   |
+   +---- Retry
+   |
+   +---- Circuit Breaker
+   |
+   +---- Adaptive Timeout
+   |
+   v
+Payment Service
+
+9. Best Solution (Used in Production)
+
+Use Resilience4j.
+
+Features
+
+Retry
+Circuit Breaker
+Rate Limiter
+Bulkhead
+Timeout
+
+10. Adaptive Timeout Strategy
+
+We track response time metrics.
+
+Example
+
+last 100 calls
+average response = 400ms
+p95 latency = 900ms
+
+Then timeout becomes
+
+timeout = p95 + buffer
+timeout = 900 + 200
+timeout = 1100ms
+
+Dynamic timeout.
+
+11. Hands-on Implementation
+
+Step 1 Dependency
+<dependency>
+ <groupId>io.github.resilience4j</groupId>
+ <artifactId>resilience4j-spring-boot3</artifactId>
+</dependency>
+12. Circuit Breaker Configuration
+resilience4j:
+ circuitbreaker:
+  instances:
+   paymentService:
+    failureRateThreshold: 50
+    waitDurationInOpenState: 10s
+
+Meaning
+
+If 50% requests fail
+Open circuit for 10 seconds
+
+13. Timeout Configuration
+resilience4j:
+ timelimiter:
+  instances:
+   paymentService:
+    timeoutDuration: 2s
+	
+14. Service Code
+
+@Service
+public class PaymentService {
+
+    private final PaymentClient paymentClient;
+
+    public PaymentService(PaymentClient paymentClient) {
+        this.paymentClient = paymentClient;
+    }
+
+    @CircuitBreaker(name = "paymentService")
+    @TimeLimiter(name = "paymentService")
+    public CompletableFuture<PaymentResponse> getPayment(String id) {
+
+        return CompletableFuture.supplyAsync(() ->
+                paymentClient.getPayment(id)
+        );
+    }
+}
+
+15. Adaptive Timeout Logic Example
+
+Dynamic timeout
+
+public int calculateTimeout(long avgResponseTime) {
+
+    int buffer = 200;
+
+    return (int) (avgResponseTime + buffer);
+}
+
+Example
+
+avg response = 600ms
+
+timeout = 600 + 200
+timeout = 800ms
+
+16. Advanced Architecture (Real MNC)
+
+                +------------------+
+                |   API Gateway    |
+                +--------+---------+
+                         |
+                         v
+                +------------------+
+                |  Order Service   |
+                +--------+---------+
+                         |
+                         v
+                +------------------+
+                | Resilience Layer |
+                |  Retry           |
+                |  Timeout         |
+                |  CircuitBreaker  |
+                +--------+---------+
+                         |
+        +----------------+---------------+
+        |                                |
+        v                                v
++---------------+               +----------------+
+| Payment API   |               | Fraud Service  |
++---------------+               +----------------+
+
+17. Real Production Improvements
+
+Senior engineers usually implement:
+
+1 Adaptive timeout
+timeout = P95 latency + buffer
+2 Circuit Breaker
+stop calls if service failing
+3 Retry with backoff
+retry after 100ms
+retry after 200ms
+retry after 400ms
+4 Bulkhead isolation
+separate thread pools per service
+18. Example End-to-End Flow
+
+User places order
+      |
+      v
+Order Service
+      |
+      v
+Payment API call
+      |
+      v
+Timeout = dynamic
+      |
+      v
+Success → continue
+
+Failure → fallback
+
+19. What Interviewer Is Testing
+
+They want to see if you know:
+
+Timeout handling
+Resilience patterns
+Circuit breaker
+Adaptive timeout
+Microservice reliability
+
+20. Perfect Interview Answer (Short)
+
+we can say:
+
+Fixed timeouts are not ideal because services have variable latency. 
+We implement adaptive timeouts using latency metrics (P95), 
+combined with Resilience4j features like circuit breaker, 
+retry, and time limiter to prevent cascading failures and improve system resilience.
+
+==========================================
+
+

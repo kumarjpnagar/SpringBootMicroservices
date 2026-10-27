@@ -1,0 +1,4663 @@
+Spring Security Advanced Topics
+
+Key Concepts in Spring Security
+ 1. Authentication
+ 2. Authorization
+ 3. Principal
+ 4. GrantedAuthority
+ 3️⃣ Spring Security Architecture
+ 4️⃣ Important Classes
+ 5️⃣ Spring Security Default Behavior
+ 6️⃣ Spring Boot Spring Security Example
+ 7️⃣ Simple Spring Security Configuration
+ 8️⃣ In-Memory Authentication Example
+ 9️⃣ Password Encryption
+ 🔟 REST Controller Example
+ 1️⃣1️⃣ Authentication Flow Diagram
+ 1️⃣2️⃣ HTTP Basic Authentication Example
+ 1️⃣3️⃣ JWT Authentication (Microservices)
+ 1️⃣4️⃣ CSRF Protection
+ 1️⃣5️⃣ Method Level Security
+ 1️⃣6️⃣ Common Spring Security Annotations
+ 1️⃣7️⃣ Real Microservices Security Architecture
+ 
+ Spring Security Best Practices
+
+✔ Use JWT for microservices
+✔ Always encrypt passwords
+✔ Use HTTPS
+✔ Implement role-based access
+✔ Enable CSRF protection
+ 
+ 
+
+1️⃣ JWT Authentication Full Implementation
+2️⃣ Spring Security with Database (JPA + MySQL)
+3️⃣ OAuth2 Login (Google / Okta)
+4️⃣ Spring Security Filters Deep Dive
+5️⃣ Spring Security with Microservices + API Gateway
+6️⃣ Custom AuthenticationProvider
+
+
+
+1️⃣ Spring Security + OAuth2 Authorization Server
+2️⃣ Spring Cloud Gateway + JWT validation
+3️⃣ Auth Server + 3 Microservices (User, Order, Payment)
+4️⃣ JWT + Refresh Token flow (most asked in interviews)
+5️⃣ Spring Security internal filter chain deep explanation
+
+Spring Transaction
+
+1️⃣ Spring Transaction Internal Flow (Proxy + AOP + TransactionInterceptor)
+2️⃣ Complete Propagation Example (REQUIRED vs REQUIRES_NEW)
+3️⃣ Spring Transaction + Kafka (Exactly Once)
+4️⃣ SAGA Pattern with Spring Boot Microservices
+5️⃣ Transactional Outbox Pattern Implementation
+======================================================================
+
+
+
+
+
+Claim offer
+Spring Security chapter
+
+Below is a complete Spring Security chapter-style explanation for learning and interviews. It includes concepts, architecture, flow, and Spring Boot code examples step-by-step.
+
+1️⃣ What is Spring Security
+Spring Security is a framework that provides authentication, authorization, and protection against security attacks for Java applications.
+
+It secures:
+
+Web applications
+
+REST APIs
+
+Microservices
+
+Main goals:
+
+Authentication (Who are you?)
+
+Authorization (What can you access?)
+
+Protection against attacks
+
+Example attacks it protects against:
+
+CSRF
+
+Session fixation
+
+Clickjacking
+
+XSS
+
+Password brute force
+
+2️⃣ Key Concepts in Spring Security
+1. Authentication
+Authentication means verifying user identity.
+
+Example:
+
+Username : admin
+Password : admin123
+If correct → user authenticated.
+
+Spring Security supports:
+
+Form login
+
+Basic authentication
+
+JWT
+
+OAuth2
+
+LDAP
+
+Database authentication
+
+2. Authorization
+Authorization means checking what resources the user can access.
+
+Example
+
+User	Role	Access
+Admin	ROLE_ADMIN	All APIs
+User	ROLE_USER	Limited APIs
+Example rule:
+
+/admin/** -> ADMIN only
+/user/** -> USER
+3. Principal
+Principal represents current logged-in user.
+
+Example
+
+Principal = admin
+4. GrantedAuthority
+Represents user roles or permissions.
+
+Example
+
+ROLE_ADMIN
+ROLE_USER
+5. SecurityContext
+Stores authentication details during request processing.
+
+SecurityContext
+   |
+Authentication
+   |
+Principal + Roles
+3️⃣ Spring Security Architecture
+Important components:
+
+Client Request
+      |
+Filter Chain
+      |
+AuthenticationManager
+      |
+AuthenticationProvider
+      |
+UserDetailsService
+      |
+Database / Memory / LDAP
+Flow
+Request → Security Filter → AuthenticationManager
+         → AuthenticationProvider
+         → UserDetailsService
+         → Validate user
+         → Access resource
+4️⃣ Important Classes
+Class	Purpose
+SecurityFilterChain	Applies security rules
+UserDetailsService	Loads user from DB
+UserDetails	User object
+AuthenticationManager	Manages authentication
+PasswordEncoder	Encrypts password
+5️⃣ Spring Security Default Behavior
+When you add dependency:
+
+spring-boot-starter-security
+Spring automatically provides:
+
+✔ Login form
+✔ Username/password authentication
+✔ All endpoints secured
+
+Default username
+
+user
+Password generated in console.
+
+6️⃣ Spring Boot Spring Security Example
+Step 1 Add Dependency
+Maven
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+7️⃣ Simple Spring Security Configuration
+SecurityConfig
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+http
+.authorizeHttpRequests(auth -> auth
+.requestMatchers("/public").permitAll()
+.requestMatchers("/admin").hasRole("ADMIN")
+.requestMatchers("/user").hasRole("USER")
+.anyRequest().authenticated()
+)
+.formLogin();
+
+return http.build();
+}
+}
+Explanation
+
+/public -> open API
+/admin -> ADMIN role
+/user -> USER role
+8️⃣ In-Memory Authentication Example
+@Bean
+public UserDetailsService userDetailsService() {
+
+UserDetails user =
+User.withUsername("user")
+.password(passwordEncoder().encode("password"))
+.roles("USER")
+.build();
+
+UserDetails admin =
+User.withUsername("admin")
+.password(passwordEncoder().encode("admin123"))
+.roles("ADMIN")
+.build();
+
+return new InMemoryUserDetailsManager(user, admin);
+}
+9️⃣ Password Encryption
+Passwords should never be stored as plain text.
+
+Spring Security uses BCrypt.
+
+passwordEncoder()
+Example
+
+@Bean
+public PasswordEncoder passwordEncoder() {
+return new BCryptPasswordEncoder();
+}
+Example encoded password
+
+$2a$10$9iW...
+🔟 REST Controller Example
+@RestController
+public class TestController {
+
+@GetMapping("/public")
+public String publicApi(){
+return "Public API";
+}
+
+@GetMapping("/user")
+public String userApi(){
+return "User API";
+}
+
+@GetMapping("/admin")
+public String adminApi(){
+return "Admin API";
+}
+}
+1️⃣1️⃣ Authentication Flow Diagram
+Client Request
+     |
+     v
+Spring Security Filter
+     |
+     v
+AuthenticationManager
+     |
+     v
+AuthenticationProvider
+     |
+     v
+UserDetailsService
+     |
+     v
+Validate User
+     |
+     v
+Access Resource
+1️⃣2️⃣ HTTP Basic Authentication Example
+http
+.authorizeHttpRequests(auth -> auth
+.anyRequest().authenticated()
+)
+.httpBasic();
+Client sends
+
+Authorization: Basic base64(username:password)
+1️⃣3️⃣ JWT Authentication (Microservices)
+JWT is used for stateless authentication.
+
+Flow
+
+Login
+  |
+Generate JWT
+  |
+Client sends JWT
+  |
+Server validates JWT
+Header Example
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+1️⃣4️⃣ CSRF Protection
+CSRF = Cross Site Request Forgery
+
+Spring Security enables it by default.
+
+Disable for REST APIs
+
+http.csrf().disable();
+1️⃣5️⃣ Method Level Security
+Enable:
+
+@EnableMethodSecurity
+Example
+
+@PreAuthorize("hasRole('ADMIN')")
+public void deleteUser(){
+}
+1️⃣6️⃣ Common Spring Security Annotations
+Annotation	Use
+@EnableWebSecurity	Enables security
+@EnableMethodSecurity	Method level security
+@PreAuthorize	Role check
+@Secured	Method security
+@AuthenticationPrincipal	Access logged user
+1️⃣7️⃣ Real Microservices Security Architecture
+Client
+   |
+API Gateway
+   |
+JWT Authentication
+   |
+Microservice 1
+Microservice 2
+Microservice 3
+JWT validated at Gateway or each service.
+
+1️⃣8️⃣ Spring Security Interview Questions
+1. What is Spring Security?
+Framework for authentication and authorization.
+
+2. What is AuthenticationManager?
+Central interface that authenticates user credentials.
+
+3. What is UserDetailsService?
+Loads user data from DB.
+
+loadUserByUsername()
+4. What is PasswordEncoder?
+Encodes password using BCrypt.
+
+5. What is SecurityFilterChain?
+Defines security rules.
+
+1️⃣9️⃣ Spring Security Best Practices
+✔ Use JWT for microservices
+✔ Always encrypt passwords
+✔ Use HTTPS
+✔ Implement role-based access
+✔ Enable CSRF protection
+
+2️⃣0️⃣ Real Enterprise Security Architecture
+Client
+   |
+   v
+API Gateway (JWT validation)
+   |
+   v
+Auth Service (OAuth / Login)
+   |
+   v
+Microservices
+   |
+   v
+Database
+If you want, I can also explain next advanced chapters:
+🔐 Spring Security Advanced Topics
+1️⃣ JWT Authentication Full Implementation
+2️⃣ Spring Security with Database (JPA + MySQL)
+3️⃣ OAuth2 Login (Google / Okta)
+4️⃣ Spring Security Filters Deep Dive
+5️⃣ Spring Security with Microservices + API Gateway
+6️⃣ Custom AuthenticationProvider
+
+Just tell me and I will explain with complete code + architecture diagrams + interview questions.
+
+
+Can you please explain with full spring boot,java8, and microservice code for 
+1️⃣ JWT Authentication Full Implementation
+
+Below is a complete JWT Authentication implementation using Spring Boot, Java 8, and Microservices style architecture. This is similar to what is used in real enterprise systems.
+
+I will explain step-by-step with architecture + full code.
+
+1️⃣ Microservices JWT Authentication Architecture
+Typical architecture:
+
+Client (React / Postman)
+        |
+        v
+API Gateway
+        |
+        v
+Auth Service (Login + Generate JWT)
+        |
+        v
+Business Microservices
+(Order Service / User Service / Payment Service)
+Flow:
+
+1 Client sends login request
+2 Auth Service validates username/password
+3 Auth Service generates JWT Token
+4 Client stores JWT
+5 Client sends token in Authorization header
+6 Other microservices validate token
+Example header
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+2️⃣ Project Structure
+jwt-auth-service
+|
+|-- controller
+|     AuthController
+|
+|-- security
+|     JwtAuthenticationFilter
+|     JwtService
+|     SecurityConfig
+|
+|-- service
+|     CustomUserDetailsService
+|
+|-- model
+|     User
+|
+|-- repository
+|     UserRepository
+|
+|-- dto
+|     AuthRequest
+|     AuthResponse
+|
+|-- JwtAuthApplication
+3️⃣ Maven Dependencies
+<dependencies>
+
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<dependency>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt</artifactId>
+<version>0.9.1</version>
+</dependency>
+
+<dependency>
+<groupId>com.h2database</groupId>
+<artifactId>h2</artifactId>
+</dependency>
+
+</dependencies>
+4️⃣ User Entity
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    private String username;
+    private String password;
+    private String role;
+
+    // getters setters
+}
+5️⃣ User Repository
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+
+}
+6️⃣ DTO Classes
+AuthRequest
+public class AuthRequest {
+
+    private String username;
+    private String password;
+
+    // getters setters
+}
+AuthResponse
+public class AuthResponse {
+
+    private String token;
+
+    public AuthResponse(String token) {
+        this.token = token;
+    }
+
+    // getter
+}
+7️⃣ CustomUserDetailsService
+Spring Security loads users using this service.
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository repository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username)
+            throws UsernameNotFoundException {
+
+        User user = repository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority(user.getRole()))
+        );
+    }
+}
+8️⃣ JWT Service (Token Generation + Validation)
+@Service
+public class JwtService {
+
+    private String SECRET = "mysecretkey";
+
+    public String generateToken(String username) {
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 1000*60*60))
+                .signWith(SignatureAlgorithm.HS256, SECRET)
+                .compact();
+    }
+
+    public String extractUsername(String token) {
+
+        return Jwts.parser()
+                .setSigningKey(SECRET)
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    public boolean validateToken(String token, UserDetails userDetails) {
+
+        String username = extractUsername(token);
+
+        return username.equals(userDetails.getUsername());
+    }
+}
+9️⃣ JWT Authentication Filter
+This filter intercepts every request.
+
+Client Request
+     |
+     v
+JwtAuthenticationFilter
+     |
+Validate Token
+     |
+Set Authentication Context
+Code:
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private CustomUserDetailsService userService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String authHeader = request.getHeader("Authorization");
+
+        String token = null;
+        String username = null;
+
+        if(authHeader != null && authHeader.startsWith("Bearer ")){
+
+            token = authHeader.substring(7);
+            username = jwtService.extractUsername(token);
+        }
+
+        if(username != null && SecurityContextHolder.getContext().getAuthentication()==null){
+
+            UserDetails userDetails = userService.loadUserByUsername(username);
+
+            if(jwtService.validateToken(token,userDetails)){
+
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        }
+
+        filterChain.doFilter(request,response);
+    }
+}
+🔟 Security Configuration
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Autowired
+private JwtAuthenticationFilter jwtFilter;
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.csrf().disable()
+.authorizeHttpRequests(auth -> auth
+.requestMatchers("/auth/**").permitAll()
+.anyRequest().authenticated()
+)
+.sessionManagement()
+.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+
+http.addFilterBefore(jwtFilter,
+UsernamePasswordAuthenticationFilter.class);
+
+return http.build();
+}
+
+@Bean
+public PasswordEncoder passwordEncoder() {
+return new BCryptPasswordEncoder();
+}
+
+@Bean
+public AuthenticationManager authenticationManager(
+AuthenticationConfiguration config) throws Exception {
+return config.getAuthenticationManager();
+}
+
+}
+1️⃣1️⃣ Auth Controller
+Login API that generates JWT.
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+@Autowired
+private AuthenticationManager authenticationManager;
+
+@Autowired
+private JwtService jwtService;
+
+@PostMapping("/login")
+public AuthResponse login(@RequestBody AuthRequest request){
+
+Authentication authentication =
+authenticationManager.authenticate(
+new UsernamePasswordAuthenticationToken(
+request.getUsername(),
+request.getPassword()
+)
+);
+
+if(authentication.isAuthenticated()){
+
+String token = jwtService.generateToken(request.getUsername());
+
+return new AuthResponse(token);
+}
+
+throw new RuntimeException("Invalid credentials");
+}
+}
+1️⃣2️⃣ Secure REST Controller
+@RestController
+@RequestMapping("/api")
+public class TestController {
+
+@GetMapping("/hello")
+public String hello(){
+
+return "Secure API accessed!";
+}
+}
+1️⃣3️⃣ Application Properties
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.jpa.hibernate.ddl-auto=update
+spring.h2.console.enabled=true
+1️⃣4️⃣ JWT Authentication Flow
+1 POST /auth/login
+{
+ "username":"admin",
+ "password":"admin123"
+}
+
+2 Server validates credentials
+
+3 Server returns JWT
+
+{
+ "token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+4 Client sends token
+
+GET /api/hello
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+
+5 JWT Filter validates token
+
+6 API returns response
+1️⃣5️⃣ Microservices Token Validation
+In microservices environment:
+
+Auth Service
+     |
+Generate JWT
+     |
+API Gateway
+     |
+User Service
+Order Service
+Payment Service
+Each service only validates token.
+
+1️⃣6️⃣ Production Improvements
+Enterprise systems add:
+
+✔ Refresh Token
+✔ Redis Token Store
+✔ OAuth2
+✔ API Gateway validation
+✔ Role-based access
+✔ Token blacklist
+
+1️⃣7️⃣ Common Interview Questions
+What is JWT?
+JSON Web Token used for stateless authentication.
+
+JWT Structure
+HEADER.PAYLOAD.SIGNATURE
+Example
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+.
+eyJzdWIiOiJhZG1pbiJ9
+.
+signature
+Why JWT used in Microservices?
+Because it is stateless.
+
+Server does not store session.
+
+1️⃣8️⃣ Real Production Architecture
+Client
+   |
+   v
+API Gateway
+   |
+   v
+Authentication Service
+   |
+   v
+JWT Token
+   |
+   v
+Microservices
+✅ If you want, I can also explain very advanced production-level security next:
+
+1️⃣ JWT + Refresh Token implementation
+2️⃣ Spring Security + API Gateway + Microservices security
+3️⃣ Custom JWT Filter Deep Internal Flow
+4️⃣ OAuth2 + JWT (Google / Okta Login)
+5️⃣ Spring Security Filters Internal Architecture
+
+These are very common senior Java / microservices interview topics.
+
+
+1 POST /auth/login
+{
+ "username":"admin",
+ "password":"admin123"
+}
+
+2 Server validates credentials
+
+3 Server returns JWT
+
+{
+ "token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+4 Client sends token
+
+GET /api/hello
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+
+5 JWT Filter validates token
+
+6 API returns response   Here question is which server(resource or oauth2) and which client?
+
+Good question 👍 — this confusion happens because JWT authentication, OAuth2, and resource servers are related but not the same. Let's clarify who is the client and which server is involved in your example.
+
+1️⃣ In Your Example (JWT Login API)
+Your flow:
+
+POST /auth/login
+username/password
+This is NOT OAuth2.
+
+It is a custom JWT authentication implemented inside your Spring Boot service.
+
+Architecture:
+
+Client
+   |
+   v
+Spring Boot Application
+(Authentication + Resource Server both)
+So here:
+
+Component	What it is
+Client	Postman / React / Mobile app
+Server	Spring Boot application
+Auth server	Same Spring Boot application
+Resource server	Same Spring Boot application
+This is called:
+
+Self-issued JWT authentication
+
+2️⃣ Step-by-Step Flow of Your Example
+Step 1 Client sends login request
+Client could be:
+
+React frontend
+
+Angular frontend
+
+Mobile app
+
+Postman
+
+Another microservice
+
+Example request:
+
+POST http://localhost:8080/auth/login
+Body
+
+{
+ "username":"admin",
+ "password":"admin123"
+}
+Client → Spring Boot server
+
+3️⃣ Step 2 Server validates credentials
+Inside AuthController
+
+authenticationManager.authenticate(
+   new UsernamePasswordAuthenticationToken(
+      request.getUsername(),
+      request.getPassword()
+   )
+);
+Spring Security checks:
+
+Username
+Password
+using:
+
+UserDetailsService
+PasswordEncoder
+Database
+4️⃣ Step 3 Server generates JWT
+After successful authentication:
+
+String token = jwtService.generateToken(username);
+Server returns:
+
+{
+ "token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+5️⃣ Step 4 Client stores token
+Client stores JWT in:
+
+Client type	Storage
+React	LocalStorage
+Mobile	Secure storage
+Browser	Cookie
+Postman	Environment variable
+6️⃣ Step 5 Client calls secured API
+Example:
+
+GET /api/hello
+Header:
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Client sends token to server.
+
+7️⃣ Step 6 JWT Filter validates token
+Your filter:
+
+JwtAuthenticationFilter
+Flow:
+
+Request
+   |
+   v
+JwtAuthenticationFilter
+   |
+Extract Token
+   |
+Validate Signature
+   |
+Extract Username
+   |
+Load UserDetails
+   |
+Set Authentication in SecurityContext
+Code:
+
+SecurityContextHolder.getContext()
+      .setAuthentication(authentication);
+8️⃣ Step 7 API returns response
+Controller executes:
+
+@GetMapping("/hello")
+public String hello(){
+   return "Secure API accessed!";
+}
+Response:
+
+Secure API accessed!
+9️⃣ Important Answer to Your Question
+Your example uses:
+
+Role	Component
+Client	React / Postman / Mobile
+Authorization Server	Spring Boot app
+Resource Server	Same Spring Boot app
+This is called:
+
+Single service JWT authentication
+🔟 Microservices Architecture (Real Production)
+Usually authentication is separate service.
+
+Client
+   |
+   v
+API Gateway
+   |
+   v
+Auth Service (OAuth2 / JWT)
+   |
+   v
+Resource Services
+   |
+   |---- User Service
+   |---- Order Service
+   |---- Payment Service
+Here:
+
+Component	Role
+Client	Frontend
+Auth Server	Login + token generation
+Resource Server	Business APIs
+API Gateway	Token validation
+1️⃣1️⃣ OAuth2 Version (Enterprise)
+If using OAuth2, architecture changes.
+
+Client
+   |
+   v
+Authorization Server
+(Keycloak / Okta / Auth0)
+   |
+   v
+Resource Server
+(Spring Boot APIs)
+Flow:
+
+Client → Authorization Server → Token
+Client → Resource Server → API access
+1️⃣2️⃣ Quick Comparison
+Feature	Custom JWT	OAuth2
+Login API	You create it	Provided by OAuth2 server
+Auth Server	Your service	Keycloak / Okta
+Token generation	Your code	OAuth2 server
+Complexity	Simple	Enterprise
+1️⃣3️⃣ In Interview Answer
+If interviewer asks:
+
+Which server and which client in JWT flow?
+
+Answer:
+
+Client:
+Frontend application (React/Angular/Mobile/Postman)
+
+Server:
+Spring Boot application acting as both
+Authentication server and Resource server.
+
+JWT is generated after login and used for
+stateless authentication in subsequent requests.
+✅ If you want, I can also show very important advanced production architecture used in FAANG / big companies:
+
+1️⃣ Spring Security Internal Filter Chain (very important)
+2️⃣ JWT + Refresh Token implementation
+3️⃣ Spring Security + API Gateway + Microservices security
+4️⃣ OAuth2 + Keycloak full implementation
+5️⃣ Spring Security request flow deep dive
+
+These are extremely important for senior Java interviews.
+
+
+Shall we create one auth server and resource server using spring boot
+
+Yes 👍 — this is actually the recommended microservices security architecture.
+
+We will create two Spring Boot services:
+
+1️⃣ Auth Server (Authorization Server) → Generates JWT
+2️⃣ Resource Server (API Service) → Validates JWT and serves protected APIs
+
+This is a real microservices security pattern used in production.
+
+1️⃣ Architecture
+Client (React/Postman)
+        |
+        v
+   Auth Server
+  (Login + JWT)
+        |
+        v
+Client receives JWT
+        |
+        v
+   Resource Server
+ (Protected APIs)
+Flow:
+
+1 Client → Auth Server → login
+2 Auth Server → generates JWT
+3 Client receives JWT
+4 Client → Resource Server (with JWT)
+5 Resource Server → validates token
+6 Resource Server → returns data
+2️⃣ Project Structure
+Auth Server
+auth-server
+ ├── controller
+ │      AuthController
+ ├── security
+ │      JwtService
+ │      SecurityConfig
+ ├── service
+ │      CustomUserDetailsService
+ ├── entity
+ │      User
+ ├── repository
+ │      UserRepository
+Resource Server
+resource-server
+ ├── controller
+ │      HelloController
+ ├── security
+ │      JwtAuthenticationFilter
+ │      SecurityConfig
+ │      JwtService
+3️⃣ Dependencies (Both Services)
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>io.jsonwebtoken</groupId>
+ <artifactId>jjwt</artifactId>
+ <version>0.9.1</version>
+</dependency>
+Auth server also needs:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+4️⃣ Auth Server Implementation
+User Entity
+@Entity
+public class User {
+
+ @Id
+ @GeneratedValue
+ private Long id;
+
+ private String username;
+ private String password;
+ private String role;
+
+}
+User Repository
+@Repository
+public interface UserRepository extends JpaRepository<User,Long>{
+
+ Optional<User> findByUsername(String username);
+
+}
+5️⃣ CustomUserDetailsService
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+ @Autowired
+ private UserRepository repo;
+
+ @Override
+ public UserDetails loadUserByUsername(String username)
+       throws UsernameNotFoundException {
+
+   User user = repo.findByUsername(username)
+           .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+   return new org.springframework.security.core.userdetails.User(
+           user.getUsername(),
+           user.getPassword(),
+           List.of(new SimpleGrantedAuthority(user.getRole()))
+   );
+ }
+}
+6️⃣ JWT Service (Auth Server)
+@Service
+public class JwtService {
+
+ private String SECRET = "mysecret";
+
+ public String generateToken(String username){
+
+  return Jwts.builder()
+          .setSubject(username)
+          .setIssuedAt(new Date())
+          .setExpiration(new Date(System.currentTimeMillis()+3600000))
+          .signWith(SignatureAlgorithm.HS256, SECRET)
+          .compact();
+ }
+
+}
+7️⃣ Security Configuration (Auth Server)
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http.csrf().disable()
+.authorizeHttpRequests(auth -> auth
+.requestMatchers("/auth/**").permitAll()
+.anyRequest().authenticated()
+);
+
+return http.build();
+}
+
+@Bean
+public PasswordEncoder passwordEncoder(){
+ return new BCryptPasswordEncoder();
+}
+
+}
+8️⃣ Auth Controller
+Login endpoint.
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+@Autowired
+private AuthenticationManager authenticationManager;
+
+@Autowired
+private JwtService jwtService;
+
+@PostMapping("/login")
+public Map<String,String> login(@RequestBody AuthRequest request){
+
+Authentication auth = authenticationManager.authenticate(
+ new UsernamePasswordAuthenticationToken(
+ request.getUsername(),
+ request.getPassword()
+ )
+);
+
+String token = jwtService.generateToken(request.getUsername());
+
+return Map.of("token", token);
+
+}
+
+}
+9️⃣ Resource Server
+Resource server does NOT login users.
+
+It only:
+
+Validate JWT
+Allow access to API
+🔟 JWT Service (Resource Server)
+@Service
+public class JwtService {
+
+ private String SECRET="mysecret";
+
+ public String extractUsername(String token){
+
+  return Jwts.parser()
+          .setSigningKey(SECRET)
+          .parseClaimsJws(token)
+          .getBody()
+          .getSubject();
+ }
+
+}
+1️⃣1️⃣ JWT Filter
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+@Autowired
+private JwtService jwtService;
+
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
+
+String header = request.getHeader("Authorization");
+
+if(header != null && header.startsWith("Bearer ")){
+
+String token = header.substring(7);
+
+String username = jwtService.extractUsername(token);
+
+UsernamePasswordAuthenticationToken auth =
+        new UsernamePasswordAuthenticationToken(username,null,List.of());
+
+SecurityContextHolder.getContext().setAuthentication(auth);
+
+}
+
+filterChain.doFilter(request,response);
+
+}
+}
+1️⃣2️⃣ Security Config (Resource Server)
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Autowired
+private JwtAuthenticationFilter filter;
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.csrf().disable()
+.authorizeHttpRequests(auth -> auth
+.anyRequest().authenticated()
+);
+
+http.addFilterBefore(filter,
+UsernamePasswordAuthenticationFilter.class);
+
+return http.build();
+}
+}
+1️⃣3️⃣ Protected Controller
+@RestController
+@RequestMapping("/api")
+public class HelloController {
+
+@GetMapping("/hello")
+public String hello(){
+
+return "Hello from Resource Server";
+
+}
+}
+1️⃣4️⃣ Complete Flow
+STEP 1
+Client → Auth Server
+
+POST /auth/login
+username/password
+Auth Server response
+
+{
+ "token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+STEP 2
+Client → Resource Server
+Request
+
+GET /api/hello
+Authorization: Bearer <token>
+STEP 3
+Resource Server
+JWT Filter
+     |
+Validate Token
+     |
+Set SecurityContext
+     |
+Allow API access
+Response
+
+Hello from Resource Server
+1️⃣5️⃣ Real Production Architecture
+Client
+   |
+   v
+API Gateway
+   |
+   v
+Auth Server
+   |
+   v
+Resource Servers
+   |
+   |---- Order Service
+   |---- Payment Service
+   |---- User Service
+1️⃣6️⃣ Even Better Production Security
+Production systems add:
+
+✔ Refresh Token
+✔ OAuth2 Authorization Server
+✔ API Gateway validation
+✔ Redis token blacklist
+✔ Role based authorization
+✔ OpenID Connect
+
+✅ If you want, I can next show a real enterprise-level implementation:
+
+1️⃣ Spring Security + OAuth2 Authorization Server
+2️⃣ Spring Cloud Gateway + JWT validation
+3️⃣ Auth Server + 3 Microservices (User, Order, Payment)
+4️⃣ JWT + Refresh Token flow (most asked in interviews)
+5️⃣ Spring Security internal filter chain deep explanation
+
+This will give you complete microservices security mastery.
+
+
+Spring Security with Database (JPA + MySQL)
+
+Below is a complete Spring Security implementation using Spring Boot + Java 8 + JPA + MySQL.
+This is the most common real-world authentication setup where users are stored in a database instead of memory.
+
+1️⃣ Architecture
+Client (React / Postman / Mobile)
+        |
+        v
+Spring Boot Application
+        |
+        v
+Spring Security
+(AuthenticationManager)
+        |
+        v
+UserDetailsService
+        |
+        v
+JPA Repository
+        |
+        v
+MySQL Database
+Flow:
+
+1 Client sends login request
+2 Spring Security intercepts request
+3 AuthenticationManager validates credentials
+4 UserDetailsService loads user from database
+5 PasswordEncoder verifies password
+6 Authentication success → access granted
+2️⃣ Database Table
+MySQL Table
+CREATE DATABASE security_db;
+
+USE security_db;
+
+CREATE TABLE users(
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50),
+    password VARCHAR(255),
+    role VARCHAR(50)
+);
+Example Data
+
+INSERT INTO users(username,password,role)
+VALUES ('admin','$2a$10$abcxyzencoded','ROLE_ADMIN');
+
+INSERT INTO users(username,password,role)
+VALUES ('user','$2a$10$encodedpass','ROLE_USER');
+Password must be BCrypt encoded.
+
+3️⃣ Project Structure
+spring-security-db
+|
+|-- controller
+|      AuthController
+|
+|-- entity
+|      User
+|
+|-- repository
+|      UserRepository
+|
+|-- service
+|      CustomUserDetailsService
+|
+|-- config
+|      SecurityConfig
+|
+|-- dto
+|      LoginRequest
+|
+|-- SpringSecurityApplication
+4️⃣ Maven Dependencies
+<dependencies>
+
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<dependency>
+<groupId>mysql</groupId>
+<artifactId>mysql-connector-java</artifactId>
+</dependency>
+
+</dependencies>
+5️⃣ application.properties
+spring.datasource.url=jdbc:mysql://localhost:3306/security_db
+spring.datasource.username=root
+spring.datasource.password=root
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.database-platform=org.hibernate.dialect.MySQL8Dialect
+6️⃣ User Entity
+@Entity
+@Table(name="users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String username;
+
+    private String password;
+
+    private String role;
+
+    // getters setters
+}
+7️⃣ User Repository
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+
+}
+8️⃣ CustomUserDetailsService
+Spring Security loads users from DB through this class.
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository repository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username)
+            throws UsernameNotFoundException {
+
+        User user = repository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority(user.getRole()))
+        );
+    }
+}
+9️⃣ Security Configuration
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Autowired
+private CustomUserDetailsService userDetailsService;
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.csrf().disable()
+.authorizeHttpRequests(auth -> auth
+.requestMatchers("/login").permitAll()
+.requestMatchers("/admin/**").hasRole("ADMIN")
+.requestMatchers("/user/**").hasRole("USER")
+.anyRequest().authenticated()
+)
+.formLogin();
+
+return http.build();
+}
+
+@Bean
+public PasswordEncoder passwordEncoder(){
+return new BCryptPasswordEncoder();
+}
+
+@Bean
+public AuthenticationManager authenticationManager(
+        AuthenticationConfiguration config) throws Exception {
+return config.getAuthenticationManager();
+}
+
+}
+🔟 Login DTO
+public class LoginRequest {
+
+    private String username;
+    private String password;
+
+}
+1️⃣1️⃣ Auth Controller
+@RestController
+public class AuthController {
+
+@Autowired
+private AuthenticationManager authenticationManager;
+
+@PostMapping("/login")
+public String login(@RequestBody LoginRequest request){
+
+Authentication auth = authenticationManager.authenticate(
+new UsernamePasswordAuthenticationToken(
+request.getUsername(),
+request.getPassword()
+)
+);
+
+if(auth.isAuthenticated()){
+return "Login Successful";
+}
+
+return "Invalid Credentials";
+
+}
+}
+1️⃣2️⃣ Protected Controller
+@RestController
+@RequestMapping("/api")
+public class TestController {
+
+@GetMapping("/user")
+public String userApi(){
+return "User API accessed";
+}
+
+@GetMapping("/admin")
+public String adminApi(){
+return "Admin API accessed";
+}
+
+}
+1️⃣3️⃣ Password Encryption Example
+To insert user password:
+
+public static void main(String[] args) {
+PasswordEncoder encoder = new BCryptPasswordEncoder();
+System.out.println(encoder.encode("admin123"));
+}
+Output
+
+$2a$10$E6...
+Store this encoded value in MySQL.
+
+1️⃣4️⃣ Authentication Flow
+Client
+  |
+POST /login
+username + password
+  |
+Spring Security
+  |
+AuthenticationManager
+  |
+UserDetailsService
+  |
+MySQL Database
+  |
+Validate password
+  |
+Success / Failure
+1️⃣5️⃣ Role Based Access Control
+Endpoint	Role
+/admin/**	ROLE_ADMIN
+/user/**	ROLE_USER
+Example:
+
+GET /api/admin
+Accessible only to:
+
+ROLE_ADMIN
+1️⃣6️⃣ Real Production Setup
+Real systems use:
+
+Spring Security
+       +
+JWT Token
+       +
+MySQL / PostgreSQL
+       +
+Microservices
+Architecture:
+
+Client
+  |
+API Gateway
+  |
+Auth Service
+  |
+JWT Token
+  |
+Resource Services
+  |
+Database
+1️⃣7️⃣ Most Important Interview Questions
+1️⃣ What is UserDetailsService?
+Interface used by Spring Security to load user from database.
+
+loadUserByUsername()
+2️⃣ Why BCryptPasswordEncoder?
+Because BCrypt provides:
+
+Salted hashing
+
+Strong encryption
+
+Protection from rainbow table attacks
+
+3️⃣ How does Spring Security authenticate user?
+AuthenticationManager
+     |
+AuthenticationProvider
+     |
+UserDetailsService
+     |
+Database
+4️⃣ What happens during login?
+1 User sends username/password
+2 AuthenticationManager authenticates
+3 UserDetailsService loads user
+4 PasswordEncoder verifies password
+5 Authentication success
+1️⃣8️⃣ Production Improvements
+Enterprise systems add:
+
+✔ JWT authentication
+✔ OAuth2 login
+✔ Refresh tokens
+✔ Redis session store
+✔ API gateway security
+✔ Microservices authentication
+
+✅ If you want, I can also show the next important advanced implementation used in real companies:
+
+🔐 Spring Security Advanced
+1️⃣ Spring Security + JWT + MySQL (Full Production Implementation)
+2️⃣ Spring Security Filter Chain internal working
+3️⃣ OAuth2 Authorization Server with Spring Boot
+4️⃣ Spring Security with API Gateway + Microservices
+5️⃣ Refresh Token Implementation
+
+These are extremely common in senior Java / microservices interviews.
+
+
+OAuth2 Login
+
+Below is a complete explanation of OAuth2 Login using Spring Boot + Spring Security + Java 8.
+This is commonly used when users login using Google, GitHub, Facebook, Okta, etc.
+
+1️⃣ What is OAuth2 Login
+OAuth2 is an authorization framework that allows users to login using another provider.
+
+Example:
+
+Login with Google
+Login with GitHub
+Login with Facebook
+Instead of storing passwords in your application, authentication is handled by the OAuth Provider.
+
+Example providers:
+
+Google
+
+GitHub
+
+Facebook
+
+Okta
+
+Keycloak
+
+2️⃣ OAuth2 Architecture
+Client (Browser)
+      |
+      v
+Spring Boot Application
+      |
+      v
+OAuth2 Provider
+(Google / GitHub / Okta)
+Flow:
+
+1 User clicks Login with Google
+2 App redirects to Google
+3 User logs into Google
+4 Google sends authorization code
+5 Spring Boot exchanges code for access token
+6 User authenticated
+3️⃣ OAuth2 Login Flow
+User
+ |
+ | Click Login
+ v
+Spring Boot App
+ |
+ | Redirect
+ v
+OAuth Provider
+ |
+ | Login + Consent
+ v
+Authorization Code
+ |
+ | Exchange Code
+ v
+Access Token
+ |
+ v
+User Logged In
+4️⃣ Spring Boot OAuth2 Login Dependencies
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-oauth2-client</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+5️⃣ Register OAuth App (Example: Google)
+Go to
+
+Google Cloud Console
+Steps:
+
+APIs & Services
+     |
+Credentials
+     |
+Create OAuth Client
+Add redirect URL
+
+http://localhost:8080/login/oauth2/code/google
+You will receive:
+
+Client ID
+Client Secret
+6️⃣ application.yml Configuration
+spring:
+ security:
+  oauth2:
+   client:
+    registration:
+     google:
+      client-id: YOUR_CLIENT_ID
+      client-secret: YOUR_CLIENT_SECRET
+      scope:
+       - profile
+       - email
+Spring Boot automatically configures:
+
+/oauth2/authorization/google
+Login URL.
+
+7️⃣ Security Configuration
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.authorizeHttpRequests(auth -> auth
+.requestMatchers("/","/login").permitAll()
+.anyRequest().authenticated()
+)
+.oauth2Login();
+
+return http.build();
+}
+
+}
+This enables OAuth2 login.
+
+8️⃣ Controller Example
+@RestController
+public class HomeController {
+
+@GetMapping("/")
+public String home(){
+return "Public Home Page";
+}
+
+@GetMapping("/user")
+public String user(@AuthenticationPrincipal OAuth2User user){
+
+return "Welcome " + user.getAttribute("name");
+
+}
+
+}
+9️⃣ OAuth2 Login URLs
+Start login
+
+http://localhost:8080/oauth2/authorization/google
+Spring Security automatically redirects to Google.
+
+🔟 OAuth2 Login Process Internally
+User clicks Login
+      |
+      v
+/oauth2/authorization/google
+      |
+      v
+Spring Security OAuth2 Client
+      |
+      v
+Redirect to Google Authorization Server
+      |
+      v
+User Login + Consent
+      |
+      v
+Authorization Code
+      |
+      v
+Spring Boot exchanges code for token
+      |
+      v
+User authenticated
+1️⃣1️⃣ OAuth2 Important Terms
+Term	Meaning
+Client	Your application
+Authorization Server	Google / Okta
+Resource Owner	User
+Access Token	Token used to access API
+Authorization Code	Temporary code
+1️⃣2️⃣ OAuth2 Authorization Code Flow
+Most secure flow used by Spring Security.
+
+Client
+ |
+ | Login Request
+ v
+Authorization Server
+ |
+ | Authorization Code
+ v
+Client
+ |
+ | Exchange Code
+ v
+Access Token
+1️⃣3️⃣ Access User Information
+Example attributes from Google:
+
+OAuth2User user
+Example fields:
+
+user.getAttribute("email")
+user.getAttribute("name")
+user.getAttribute("picture")
+1️⃣4️⃣ OAuth2 Login + JWT (Production)
+Real production systems combine:
+
+OAuth2 Login
+      +
+JWT Token
+Flow:
+
+User login with Google
+       |
+Spring Boot gets user info
+       |
+Application generates JWT
+       |
+Client uses JWT for APIs
+1️⃣5️⃣ Microservices OAuth2 Architecture
+Client
+   |
+   v
+API Gateway
+   |
+   v
+OAuth2 Authorization Server
+(Keycloak / Okta)
+   |
+   v
+Resource Servers
+(Microservices)
+1️⃣6️⃣ OAuth2 Providers Supported by Spring Boot
+Spring Boot automatically supports:
+
+Google
+GitHub
+Facebook
+Okta
+Keycloak
+Azure AD
+1️⃣7️⃣ Interview Questions
+What is OAuth2?
+Framework for secure authorization between applications.
+
+What is Authorization Code?
+Temporary code used to obtain access token.
+
+What is Access Token?
+Token used to access protected resources.
+
+What is OAuth2 Client?
+Application requesting authentication.
+
+1️⃣8️⃣ OAuth2 vs JWT
+Feature	OAuth2	JWT
+Purpose	Authorization	Authentication
+Token	Access Token	JWT
+Provider	Google/Okta	Application
+Often used together.
+
+1️⃣9️⃣ Production Tools
+Enterprise systems use:
+
+Keycloak
+Okta
+Auth0
+Azure AD
+Instead of building their own auth server.
+
+2️⃣0️⃣ Real Enterprise Architecture
+Frontend
+   |
+API Gateway
+   |
+OAuth2 Authorization Server
+   |
+JWT Token
+   |
+Microservices
+   |
+Database
+✅ If you want, I can next show very advanced OAuth2 topics used in real microservices:
+
+1️⃣ Spring Authorization Server (Build your own OAuth2 server)
+2️⃣ Keycloak + Spring Boot Integration
+3️⃣ OAuth2 + JWT + Microservices Security
+4️⃣ Spring Cloud Gateway + OAuth2 Authentication
+5️⃣ Complete OAuth2 Authorization Code Flow with diagrams
+
+These are extremely important for senior Java backend interviews.
+
+
+Spring Security Filters Deep Dive
+
+A deep understanding of Spring Security Filters is very important because every request in Spring Security is processed through a filter chain before reaching your controller. Let’s go step-by-step with architecture, internal flow, and code examples.
+
+1️⃣ What Are Spring Security Filters
+Spring Security is built on Servlet Filters.
+
+A filter intercepts an HTTP request before it reaches the controller.
+
+Responsibilities include:
+
+Authentication
+
+Authorization
+
+CSRF protection
+
+Session management
+
+JWT validation
+
+Exception handling
+
+Request Flow:
+
+Client Request
+     |
+     v
+Servlet Container
+     |
+     v
+Spring Security Filter Chain
+     |
+     v
+Controller
+2️⃣ High-Level Spring Security Filter Architecture
+Client Request
+      |
+      v
+DelegatingFilterProxy
+      |
+      v
+FilterChainProxy
+      |
+      v
+Security Filters
+      |
+      v
+Controller
+Explanation:
+
+Component	Role
+DelegatingFilterProxy	Entry point from Servlet container
+FilterChainProxy	Manages all security filters
+Security Filters	Perform security checks
+3️⃣ DelegatingFilterProxy
+This is the first security filter registered in the servlet container.
+
+Purpose:
+
+Connects Spring Security filters with Spring context
+
+Flow:
+
+Tomcat
+   |
+DelegatingFilterProxy
+   |
+Spring Bean
+FilterChainProxy
+Example configuration (auto-configured in Spring Boot).
+
+4️⃣ FilterChainProxy
+This is the central filter in Spring Security.
+
+Responsibilities:
+
+Holds multiple filter chains
+
+Executes filters in order
+
+Applies security rules
+
+Structure:
+
+FilterChainProxy
+      |
+      |---- SecurityFilterChain #1
+      |
+      |---- SecurityFilterChain #2
+      |
+      |---- SecurityFilterChain #3
+Each chain contains multiple filters.
+
+5️⃣ Spring Security Filter Order
+Spring Security has many internal filters.
+Important ones (simplified):
+
+SecurityContextPersistenceFilter
+LogoutFilter
+UsernamePasswordAuthenticationFilter
+BasicAuthenticationFilter
+BearerTokenAuthenticationFilter
+RequestCacheAwareFilter
+SecurityContextHolderAwareRequestFilter
+AnonymousAuthenticationFilter
+SessionManagementFilter
+ExceptionTranslationFilter
+FilterSecurityInterceptor
+Execution order is very important.
+
+6️⃣ Important Filters Explained
+SecurityContextPersistenceFilter
+Purpose:
+
+Loads authentication information from session.
+
+Flow:
+
+Request Start
+    |
+Load SecurityContext
+    |
+Set Authentication
+UsernamePasswordAuthenticationFilter
+Used for form login authentication.
+
+Handles:
+
+POST /login
+username + password
+Flow:
+
+Client Login Request
+     |
+UsernamePasswordAuthenticationFilter
+     |
+AuthenticationManager
+     |
+UserDetailsService
+Example request:
+
+POST /login
+{
+ "username":"admin",
+ "password":"admin123"
+}
+BasicAuthenticationFilter
+Handles HTTP Basic Authentication.
+
+Header example:
+
+Authorization: Basic dXNlcjpwYXNzd29yZA==
+BearerTokenAuthenticationFilter
+Used for JWT authentication.
+
+Example:
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+This filter:
+
+Extracts JWT
+
+Validates JWT
+
+Creates Authentication object
+
+AnonymousAuthenticationFilter
+If user is not authenticated:
+
+Spring creates anonymous authentication.
+
+Example:
+
+ROLE_ANONYMOUS
+ExceptionTranslationFilter
+Handles:
+
+Authentication exceptions
+
+Access denied exceptions
+
+Example:
+
+401 Unauthorized
+403 Forbidden
+FilterSecurityInterceptor
+This is the final authorization filter.
+
+It checks:
+
+Does user have required role?
+Example rule:
+
+/admin/** -> ROLE_ADMIN
+7️⃣ Full Filter Execution Flow
+Example request:
+
+GET /api/orders
+Authorization: Bearer JWT
+Flow:
+
+Client Request
+      |
+DelegatingFilterProxy
+      |
+FilterChainProxy
+      |
+SecurityContextPersistenceFilter
+      |
+BearerTokenAuthenticationFilter
+      |
+AnonymousAuthenticationFilter
+      |
+ExceptionTranslationFilter
+      |
+FilterSecurityInterceptor
+      |
+Controller
+8️⃣ JWT Authentication Filter Example
+Most microservices add a custom JWT filter.
+
+Example:
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+@Autowired
+private JwtService jwtService;
+
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
+
+String header = request.getHeader("Authorization");
+
+if(header != null && header.startsWith("Bearer ")){
+
+String token = header.substring(7);
+
+String username = jwtService.extractUsername(token);
+
+UsernamePasswordAuthenticationToken auth =
+ new UsernamePasswordAuthenticationToken(username,null,List.of());
+
+SecurityContextHolder.getContext().setAuthentication(auth);
+
+}
+
+filterChain.doFilter(request,response);
+}
+}
+9️⃣ Registering Custom Filter
+You must add your filter before a specific filter.
+
+Example:
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Autowired
+private JwtAuthenticationFilter jwtFilter;
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.csrf().disable()
+.authorizeHttpRequests(auth -> auth
+.anyRequest().authenticated()
+);
+
+http.addFilterBefore(jwtFilter,
+UsernamePasswordAuthenticationFilter.class);
+
+return http.build();
+}
+}
+This means:
+
+JWT Filter runs BEFORE login filter
+🔟 SecurityContext
+After authentication, Spring stores user details in:
+
+SecurityContextHolder
+Structure:
+
+SecurityContextHolder
+        |
+Authentication
+        |
+Principal
+Authorities
+Example:
+
+Authentication auth = SecurityContextHolder
+                       .getContext()
+                       .getAuthentication();
+1️⃣1️⃣ Authentication Object
+Contains:
+
+Field	Description
+Principal	User
+Credentials	Password
+Authorities	Roles
+Example:
+
+auth.getName();
+auth.getAuthorities();
+1️⃣2️⃣ Request Processing Diagram
+Client
+   |
+HTTP Request
+   |
+Spring Security Filters
+   |
+Authentication
+   |
+Authorization
+   |
+Controller
+   |
+Service
+   |
+Database
+1️⃣3️⃣ Custom Authentication Filter
+You can create custom authentication logic.
+
+Example:
+
+public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
+
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
+
+String apiKey = request.getHeader("X-API-KEY");
+
+if("my-secret".equals(apiKey)){
+
+UsernamePasswordAuthenticationToken auth =
+ new UsernamePasswordAuthenticationToken("apiUser",null,List.of());
+
+SecurityContextHolder.getContext().setAuthentication(auth);
+
+}
+
+filterChain.doFilter(request,response);
+}
+}
+1️⃣4️⃣ Multiple Security Filter Chains
+Spring Security supports multiple filter chains.
+
+Example:
+
+@Bean
+SecurityFilterChain apiSecurity(HttpSecurity http) {}
+
+@Bean
+SecurityFilterChain adminSecurity(HttpSecurity http) {}
+Use cases:
+
+/api/** -> JWT security
+/admin/** -> Form login
+1️⃣5️⃣ Real Microservices Security Flow
+Client
+   |
+API Gateway
+   |
+JWT Filter
+   |
+Spring Security Filters
+   |
+Controller
+   |
+Microservice
+1️⃣6️⃣ Most Important Interview Questions
+Why Spring Security uses filters?
+Because filters intercept requests before reaching controllers.
+
+What is FilterChainProxy?
+Central filter managing all security filters.
+
+What is SecurityContextHolder?
+Stores authenticated user details during request.
+
+Difference between Authentication and Authorization?
+Authentication → Who are you
+Authorization → What can you access
+
+1️⃣7️⃣ Production Architecture
+Client
+   |
+API Gateway
+   |
+OAuth2 Authorization Server
+   |
+JWT
+   |
+Microservices
+   |
+Spring Security Filters
+✅ If you want, I can next explain the most advanced Spring Security topic (very important for senior backend engineers):
+
+“Spring Security Internal Authentication Flow (Step-by-Step)”
+
+This explains:
+
+AuthenticationManager
+
+AuthenticationProvider
+
+DaoAuthenticationProvider
+
+UserDetailsService
+
+PasswordEncoder
+
+and exactly how login works internally inside Spring Security.
+
+
+Spring Security with Microservices + API Gateway
+
+Spring Security in Microservices + API Gateway architecture is a very common enterprise pattern. Below is a complete step-by-step explanation with architecture, flow, and Spring Boot code structure.
+
+1️⃣ Microservices Security Architecture
+Typical architecture:
+
+Client (Web / Mobile)
+        |
+        v
+API Gateway (Spring Cloud Gateway)
+        |
+        v
+Authentication Service
+(JWT / OAuth2)
+        |
+        v
+Microservices
+|--- User Service
+|--- Order Service
+|--- Payment Service
+Key idea:
+
+API Gateway handles authentication
+
+Microservices validate token
+
+No service stores session (stateless)
+
+2️⃣ Security Flow
+Full request flow:
+
+1 Client sends login request
+2 Auth Service validates credentials
+3 Auth Service generates JWT token
+4 Client sends JWT token to API Gateway
+5 Gateway validates token
+6 Gateway forwards request to microservice
+7 Microservice verifies JWT
+8 API response returned
+Example request:
+
+GET /orders
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+3️⃣ System Components
+Component	Responsibility
+Client	Sends requests
+API Gateway	Routes requests + security
+Auth Service	Login + token generation
+Microservices	Business logic
+JWT	Authentication token
+4️⃣ Microservices Project Structure
+Example system:
+
+microservices-security
+
+|-- api-gateway
+|-- auth-service
+|-- user-service
+|-- order-service
+5️⃣ API Gateway (Spring Cloud Gateway)
+Dependency:
+
+<dependency>
+ <groupId>org.springframework.cloud</groupId>
+ <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+Security dependency:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+6️⃣ Gateway Configuration
+application.yml
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/users/**
+            
+        - id: order-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/orders/**
+Gateway forwards requests.
+
+7️⃣ JWT Token Generation (Auth Service)
+Auth service creates token.
+
+@Service
+public class JwtService {
+
+    private String SECRET = "secretkey";
+
+    public String generateToken(String username){
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis()+3600000))
+                .signWith(SignatureAlgorithm.HS256, SECRET)
+                .compact();
+    }
+}
+8️⃣ Login Controller (Auth Service)
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+@Autowired
+private AuthenticationManager authenticationManager;
+
+@Autowired
+private JwtService jwtService;
+
+@PostMapping("/login")
+public Map<String,String> login(@RequestBody LoginRequest request){
+
+authenticationManager.authenticate(
+new UsernamePasswordAuthenticationToken(
+request.getUsername(),
+request.getPassword()
+));
+
+String token = jwtService.generateToken(request.getUsername());
+
+return Map.of("token",token);
+
+}
+}
+9️⃣ Gateway JWT Filter
+Gateway validates token before routing.
+
+@Component
+public class JwtFilter implements GlobalFilter {
+
+@Autowired
+private JwtService jwtService;
+
+@Override
+public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
+String authHeader = exchange.getRequest()
+                .getHeaders()
+                .getFirst(HttpHeaders.AUTHORIZATION);
+
+if(authHeader == null || !authHeader.startsWith("Bearer ")){
+    throw new RuntimeException("Missing token");
+}
+
+String token = authHeader.substring(7);
+
+jwtService.validateToken(token);
+
+return chain.filter(exchange);
+}
+}
+🔟 Resource Server (Microservice)
+Each microservice validates JWT.
+
+Example:
+
+user-service
+order-service
+Dependencies:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+1️⃣1️⃣ JWT Filter in Microservice
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+@Autowired
+private JwtService jwtService;
+
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
+
+String header = request.getHeader("Authorization");
+
+if(header != null && header.startsWith("Bearer ")){
+
+String token = header.substring(7);
+
+String username = jwtService.extractUsername(token);
+
+UsernamePasswordAuthenticationToken auth =
+        new UsernamePasswordAuthenticationToken(username,null,List.of());
+
+SecurityContextHolder.getContext().setAuthentication(auth);
+}
+
+filterChain.doFilter(request,response);
+}
+}
+1️⃣2️⃣ Microservice Security Config
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Autowired
+private JwtAuthenticationFilter filter;
+
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.csrf().disable()
+.authorizeHttpRequests(auth -> auth
+.anyRequest().authenticated()
+);
+
+http.addFilterBefore(filter,
+UsernamePasswordAuthenticationFilter.class);
+
+return http.build();
+}
+}
+1️⃣3️⃣ Example Microservice Controller
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+@GetMapping
+public String orders(){
+return "Order list from Order Service";
+}
+
+}
+1️⃣4️⃣ Complete Request Flow
+Client
+  |
+POST /auth/login
+  |
+Auth Service
+  |
+JWT Token Generated
+  |
+Client sends request
+  |
+GET /orders
+Authorization: Bearer JWT
+  |
+API Gateway
+  |
+JWT Validation
+  |
+Forward request
+  |
+Order Service
+  |
+JWT Filter
+  |
+Controller
+1️⃣5️⃣ Security Advantages
+Feature	Benefit
+Stateless	No sessions required
+Scalable	Works well with microservices
+Secure	Token-based authentication
+Decoupled	Auth separated from services
+1️⃣6️⃣ Production Enterprise Architecture
+Large systems add:
+
+Client
+   |
+API Gateway
+   |
+OAuth2 Authorization Server
+(Keycloak / Okta)
+   |
+JWT
+   |
+Microservices
+   |
+Redis / Database
+1️⃣7️⃣ Additional Production Features
+Enterprise systems include:
+
+Refresh tokens
+
+OAuth2 authorization server
+
+Rate limiting
+
+Token revocation
+
+API gateway authentication
+
+Service-to-service authentication
+
+1️⃣8️⃣ Common Interview Questions
+Why API Gateway used?
+Central point for:
+
+routing
+
+authentication
+
+rate limiting
+
+logging
+
+Why JWT used in microservices?
+Because JWT is:
+
+stateless
+
+scalable
+
+portable
+
+Where should token validation happen?
+Usually:
+
+API Gateway
+AND
+Microservices
+(Double validation for security)
+
+✅ If you want, I can also explain the most advanced real-world architecture used by companies like Netflix, Amazon, and Uber:
+
+Spring Security + OAuth2 + Keycloak + API Gateway + Microservices
+
+Including:
+
+Authorization Server
+
+Resource Server
+
+Gateway security
+
+Token introspection
+
+Refresh token flow
+
+Role based microservice security
+
+This is the most complete production architecture for Spring Security.
+
+
+Spring Security + OAuth2 Authorization Server
+
+Below is a complete explanation of Spring Security + OAuth2 Authorization Server using Spring Boot.
+This is the enterprise way of implementing authentication in microservices.
+
+We will cover:
+
+1️⃣ OAuth2 Authorization Server architecture
+2️⃣ Authorization Server implementation
+3️⃣ Resource Server implementation
+4️⃣ OAuth2 flows
+5️⃣ Spring Boot code examples
+
+1️⃣ OAuth2 Authorization Server Architecture
+In OAuth2 systems there are four main components:
+
+Component	Description
+Resource Owner	User
+Client	Application requesting login
+Authorization Server	Generates tokens
+Resource Server	API server
+Architecture:
+
+Client (Frontend / Mobile)
+        |
+        v
+Authorization Server
+(Spring Authorization Server)
+        |
+        v
+Access Token (JWT)
+        |
+        v
+Resource Server (Microservices)
+        |
+        v
+Database
+2️⃣ OAuth2 Authentication Flow (Authorization Code)
+Most secure OAuth2 flow used in production.
+
+1 Client requests authorization
+2 Authorization server authenticates user
+3 Authorization server returns authorization code
+4 Client exchanges code for access token
+5 Client uses access token to call resource server
+Diagram:
+
+Client
+  |
+  | Authorization Request
+  v
+Authorization Server
+  |
+  | Authorization Code
+  v
+Client
+  |
+  | Token Request
+  v
+Authorization Server
+  |
+  | Access Token
+  v
+Client
+  |
+  | API Request
+  v
+Resource Server
+3️⃣ Required Dependencies
+For Authorization Server:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.security</groupId>
+ <artifactId>spring-security-oauth2-authorization-server</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+4️⃣ Authorization Server Configuration
+Main class:
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
+return http.formLogin().and().build();
+}
+
+}
+This enables:
+
+OAuth2 endpoints
+Authorization endpoint
+Token endpoint
+JWK endpoint
+5️⃣ Registered Client Configuration
+OAuth2 requires registered clients.
+
+Example:
+
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+
+RegisteredClient client = RegisteredClient.withId(UUID.randomUUID().toString())
+        .clientId("client-app")
+        .clientSecret("{noop}secret")
+        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+        .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+        .redirectUri("http://localhost:8081/login/oauth2/code/client-app")
+        .scope("read")
+        .scope("write")
+        .build();
+
+return new InMemoryRegisteredClientRepository(client);
+}
+Explanation:
+
+Field	Meaning
+clientId	Application identifier
+clientSecret	Secret key
+authorizationGrantType	OAuth2 flow
+redirectUri	Callback URL
+scope	Permissions
+6️⃣ JWT Token Configuration
+Authorization server generates JWT tokens.
+
+@Bean
+public JWKSource<SecurityContext> jwkSource() {
+
+RSAKey rsaKey = generateRsa();
+JWKSet jwkSet = new JWKSet(rsaKey);
+
+return (selector, context) -> selector.select(jwkSet);
+}
+JWT token example:
+
+eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+.
+eyJzdWIiOiJ1c2VyIn0
+.
+signature
+7️⃣ User Authentication
+Users can be stored:
+
+In memory
+
+Database
+
+LDAP
+
+Example:
+
+@Bean
+UserDetailsService users() {
+
+UserDetails user = User.withDefaultPasswordEncoder()
+        .username("admin")
+        .password("password")
+        .roles("USER")
+        .build();
+
+return new InMemoryUserDetailsManager(user);
+}
+8️⃣ Authorization Server Endpoints
+Spring Authorization Server automatically exposes endpoints.
+
+Endpoint	Purpose
+/oauth2/authorize	Authorization request
+/oauth2/token	Token generation
+/oauth2/jwks	Public key
+/oauth2/introspect	Token validation
+Example authorization request:
+
+http://localhost:9000/oauth2/authorize
+9️⃣ Resource Server Configuration
+Resource server verifies the token.
+
+Dependency:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+</dependency>
+🔟 Resource Server Security Config
+@Configuration
+@EnableWebSecurity
+public class ResourceSecurityConfig {
+
+@Bean
+SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+http
+.authorizeHttpRequests(auth -> auth
+.anyRequest().authenticated()
+)
+.oauth2ResourceServer(oauth2 -> oauth2
+.jwt()
+);
+
+return http.build();
+}
+}
+1️⃣1️⃣ Resource API Example
+@RestController
+public class ApiController {
+
+@GetMapping("/api/data")
+public String data(){
+return "Secure Resource Data";
+}
+
+}
+1️⃣2️⃣ Complete OAuth2 Request Flow
+Client
+  |
+  | GET /oauth2/authorize
+  |
+Authorization Server
+  |
+  | login page
+  |
+User logs in
+  |
+Authorization code generated
+  |
+Client exchanges code
+  |
+POST /oauth2/token
+  |
+Access token generated
+  |
+Client calls API
+  |
+Authorization: Bearer TOKEN
+  |
+Resource Server validates token
+  |
+API response returned
+1️⃣3️⃣ OAuth2 Grant Types
+Grant Type	Use Case
+Authorization Code	Web apps
+Client Credentials	Service-to-service
+Password	Legacy apps
+Refresh Token	Renew access tokens
+Most common:
+
+Authorization Code
+Client Credentials
+1️⃣4️⃣ Microservices OAuth2 Architecture
+Client
+   |
+API Gateway
+   |
+Authorization Server
+(Spring Authorization Server)
+   |
+JWT Token
+   |
+Resource Servers
+|-- User Service
+|-- Order Service
+|-- Payment Service
+1️⃣5️⃣ Production OAuth2 Tools
+Most companies use external identity providers:
+
+Provider	Example
+Keycloak	Open source
+Okta	Enterprise
+Auth0	Cloud
+Azure AD	Microsoft
+1️⃣6️⃣ Security Benefits
+OAuth2 provides:
+
+centralized authentication
+
+token based security
+
+scalable microservices authentication
+
+secure delegation
+
+1️⃣7️⃣ Interview Questions
+What is Authorization Server?
+Server responsible for issuing access tokens.
+
+What is Resource Server?
+Server hosting protected APIs.
+
+What is OAuth2 Client?
+Application requesting access to resources.
+
+What is JWT?
+Signed token containing user information.
+
+1️⃣8️⃣ Enterprise Security Architecture
+Frontend
+   |
+API Gateway
+   |
+Authorization Server
+(Keycloak / Spring Auth Server)
+   |
+JWT Token
+   |
+Microservices
+   |
+Database
+✅ If you want, I can next explain the most advanced Spring Security architecture used in large companies:
+
+Spring Security + OAuth2 + Keycloak + API Gateway + Microservices
+
+Including:
+
+Authorization server
+
+Resource server
+
+Token introspection
+
+Refresh token flow
+
+Role-based microservice security
+
+This is the most important real-world architecture for senior backend engineers.
+
+
+Spring Cloud Gateway + JWT validation
+
+Spring Cloud Gateway + JWT Validation is a common architecture used in microservices security where the API Gateway validates the JWT token before forwarding requests to microservices.
+
+This avoids duplicating authentication logic in every service.
+
+1️⃣ Architecture
+Typical architecture:
+
+Client
+   |
+   |  HTTP Request + JWT
+   v
+API Gateway (Spring Cloud Gateway)
+   |
+   | JWT Validation
+   v
+Microservices
+|-- User Service
+|-- Order Service
+|-- Payment Service
+Responsibilities:
+
+Component	Responsibility
+API Gateway	Validate JWT
+Authorization Server	Issue JWT
+Microservices	Business logic
+2️⃣ JWT Flow in Gateway
+Flow:
+
+1 Client logs in
+2 Authorization Server returns JWT
+3 Client sends JWT to API Gateway
+4 Gateway validates JWT
+5 Gateway forwards request to microservice
+Example request:
+
+GET /orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+3️⃣ Required Dependencies
+For Spring Cloud Gateway with security:
+
+<dependency>
+ <groupId>org.springframework.cloud</groupId>
+ <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+4️⃣ Gateway Route Configuration
+In application.yml:
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: order-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/orders/**
+This forwards:
+
+/orders/** → order-service
+5️⃣ Enable JWT Validation in Gateway
+Gateway acts as Resource Server.
+
+application.yml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+Or use JWK set:
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
+6️⃣ Security Configuration
+@Configuration
+@EnableWebFluxSecurity
+public class SecurityConfig {
+
+@Bean
+SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+
+return http
+    .authorizeExchange(exchanges -> exchanges
+        .pathMatchers("/auth/**").permitAll()
+        .anyExchange().authenticated()
+    )
+    .oauth2ResourceServer(oauth2 -> oauth2.jwt())
+    .build();
+}
+
+}
+Explanation:
+
+Config	Meaning
+permitAll()	Public endpoints
+authenticated()	Require JWT
+oauth2ResourceServer()	Enable JWT validation
+7️⃣ JWT Validation Process
+When request arrives:
+
+Client → Gateway
+Authorization: Bearer TOKEN
+Gateway:
+
+1 Extract token
+2 Verify signature
+3 Validate expiration
+4 Validate issuer
+5 Allow request
+If invalid:
+
+401 Unauthorized
+8️⃣ Forward Request to Microservice
+After validation:
+
+Gateway → Order Service
+Gateway forwards headers including:
+
+Authorization
+User Claims
+Example claim:
+
+{
+ "sub": "user1",
+ "scope": "read write",
+ "roles": ["USER"]
+}
+9️⃣ Extract User Info from JWT
+Example custom filter:
+
+@Component
+public class JwtUserFilter implements GlobalFilter {
+
+@Override
+public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
+Authentication auth = exchange.getPrincipal().block();
+
+if(auth != null){
+System.out.println(auth.getName());
+}
+
+return chain.filter(exchange);
+}
+}
+🔟 Role-Based Authorization
+Example:
+
+.authorizeExchange(exchanges -> exchanges
+.pathMatchers("/admin/**").hasRole("ADMIN")
+.pathMatchers("/user/**").hasRole("USER")
+.anyExchange().authenticated()
+)
+1️⃣1️⃣ Production Microservices Security
+Real production setup:
+
+Client
+   |
+API Gateway
+(Spring Cloud Gateway)
+   |
+JWT Validation
+   |
+Microservices
+|-- User Service
+|-- Order Service
+|-- Payment Service
+   |
+Authorization Server
+(Keycloak / Spring Auth Server)
+1️⃣2️⃣ Why Validate JWT at Gateway?
+Benefits:
+
+Benefit	Explanation
+Centralized security	One place for authentication
+Performance	Services skip token verification
+Simpler microservices	Business logic only
+Security	Unauthorized traffic blocked early
+1️⃣3️⃣ Advanced Production Enhancements
+Companies add:
+
+Rate limiting
+
+Token blacklist
+
+Refresh tokens
+
+Redis session store
+
+Role-based routing
+
+Example:
+
+Gateway
+ ├── JWT validation
+ ├── Rate limiter
+ ├── Logging
+ └── Request routing
+1️⃣4️⃣ Interview Questions
+Why validate JWT at API Gateway?
+To centralize authentication and reduce duplication across microservices.
+
+What is JWK?
+JSON Web Key used to verify JWT signature.
+
+Difference between Authentication and Authorization?
+Authentication	Authorization
+Who you are	What you can access
+✅ If you want, I can also explain a full real-world system:
+
+Spring Boot Microservices Security Architecture
+
+Spring Security
++ Spring Cloud Gateway
++ OAuth2 Authorization Server
++ JWT
++ Redis
++ Keycloak
+This is the exact architecture used in FAANG-level backend systems.
+
+
+Auth Server + 3 Microservices (User, Order, Payment)
+
+Here is a real-world Spring Boot microservices security architecture with:
+
+Auth Server
+
+API Gateway
+
+3 Microservices
+
+User Service
+
+Order Service
+
+Payment Service
+
+JWT Authentication
+
+This is a very common enterprise architecture.
+
+1️⃣ System Architecture
+Client (Web / Mobile)
+        |
+        v
+API Gateway (Spring Cloud Gateway)
+        |
+        v
+Auth Server (Spring Authorization Server)
+        |
+        v
+JWT Token
+        |
+        v
+Microservices
+   |        |        |
+User      Order    Payment
+Service   Service  Service
+Responsibilities:
+
+Component	Role
+Auth Server	Login + issue JWT
+API Gateway	Route requests + validate JWT
+User Service	User data
+Order Service	Orders
+Payment Service	Payments
+2️⃣ Login Flow
+1 Client → Auth Server → Login
+2 Auth Server validates credentials
+3 Auth Server returns JWT
+4 Client stores token
+5 Client sends token to API Gateway
+6 Gateway validates token
+7 Request forwarded to microservice
+Example request:
+
+GET /orders
+Authorization: Bearer eyJhbGc....
+3️⃣ Project Structure
+Example multi-module architecture:
+
+microservices-project
+│
+├── auth-server
+├── api-gateway
+├── user-service
+├── order-service
+└── payment-service
+4️⃣ Auth Server (JWT Issuer)
+Dependencies:
+
+<dependency>
+ <groupId>org.springframework.security</groupId>
+ <artifactId>spring-security-oauth2-authorization-server</artifactId>
+</dependency>
+Security config:
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
+return http.formLogin().and().build();
+}
+
+}
+Register OAuth Client
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+
+RegisteredClient client = RegisteredClient.withId(UUID.randomUUID().toString())
+        .clientId("gateway-client")
+        .clientSecret("{noop}secret")
+        .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+        .scope("read")
+        .scope("write")
+        .build();
+
+return new InMemoryRegisteredClientRepository(client);
+}
+5️⃣ API Gateway
+Dependencies:
+
+<dependency>
+ <groupId>org.springframework.cloud</groupId>
+ <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+</dependency>
+Gateway Routes
+application.yml
+
+spring:
+  cloud:
+    gateway:
+      routes:
+
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/users/**
+
+        - id: order-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/orders/**
+
+        - id: payment-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/payments/**
+6️⃣ Gateway JWT Validation
+application.yml
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+Security config:
+
+@Configuration
+@EnableWebFluxSecurity
+public class SecurityConfig {
+
+@Bean
+public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http){
+
+return http
+    .authorizeExchange(exchange -> exchange
+        .pathMatchers("/auth/**").permitAll()
+        .anyExchange().authenticated()
+    )
+    .oauth2ResourceServer(oauth -> oauth.jwt())
+    .build();
+}
+}
+7️⃣ User Service
+Simple controller:
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+@GetMapping
+public String users(){
+return "User Service Data";
+}
+
+}
+8️⃣ Order Service
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+@GetMapping
+public String orders(){
+return "Order Service Data";
+}
+
+}
+9️⃣ Payment Service
+@RestController
+@RequestMapping("/payments")
+public class PaymentController {
+
+@GetMapping
+public String payments(){
+return "Payment Service Data";
+}
+
+}
+🔟 JWT Token Example
+JWT generated by Auth Server:
+
+{
+ "sub": "user1",
+ "scope": "read write",
+ "roles": ["USER"],
+ "exp": 1710000000
+}
+Header example:
+
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+1️⃣1️⃣ Request Flow
+Client
+   |
+   | Login
+   v
+Auth Server
+   |
+   | JWT Token
+   v
+Client
+   |
+   | Request + JWT
+   v
+API Gateway
+   |
+   | Validate Token
+   v
+User / Order / Payment Services
+1️⃣2️⃣ Role-Based Access Example
+Gateway security:
+
+.authorizeExchange(exchange -> exchange
+.pathMatchers("/payments/**").hasRole("ADMIN")
+.pathMatchers("/orders/**").hasRole("USER")
+.anyExchange().authenticated()
+)
+1️⃣3️⃣ Production Architecture
+Real companies use:
+
+Client
+   |
+CDN
+   |
+API Gateway
+(Spring Cloud Gateway)
+   |
+Auth Server
+(Keycloak / Okta / Auth0)
+   |
+Microservices
+   |
+Kafka / RabbitMQ
+   |
+Database
+1️⃣4️⃣ Advanced Enhancements
+Production systems add:
+
+Redis token cache
+
+Rate limiting
+
+Distributed tracing
+
+Circuit breaker
+
+Service discovery
+
+Logging
+
+Example stack:
+
+Spring Boot
+Spring Cloud Gateway
+Spring Security
+OAuth2
+JWT
+Redis
+Kafka
+Docker
+Kubernetes
+✅ If you'd like, I can also show a complete GitHub-style project structure (about 30–40 files) for this system so you can build the entire Auth + Gateway + 3 Microservices project step-by-step like a real enterprise backend system.
+
+
+JWT + Refresh Token flow
+
+The JWT + Refresh Token flow is the standard authentication mechanism used in modern systems (mobile apps, SPAs, microservices). It solves the problem of short-lived access tokens while keeping users logged in securely.
+
+1️⃣ Why Use Refresh Tokens?
+Problem with only JWT:
+
+If JWT expires → user must log in again.
+
+Long-lived JWT → security risk if stolen.
+
+Solution:
+
+Token	Purpose
+Access Token (JWT)	Used to call APIs
+Refresh Token	Used to get a new access token
+Typical lifetimes:
+
+Token	Expiry
+Access Token	5–15 minutes
+Refresh Token	7–30 days
+2️⃣ Architecture
+Client (Web / Mobile)
+        |
+        v
+Auth Server
+(Spring Security / OAuth2)
+        |
+        v
+Access Token + Refresh Token
+        |
+        v
+API Gateway / Resource Server
+        |
+        v
+Microservices
+3️⃣ Authentication Flow
+1 User logs in
+2 Auth Server verifies credentials
+3 Auth Server returns:
+      Access Token
+      Refresh Token
+4 Client stores both tokens
+5 Client calls APIs using Access Token
+6 Access Token expires
+7 Client sends Refresh Token
+8 Server returns new Access Token
+4️⃣ Complete Request Flow
+Step 1 — Login
+Request:
+
+POST /auth/login
+Body:
+
+{
+ "username": "user1",
+ "password": "password"
+}
+Response:
+
+{
+ "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+ "refreshToken": "d91c23f9-8893-4a3f..."
+}
+Step 2 — Call API
+Request:
+
+GET /orders
+Authorization: Bearer ACCESS_TOKEN
+Server verifies JWT and returns data.
+
+Step 3 — Access Token Expired
+Client receives:
+
+401 Unauthorized
+Step 4 — Refresh Token Request
+POST /auth/refresh
+Body:
+
+{
+ "refreshToken": "d91c23f9-8893-4a3f..."
+}
+Step 5 — New Access Token Issued
+Response:
+
+{
+ "accessToken": "new.jwt.token",
+ "refreshToken": "same-or-new-refresh-token"
+}
+5️⃣ Token Storage Strategy
+Best practice:
+
+Platform	Storage
+Web App	HTTP-only cookies
+Mobile App	Secure storage
+Backend service	Memory
+Avoid:
+
+LocalStorage (XSS risk)
+
+6️⃣ Database Schema for Refresh Tokens
+Refresh tokens are typically stored in DB.
+
+Example table:
+
+refresh_tokens
+-------------------------
+id
+user_id
+token
+expiry_date
+revoked
+Example entity:
+
+@Entity
+public class RefreshToken {
+
+@Id
+@GeneratedValue
+private Long id;
+
+private String token;
+
+private Long userId;
+
+private Instant expiryDate;
+
+}
+7️⃣ Generate Access Token
+Example using the library JJWT
+
+public String generateAccessToken(String username) {
+
+return Jwts.builder()
+        .setSubject(username)
+        .setIssuedAt(new Date())
+        .setExpiration(new Date(System.currentTimeMillis() + 900000))
+        .signWith(secretKey)
+        .compact();
+}
+Access token expiry:
+
+15 minutes
+8️⃣ Generate Refresh Token
+Refresh tokens are usually random UUIDs.
+
+public String generateRefreshToken() {
+    return UUID.randomUUID().toString();
+}
+Save it to database.
+
+9️⃣ Refresh Token Endpoint
+Example controller:
+
+@PostMapping("/refresh")
+public TokenResponse refresh(@RequestBody RefreshRequest request){
+
+RefreshToken token = refreshTokenService
+        .verifyToken(request.getRefreshToken());
+
+String accessToken = jwtService
+        .generateAccessToken(token.getUserId());
+
+return new TokenResponse(accessToken);
+}
+🔟 Refresh Token Validation
+Steps:
+
+1 Check token exists
+2 Check expiry date
+3 Check revoked status
+4 Issue new access token
+1️⃣1️⃣ Token Rotation (Best Practice)
+Instead of reusing refresh tokens:
+
+Old refresh token → invalidated
+New refresh token → generated
+Flow:
+
+Client → refresh token
+Server → new access token + new refresh token
+Old refresh token → revoked
+This prevents token replay attacks.
+
+1️⃣2️⃣ Logout Flow
+When user logs out:
+
+DELETE /auth/logout
+Server:
+
+Invalidate refresh token
+Database:
+
+revoked = true
+1️⃣3️⃣ Microservices Flow with Refresh Tokens
+Client
+   |
+Login
+   |
+Auth Server
+   |
+Access Token + Refresh Token
+   |
+API Gateway
+   |
+JWT Validation
+   |
+Microservices
+(User / Order / Payment)
+Important rule:
+
+Only Auth Server handles refresh tokens
+
+Microservices only validate access tokens
+
+1️⃣4️⃣ Security Best Practices
+✔ Short access token lifetime
+✔ Store refresh tokens securely
+✔ Use HTTPS only
+✔ Implement token rotation
+✔ Support logout token revocation
+
+1️⃣5️⃣ Real Production Stack
+Most companies combine:
+
+Spring Security
+
+Spring Cloud Gateway
+
+Keycloak
+
+Redis for token storage
+
+PostgreSQL for persistence
+
+✅ If you'd like, I can also show a complete Spring Boot implementation (Auth Server) with:
+
+JWT generation
+
+Refresh token database
+
+Login endpoint
+
+Refresh endpoint
+
+Logout endpoint
+
+It will look like a real production authentication service (~15 classes).
+
+
+Spring Security internal filter chain deep explanation
+
+Understanding the Spring Security Internal Filter Chain is extremely important because Spring Security works mainly through filters. Every HTTP request passes through a chain of security filters before reaching your controller.
+
+I will explain:
+
+1️⃣ What is Filter Chain
+2️⃣ Complete internal flow
+3️⃣ Important filters
+4️⃣ Request lifecycle
+5️⃣ Authentication flow
+6️⃣ Where JWT filter fits
+7️⃣ Real execution order
+
+1️⃣ What is Spring Security Filter Chain?
+In Spring Security, every incoming HTTP request goes through a chain of servlet filters.
+
+Flow:
+
+Client Request
+      |
+      v
+Spring Security Filter Chain
+      |
+      v
+DispatcherServlet
+      |
+      v
+Controller
+Filters intercept requests and perform:
+
+Authentication
+
+Authorization
+
+CSRF protection
+
+Session management
+
+Exception handling
+
+2️⃣ Internal Architecture
+Spring Security registers a filter called:
+
+DelegatingFilterProxy
+Flow:
+
+Client
+   |
+DelegatingFilterProxy
+   |
+FilterChainProxy
+   |
+Security Filter Chain
+   |
+Application
+Explanation:
+
+Component	Purpose
+DelegatingFilterProxy	Bridge between Servlet container and Spring
+FilterChainProxy	Manages security filters
+SecurityFilterChain	Actual list of filters
+3️⃣ Request Lifecycle
+Full request lifecycle:
+
+HTTP Request
+     |
+DelegatingFilterProxy
+     |
+FilterChainProxy
+     |
+Security Filters
+     |
+DispatcherServlet
+     |
+Controller
+If authentication fails → request stops inside filters.
+
+4️⃣ Important Spring Security Filters
+Typical filter order:
+
+1 DisableEncodeUrlFilter
+2 WebAsyncManagerIntegrationFilter
+3 SecurityContextHolderFilter
+4 HeaderWriterFilter
+5 CsrfFilter
+6 LogoutFilter
+7 UsernamePasswordAuthenticationFilter
+8 DefaultLoginPageGeneratingFilter
+9 BasicAuthenticationFilter
+10 RequestCacheAwareFilter
+11 SecurityContextHolderAwareRequestFilter
+12 AnonymousAuthenticationFilter
+13 ExceptionTranslationFilter
+14 FilterSecurityInterceptor
+Not all filters run every time. It depends on configuration.
+
+5️⃣ Filter Chain Diagram
+Request
+  |
+  v
+SecurityContextHolderFilter
+  |
+  v
+CsrfFilter
+  |
+  v
+LogoutFilter
+  |
+  v
+Authentication Filters
+  |
+  v
+AnonymousAuthenticationFilter
+  |
+  v
+ExceptionTranslationFilter
+  |
+  v
+FilterSecurityInterceptor
+  |
+  v
+Controller
+6️⃣ Authentication Flow (Form Login)
+Example login request:
+
+POST /login
+Flow:
+
+Client → /login
+        |
+        v
+UsernamePasswordAuthenticationFilter
+        |
+        v
+AuthenticationManager
+        |
+        v
+AuthenticationProvider
+        |
+        v
+UserDetailsService
+        |
+        v
+Database
+7️⃣ Detailed Authentication Process
+Step 1 — Login Request
+Request:
+
+{
+ "username":"admin",
+ "password":"admin123"
+}
+Handled by:
+
+UsernamePasswordAuthenticationFilter
+Step 2 — AuthenticationManager
+Authentication auth =
+authenticationManager.authenticate(token);
+Step 3 — AuthenticationProvider
+Default provider:
+
+DaoAuthenticationProvider
+Responsibilities:
+
+Load user
+
+Verify password
+
+Step 4 — UserDetailsService
+UserDetails user =
+userDetailsService.loadUserByUsername(username);
+Loads user from:
+
+Database
+
+LDAP
+
+Memory
+
+Step 5 — Password Check
+Uses:
+
+PasswordEncoder
+Example:
+
+passwordEncoder.matches(rawPassword, encodedPassword);
+8️⃣ SecurityContext Creation
+If authentication succeeds:
+
+SecurityContextHolder.getContext()
+        .setAuthentication(authentication);
+Now user is authenticated for this request.
+
+9️⃣ Authorization Filter
+The most important authorization filter:
+
+FilterSecurityInterceptor
+Responsibilities:
+
+Check roles
+
+Check permissions
+
+Example rule:
+
+http.authorizeHttpRequests()
+    .requestMatchers("/admin/**").hasRole("ADMIN")
+🔟 Exception Handling
+Handled by:
+
+ExceptionTranslationFilter
+Responsibilities:
+
+Exception	Action
+AuthenticationException	redirect login
+AccessDeniedException	403 error
+1️⃣1️⃣ Where JWT Filter Fits
+In JWT systems we add a custom filter:
+
+public class JwtFilter extends OncePerRequestFilter
+Execution order:
+
+SecurityContextHolderFilter
+      |
+JwtAuthenticationFilter
+      |
+UsernamePasswordAuthenticationFilter
+      |
+Authorization filters
+Example configuration:
+
+http.addFilterBefore(
+        jwtFilter,
+        UsernamePasswordAuthenticationFilter.class
+);
+Purpose:
+
+Extract JWT
+
+Validate token
+
+Set Authentication
+
+1️⃣2️⃣ JWT Authentication Flow
+Client Request
+Authorization: Bearer TOKEN
+      |
+JwtFilter
+      |
+Validate Token
+      |
+Create Authentication
+      |
+SecurityContextHolder
+      |
+Authorization Filter
+      |
+Controller
+1️⃣3️⃣ Example JWT Filter
+public class JwtFilter extends OncePerRequestFilter {
+
+@Override
+protected void doFilterInternal(
+HttpServletRequest request,
+HttpServletResponse response,
+FilterChain chain
+) throws ServletException, IOException {
+
+String header = request.getHeader("Authorization");
+
+if(header != null && header.startsWith("Bearer ")){
+
+String token = header.substring(7);
+
+Authentication auth = jwtService.validate(token);
+
+SecurityContextHolder.getContext()
+        .setAuthentication(auth);
+}
+
+chain.doFilter(request, response);
+}
+}
+1️⃣4️⃣ Filter Order (Simplified)
+Real simplified order:
+
+SecurityContextHolderFilter
+ ↓
+JwtAuthenticationFilter
+ ↓
+UsernamePasswordAuthenticationFilter
+ ↓
+AnonymousAuthenticationFilter
+ ↓
+ExceptionTranslationFilter
+ ↓
+FilterSecurityInterceptor
+ ↓
+Controller
+1️⃣5️⃣ Key Spring Security Core Components
+Component	Responsibility
+SecurityContextHolder	Store authentication
+Authentication	Logged-in user
+AuthenticationManager	Authenticate user
+AuthenticationProvider	Verify credentials
+UserDetailsService	Load user
+PasswordEncoder	Check password
+1️⃣6️⃣ Internal Flow Summary
+Request
+ |
+DelegatingFilterProxy
+ |
+FilterChainProxy
+ |
+Security Filters
+ |
+Authentication
+ |
+Authorization
+ |
+Controller
+1️⃣7️⃣ Interview Questions
+Why is Spring Security filter-based?
+Because it allows interception of every HTTP request before reaching controllers.
+
+What is FilterChainProxy?
+Central filter that manages all security filters.
+
+What is SecurityContextHolder?
+Stores the authenticated user for the current request.
+
+Why extend OncePerRequestFilter for JWT?
+To ensure the filter runs only once per request.
+
+✅ If you'd like, I can also show the complete Spring Security execution diagram used internally by Spring Boot (about 25 filters) which makes the entire security pipeline crystal clear for interviews and real projects.
+
+
+Spring Security internal filter chain deep explanation with spring boot code?
+
+Below is a deep internal explanation of the Spring Security filter chain with Spring Boot code. This shows exactly how a request moves through the security pipeline and where authentication and authorization happen.
+
+We’ll cover:
+
+1️⃣ How Spring Security integrates with Spring Boot
+2️⃣ Core filters and execution order
+3️⃣ Authentication process
+4️⃣ Authorization process
+5️⃣ Adding a custom JWT filter
+6️⃣ Complete working Spring Boot example
+
+1️⃣ How Spring Security Starts in Spring Boot
+When you add Spring Security dependency:
+
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+Spring Boot automatically registers a filter called:
+
+DelegatingFilterProxy
+Flow:
+
+Client Request
+      |
+DelegatingFilterProxy
+      |
+FilterChainProxy
+      |
+SecurityFilterChain
+      |
+DispatcherServlet
+      |
+Controller
+2️⃣ Core Security Components
+Component	Responsibility
+DelegatingFilterProxy	Bridge between Servlet container and Spring
+FilterChainProxy	Executes security filters
+SecurityFilterChain	List of filters
+SecurityContextHolder	Stores authenticated user
+3️⃣ Internal Filter Chain Order
+Spring Security internally executes filters in order.
+
+Typical filters:
+
+SecurityContextHolderFilter
+HeaderWriterFilter
+CsrfFilter
+LogoutFilter
+UsernamePasswordAuthenticationFilter
+BasicAuthenticationFilter
+RequestCacheAwareFilter
+SecurityContextHolderAwareRequestFilter
+AnonymousAuthenticationFilter
+ExceptionTranslationFilter
+AuthorizationFilter
+Each filter has a specific responsibility.
+
+4️⃣ Request Flow Example
+Example request:
+
+GET /api/users
+Authorization: Bearer JWT_TOKEN
+Execution pipeline:
+
+Request
+  |
+SecurityContextHolderFilter
+  |
+CsrfFilter
+  |
+LogoutFilter
+  |
+JWT Filter (custom)
+  |
+UsernamePasswordAuthenticationFilter
+  |
+AnonymousAuthenticationFilter
+  |
+ExceptionTranslationFilter
+  |
+AuthorizationFilter
+  |
+Controller
+5️⃣ Spring Boot Security Configuration
+Basic Spring Boot configuration.
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+http
+    .csrf(csrf -> csrf.disable())
+    .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/login").permitAll()
+            .anyRequest().authenticated()
+    )
+    .formLogin();
+
+return http.build();
+}
+
+}
+This configuration builds the SecurityFilterChain.
+
+6️⃣ Authentication Flow (Login)
+Example login request:
+
+POST /login
+Handled by:
+
+UsernamePasswordAuthenticationFilter
+Flow:
+
+UsernamePasswordAuthenticationFilter
+        |
+AuthenticationManager
+        |
+AuthenticationProvider
+        |
+UserDetailsService
+        |
+Database
+7️⃣ Code Example: UserDetailsService
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+@Override
+public UserDetails loadUserByUsername(String username)
+        throws UsernameNotFoundException {
+
+return User.builder()
+        .username("admin")
+        .password("{noop}password")
+        .roles("ADMIN")
+        .build();
+}
+}
+This loads user data.
+
+8️⃣ AuthenticationManager
+Spring uses:
+
+ProviderManager
+Example:
+
+Authentication authentication =
+authenticationManager.authenticate(
+    new UsernamePasswordAuthenticationToken(
+        username,
+        password
+    )
+);
+9️⃣ AuthenticationProvider
+Default provider:
+
+DaoAuthenticationProvider
+Responsibilities:
+
+1️⃣ Load user from database
+2️⃣ Validate password
+
+Example:
+
+@Override
+public Authentication authenticate(Authentication auth)
+        throws AuthenticationException {
+
+String username = auth.getName();
+String password = auth.getCredentials().toString();
+
+UserDetails user = userDetailsService.loadUserByUsername(username);
+
+if(passwordEncoder.matches(password, user.getPassword())){
+    return new UsernamePasswordAuthenticationToken(
+            user,
+            password,
+            user.getAuthorities());
+}
+
+throw new BadCredentialsException("Invalid credentials");
+}
+🔟 SecurityContextHolder
+After authentication succeeds:
+
+SecurityContextHolder.getContext()
+        .setAuthentication(authentication);
+This means the user is now authenticated for this request.
+
+Example stored object:
+
+Authentication
+ ├── principal (UserDetails)
+ ├── credentials
+ └── authorities
+1️⃣1️⃣ Authorization Phase
+Authorization happens in:
+
+AuthorizationFilter
+Example rule:
+
+http.authorizeHttpRequests(auth -> auth
+        .requestMatchers("/admin/**").hasRole("ADMIN")
+        .anyRequest().authenticated()
+);
+Authorization logic:
+
+Check authentication
+Check roles
+Allow or deny request
+1️⃣2️⃣ Exception Handling
+Handled by:
+
+ExceptionTranslationFilter
+Example cases:
+
+Exception	Result
+AuthenticationException	Redirect login
+AccessDeniedException	HTTP 403
+1️⃣3️⃣ Adding JWT Authentication Filter
+Most modern APIs use JWT.
+
+Custom filter:
+
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+@Override
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain)
+        throws ServletException, IOException {
+
+String header = request.getHeader("Authorization");
+
+if(header != null && header.startsWith("Bearer ")){
+
+String token = header.substring(7);
+
+String username = jwtService.extractUsername(token);
+
+if(username != null){
+
+UsernamePasswordAuthenticationToken auth =
+        new UsernamePasswordAuthenticationToken(
+                username,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+
+SecurityContextHolder.getContext().setAuthentication(auth);
+}
+
+}
+
+filterChain.doFilter(request, response);
+}
+}
+1️⃣4️⃣ Register JWT Filter
+Add it before the login filter.
+
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+http
+    .csrf(csrf -> csrf.disable())
+    .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/login").permitAll()
+            .anyRequest().authenticated()
+    )
+    .addFilterBefore(
+            jwtAuthenticationFilter,
+            UsernamePasswordAuthenticationFilter.class
+    );
+
+return http.build();
+}
+Execution order now becomes:
+
+SecurityContextHolderFilter
+JwtAuthenticationFilter
+UsernamePasswordAuthenticationFilter
+AnonymousAuthenticationFilter
+ExceptionTranslationFilter
+AuthorizationFilter
+1️⃣5️⃣ Full Request Lifecycle
+Final execution pipeline:
+
+Client Request
+      |
+DelegatingFilterProxy
+      |
+FilterChainProxy
+      |
+SecurityContextHolderFilter
+      |
+JwtAuthenticationFilter
+      |
+UsernamePasswordAuthenticationFilter
+      |
+AnonymousAuthenticationFilter
+      |
+ExceptionTranslationFilter
+      |
+AuthorizationFilter
+      |
+DispatcherServlet
+      |
+Controller
+1️⃣6️⃣ Controller Example
+@RestController
+@RequestMapping("/api")
+public class UserController {
+
+@GetMapping("/users")
+public String users() {
+    return "Secure user data";
+}
+
+}
+If JWT is valid → request succeeds.
+
+1️⃣7️⃣ Key Internal Objects
+Object	Purpose
+Authentication	Represents logged-in user
+SecurityContext	Stores authentication
+SecurityContextHolder	Thread-local storage
+AuthenticationManager	Performs authentication
+AuthenticationProvider	Actual auth logic
+1️⃣8️⃣ Debugging the Filter Chain
+Enable logging:
+
+logging.level.org.springframework.security=DEBUG
+You will see:
+
+Securing GET /api/users
+Filter: SecurityContextHolderFilter
+Filter: JwtAuthenticationFilter
+Filter: AuthorizationFilter
+1️⃣9️⃣ Summary
+Complete internal flow:
+
+HTTP Request
+   |
+DelegatingFilterProxy
+   |
+FilterChainProxy
+   |
+Security Filters
+   |
+Authentication
+   |
+Authorization
+   |
+Controller
+Spring Security is essentially a powerful filter pipeline controlling authentication and authorization.
+
+✅ If you'd like, I can also show the FULL Spring Security filter chain (about 25 filters) with diagrams and explanations, which helps understand exactly how large enterprise systems secure APIs internally.
+
+
+
+
+
+
+
+
+
+
+

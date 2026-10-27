@@ -1,0 +1,831 @@
+
+
+// BankAccount.java
+package com.banking.model;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+public class BankAccount {
+    private final String accountId;
+    private BigDecimal balance;
+    private final List<Transaction> transactionHistory;
+    private final BigDecimal overdraftLimit;
+
+    public BankAccount(String accountId, BigDecimal initialBalance) {
+        this(accountId, initialBalance, BigDecimal.ZERO);
+    }
+
+    public BankAccount(String accountId, BigDecimal initialBalance, BigDecimal overdraftLimit) {
+        validateAccountId(accountId);
+        validateAmount(initialBalance);
+        validateOverdraftLimit(overdraftLimit);
+        
+        this.accountId = accountId;
+        this.balance = initialBalance;
+        this.transactionHistory = new ArrayList<>();
+        this.overdraftLimit = overdraftLimit;
+        
+        // Record initial deposit as a transaction
+        if (initialBalance.compareTo(BigDecimal.ZERO) > 0) {
+            this.transactionHistory.add(new Transaction(
+                TransactionType.DEPOSIT,
+                initialBalance,
+                this.balance,
+                "Initial deposit"
+            ));
+        }
+    }
+
+    public void deposit(BigDecimal amount) {
+        deposit(amount, "Deposit");
+    }
+
+    public void deposit(BigDecimal amount, String description) {
+        validateAmount(amount);
+        
+        BigDecimal newBalance = balance.add(amount);
+        transactionHistory.add(new Transaction(
+            TransactionType.DEPOSIT,
+            amount,
+            newBalance,
+            description
+        ));
+        balance = newBalance;
+    }
+
+    public void withdraw(BigDecimal amount) {
+        withdraw(amount, "Withdrawal");
+    }
+
+    public void withdraw(BigDecimal amount, String description) {
+        validateAmount(amount);
+        validateSufficientFunds(amount);
+        
+        BigDecimal newBalance = balance.subtract(amount);
+        transactionHistory.add(new Transaction(
+            TransactionType.WITHDRAWAL,
+            amount,
+            newBalance,
+            description
+        ));
+        balance = newBalance;
+    }
+
+    public void transferTo(BankAccount targetAccount, BigDecimal amount) {
+        transferTo(targetAccount, amount, "Transfer");
+    }
+
+    public void transferTo(BankAccount targetAccount, BigDecimal amount, String description) {
+        if (targetAccount == null) {
+            throw new IllegalArgumentException("Target account cannot be null");
+        }
+        if (this.equals(targetAccount)) {
+            throw new IllegalArgumentException("Cannot transfer to the same account");
+        }
+        
+        validateAmount(amount);
+        validateSufficientFunds(amount);
+        
+        // Perform withdrawal from source
+        BigDecimal newBalance = balance.subtract(amount);
+        transactionHistory.add(new Transaction(
+            TransactionType.TRANSFER_OUT,
+            amount,
+            newBalance,
+            description + " to " + targetAccount.getAccountId()
+        ));
+        balance = newBalance;
+        
+        // Perform deposit to target
+        targetAccount.deposit(amount, description + " from " + accountId);
+    }
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public String getAccountId() {
+        return accountId;
+    }
+
+    public List<Transaction> getTransactionHistory() {
+        return Collections.unmodifiableList(transactionHistory);
+    }
+
+    public List<Transaction> getTransactionHistory(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            throw new IllegalArgumentException("Date range cannot be null");
+        }
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("From date must be before to date");
+        }
+        
+        return transactionHistory.stream()
+            .filter(t -> !t.getTimestamp().isBefore(from) && !t.getTimestamp().isAfter(to))
+            .toList();
+    }
+
+    public BigDecimal getOverdraftLimit() {
+        return overdraftLimit;
+    }
+
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null) {
+            throw new IllegalArgumentException("Amount cannot be null");
+        }
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+    }
+
+    private void validateAccountId(String accountId) {
+        if (accountId == null || accountId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Account ID cannot be null or empty");
+        }
+    }
+
+    private void validateOverdraftLimit(BigDecimal overdraftLimit) {
+        if (overdraftLimit == null || overdraftLimit.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Overdraft limit cannot be negative");
+        }
+    }
+
+    private void validateSufficientFunds(BigDecimal amount) {
+        BigDecimal availableBalance = balance.add(overdraftLimit);
+        if (amount.compareTo(availableBalance) > 0) {
+            throw new InsufficientFundsException(
+                "Insufficient funds. Available: " + availableBalance + 
+                ", Requested: " + amount + 
+                (overdraftLimit.compareTo(BigDecimal.ZERO) > 0 ? 
+                    " (including overdraft limit: " + overdraftLimit + ")" : "")
+            );
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BankAccount that = (BankAccount) o;
+        return accountId.equals(that.accountId);
+    }
+
+    @Override
+    public int hashCode() {
+        return accountId.hashCode();
+    }
+}
+
+
+
+
+// Transaction.java
+package com.banking.model;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class Transaction {
+    private final String transactionId;
+    private final TransactionType type;
+    private final BigDecimal amount;
+    private final BigDecimal balanceAfter;
+    private final LocalDateTime timestamp;
+    private final String description;
+
+    public Transaction(TransactionType type, BigDecimal amount, BigDecimal balanceAfter, String description) {
+        this.transactionId = UUID.randomUUID().toString();
+        this.type = type;
+        this.amount = amount;
+        this.balanceAfter = balanceAfter;
+        this.timestamp = LocalDateTime.now();
+        this.description = description != null ? description : "";
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public TransactionType getType() {
+        return type;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public BigDecimal getBalanceAfter() {
+        return balanceAfter;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return "Transaction{" +
+            "transactionId='" + transactionId + '\'' +
+            ", type=" + type +
+            ", amount=" + amount +
+            ", balanceAfter=" + balanceAfter +
+            ", timestamp=" + timestamp +
+            ", description='" + description + '\'' +
+            '}';
+    }
+}
+
+
+// TransactionType.java
+package com.banking.model;
+
+public enum TransactionType {
+    DEPOSIT,
+    WITHDRAWAL,
+    TRANSFER_OUT,
+    TRANSFER_IN
+}
+
+
+// InsufficientFundsException.java
+package com.banking.model;
+
+public class InsufficientFundsException extends RuntimeException {
+    public InsufficientFundsException(String message) {
+        super(message);
+    }
+}
+
+// BankingService.java
+package com.banking.service;
+
+import com.banking.model.BankAccount;
+import com.banking.model.Transaction;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class BankingService {
+    private final Map<String, BankAccount> accounts;
+
+    public BankingService() {
+        this.accounts = new ConcurrentHashMap<>();
+    }
+
+    public BankAccount createAccount(String accountId, BigDecimal initialBalance) {
+        return createAccount(accountId, initialBalance, BigDecimal.ZERO);
+    }
+
+    public BankAccount createAccount(String accountId, BigDecimal initialBalance, BigDecimal overdraftLimit) {
+        if (accounts.containsKey(accountId)) {
+            throw new IllegalArgumentException("Account already exists with ID: " + accountId);
+        }
+        
+        BankAccount account = new BankAccount(accountId, initialBalance, overdraftLimit);
+        accounts.put(accountId, account);
+        return account;
+    }
+
+    public BankAccount getAccount(String accountId) {
+        BankAccount account = accounts.get(accountId);
+        if (account == null) {
+            throw new IllegalArgumentException("Account not found with ID: " + accountId);
+        }
+        return account;
+    }
+
+    public void deposit(String accountId, BigDecimal amount) {
+        BankAccount account = getAccount(accountId);
+        account.deposit(amount);
+    }
+
+    public void deposit(String accountId, BigDecimal amount, String description) {
+        BankAccount account = getAccount(accountId);
+        account.deposit(amount, description);
+    }
+
+    public void withdraw(String accountId, BigDecimal amount) {
+        BankAccount account = getAccount(accountId);
+        account.withdraw(amount);
+    }
+
+    public void withdraw(String accountId, BigDecimal amount, String description) {
+        BankAccount account = getAccount(accountId);
+        account.withdraw(amount, description);
+    }
+
+    public void transfer(String fromAccountId, String toAccountId, BigDecimal amount) {
+        BankAccount fromAccount = getAccount(fromAccountId);
+        BankAccount toAccount = getAccount(toAccountId);
+        fromAccount.transferTo(toAccount, amount);
+    }
+
+    public void transfer(String fromAccountId, String toAccountId, BigDecimal amount, String description) {
+        BankAccount fromAccount = getAccount(fromAccountId);
+        BankAccount toAccount = getAccount(toAccountId);
+        fromAccount.transferTo(toAccount, amount, description);
+    }
+
+    public BigDecimal getBalance(String accountId) {
+        BankAccount account = getAccount(accountId);
+        return account.getBalance();
+    }
+
+    public List<Transaction> getTransactionHistory(String accountId) {
+        BankAccount account = getAccount(accountId);
+        return account.getTransactionHistory();
+    }
+
+    public List<Transaction> getTransactionHistory(String accountId, LocalDateTime from, LocalDateTime to) {
+        BankAccount account = getAccount(accountId);
+        return account.getTransactionHistory(from, to);
+    }
+
+    public List<BankAccount> getAllAccounts() {
+        return List.copyOf(accounts.values());
+    }
+
+    public boolean accountExists(String accountId) {
+        return accounts.containsKey(accountId);
+    }
+}
+
+
+// BankingServiceTest.java (Unit Tests)
+package com.banking.service;
+
+import com.banking.model.BankAccount;
+import com.banking.model.InsufficientFundsException;
+import com.banking.model.Transaction;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class BankingServiceTest {
+    private BankingService bankingService;
+
+    @BeforeEach
+    void setUp() {
+        bankingService = new BankingService();
+    }
+
+    @Test
+    void testCreateAccount() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        assertNotNull(account);
+        assertEquals("ACC001", account.getAccountId());
+        assertEquals(BigDecimal.valueOf(1000), account.getBalance());
+    }
+
+    @Test
+    void testCreateAccountWithOverdraft() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000), BigDecimal.valueOf(500));
+        assertEquals(BigDecimal.valueOf(500), account.getOverdraftLimit());
+    }
+
+    @Test
+    void testCreateDuplicateAccountThrowsException() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.createAccount("ACC001", BigDecimal.valueOf(2000)));
+    }
+
+    @Test
+    void testDeposit() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.deposit("ACC001", BigDecimal.valueOf(500));
+        assertEquals(BigDecimal.valueOf(1500), account.getBalance());
+        
+        // Verify transaction was recorded
+        assertTrue(account.getTransactionHistory().stream()
+            .anyMatch(t -> t.getType() == TransactionType.DEPOSIT));
+    }
+
+    @Test
+    void testDepositWithDescription() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.deposit("ACC001", BigDecimal.valueOf(500), "Salary deposit");
+        
+        assertTrue(account.getTransactionHistory().stream()
+            .anyMatch(t -> t.getDescription().contains("Salary deposit")));
+    }
+
+    @Test
+    void testDepositInvalidAmountThrowsException() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.deposit("ACC001", BigDecimal.valueOf(-100)));
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.deposit("ACC001", BigDecimal.ZERO));
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.deposit("ACC001", null));
+    }
+
+    @Test
+    void testWithdrawal() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.withdraw("ACC001", BigDecimal.valueOf(300));
+        assertEquals(BigDecimal.valueOf(700), account.getBalance());
+        
+        assertTrue(account.getTransactionHistory().stream()
+            .anyMatch(t -> t.getType() == TransactionType.WITHDRAWAL));
+    }
+
+    @Test
+    void testWithdrawWithDescription() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.withdraw("ACC001", BigDecimal.valueOf(300), "ATM withdrawal");
+        
+        assertTrue(account.getTransactionHistory().stream()
+            .anyMatch(t -> t.getDescription().contains("ATM withdrawal")));
+    }
+
+    @Test
+    void testWithdrawInsufficientFundsThrowsException() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(100));
+        assertThrows(InsufficientFundsException.class, 
+            () -> bankingService.withdraw("ACC001", BigDecimal.valueOf(200)));
+    }
+
+    @Test
+    void testWithdrawWithOverdraftLimit() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(100), BigDecimal.valueOf(50));
+        bankingService.withdraw("ACC001", BigDecimal.valueOf(120));
+        assertEquals(BigDecimal.valueOf(-20), account.getBalance());
+    }
+
+    @Test
+    void testWithdrawBeyondOverdraftLimitThrowsException() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(100), BigDecimal.valueOf(50));
+        assertThrows(InsufficientFundsException.class, 
+            () -> bankingService.withdraw("ACC001", BigDecimal.valueOf(200)));
+    }
+
+    @Test
+    void testTransfer() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.createAccount("ACC002", BigDecimal.valueOf(500));
+        
+        bankingService.transfer("ACC001", "ACC002", BigDecimal.valueOf(300));
+        
+        assertEquals(BigDecimal.valueOf(700), bankingService.getBalance("ACC001"));
+        assertEquals(BigDecimal.valueOf(800), bankingService.getBalance("ACC002"));
+    }
+
+    @Test
+    void testTransferWithDescription() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.createAccount("ACC002", BigDecimal.valueOf(500));
+        
+        bankingService.transfer("ACC001", "ACC002", BigDecimal.valueOf(300), "Bill payment");
+        
+        BankAccount fromAccount = bankingService.getAccount("ACC001");
+        assertTrue(fromAccount.getTransactionHistory().stream()
+            .anyMatch(t -> t.getDescription().contains("Bill payment")));
+    }
+
+    @Test
+    void testTransferInsufficientFundsThrowsException() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(100));
+        bankingService.createAccount("ACC002", BigDecimal.valueOf(500));
+        
+        assertThrows(InsufficientFundsException.class, 
+            () -> bankingService.transfer("ACC001", "ACC002", BigDecimal.valueOf(200)));
+    }
+
+    @Test
+    void testTransferToSameAccountThrowsException() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        BankAccount account = bankingService.getAccount("ACC001");
+        
+        assertThrows(IllegalArgumentException.class, 
+            () -> account.transferTo(account, BigDecimal.valueOf(100)));
+    }
+
+    @Test
+    void testTransferToNullAccountThrowsException() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        BankAccount account = bankingService.getAccount("ACC001");
+        
+        assertThrows(IllegalArgumentException.class, 
+            () -> account.transferTo(null, BigDecimal.valueOf(100)));
+    }
+
+    @Test
+    void testGetNonExistentAccountThrowsException() {
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.getAccount("NONEXISTENT"));
+    }
+
+    @Test
+    void testGetTransactionHistory() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.deposit("ACC001", BigDecimal.valueOf(500));
+        bankingService.withdraw("ACC001", BigDecimal.valueOf(200));
+        
+        assertEquals(3, bankingService.getTransactionHistory("ACC001").size()); // Initial + deposit + withdrawal
+    }
+
+    @Test
+    void testGetTransactionHistoryByDateRange() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        
+        LocalDateTime before = LocalDateTime.now().minusMinutes(5);
+        bankingService.deposit("ACC001", BigDecimal.valueOf(500));
+        LocalDateTime after = LocalDateTime.now().plusMinutes(5);
+        
+        assertEquals(1, bankingService.getTransactionHistory("ACC001", before, after).size());
+    }
+
+    @Test
+    void testGetTransactionHistoryWithInvalidDateRange() {
+        BankAccount account = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        LocalDateTime now = LocalDateTime.now();
+        
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.getTransactionHistory("ACC001", now.plusHours(1), now));
+        assertThrows(IllegalArgumentException.class, 
+            () -> bankingService.getTransactionHistory("ACC001", null, now));
+    }
+
+    @Test
+    void testAccountExists() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        assertTrue(bankingService.accountExists("ACC001"));
+        assertFalse(bankingService.accountExists("ACC002"));
+    }
+
+    @Test
+    void testGetAllAccounts() {
+        bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        bankingService.createAccount("ACC002", BigDecimal.valueOf(2000));
+        
+        assertEquals(2, bankingService.getAllAccounts().size());
+    }
+}
+
+
+// BankAccountTest.java
+package com.banking.model;
+
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class BankAccountTest {
+    
+    @Test
+    void testCreateAccount() {
+        BankAccount account = new BankAccount("ACC001", BigDecimal.valueOf(1000));
+        assertEquals("ACC001", account.getAccountId());
+        assertEquals(BigDecimal.valueOf(1000), account.getBalance());
+        assertEquals(BigDecimal.ZERO, account.getOverdraftLimit());
+    }
+
+    @Test
+    void testCreateAccountWithInvalidId() {
+        assertThrows(IllegalArgumentException.class, 
+            () -> new BankAccount(null, BigDecimal.valueOf(1000)));
+        assertThrows(IllegalArgumentException.class, 
+            () -> new BankAccount("", BigDecimal.valueOf(1000)));
+        assertThrows(IllegalArgumentException.class, 
+            () -> new BankAccount("   ", BigDecimal.valueOf(1000)));
+    }
+
+    @Test
+    void testCreateAccountWithNegativeBalance() {
+        assertThrows(IllegalArgumentException.class, 
+            () -> new BankAccount("ACC001", BigDecimal.valueOf(-100)));
+    }
+
+    @Test
+    void testCreateAccountWithNegativeOverdraft() {
+        assertThrows(IllegalArgumentException.class, 
+            () -> new BankAccount("ACC001", BigDecimal.valueOf(1000), BigDecimal.valueOf(-50)));
+    }
+
+    @Test
+    void testDeposit() {
+        BankAccount account = new BankAccount("ACC001", BigDecimal.valueOf(1000));
+        account.deposit(BigDecimal.valueOf(500));
+        assertEquals(BigDecimal.valueOf(1500), account.getBalance());
+    }
+
+    @Test
+    void testWithdraw() {
+        BankAccount account = new BankAccount("ACC001", BigDecimal.valueOf(1000));
+        account.withdraw(BigDecimal.valueOf(300));
+        assertEquals(BigDecimal.valueOf(700), account.getBalance());
+    }
+
+    @Test
+    void testWithdrawWithOverdraft() {
+        BankAccount account = new BankAccount("ACC001", BigDecimal.valueOf(100), BigDecimal.valueOf(50));
+        account.withdraw(BigDecimal.valueOf(120));
+        assertEquals(BigDecimal.valueOf(-20), account.getBalance());
+    }
+
+    @Test
+    void testTransferTo() {
+        BankAccount account1 = new BankAccount("ACC001", BigDecimal.valueOf(1000));
+        BankAccount account2 = new BankAccount("ACC002", BigDecimal.valueOf(500));
+        
+        account1.transferTo(account2, BigDecimal.valueOf(300));
+        
+        assertEquals(BigDecimal.valueOf(700), account1.getBalance());
+        assertEquals(BigDecimal.valueOf(800), account2.getBalance());
+    }
+
+    @Test
+    void testTransactionHistory() {
+        BankAccount account = new BankAccount("ACC001", BigDecimal.valueOf(1000));
+        account.deposit(BigDecimal.valueOf(500));
+        account.withdraw(BigDecimal.valueOf(200));
+        
+        assertEquals(3, account.getTransactionHistory().size());
+        
+        // Test read-only
+        assertThrows(UnsupportedOperationException.class, 
+            () -> account.getTransactionHistory().add(null));
+    }
+}
+
+
+// Application.java (Main Application)
+package com.banking;
+
+import com.banking.model.BankAccount;
+import com.banking.service.BankingService;
+
+import java.math.BigDecimal;
+
+public class Application {
+    public static void main(String[] args) {
+        BankingService bankingService = new BankingService();
+        
+        // Create accounts
+        BankAccount account1 = bankingService.createAccount("ACC001", BigDecimal.valueOf(1000));
+        BankAccount account2 = bankingService.createAccount("ACC002", BigDecimal.valueOf(500), BigDecimal.valueOf(200));
+        
+        System.out.println("Account 1 balance: " + account1.getBalance());
+        System.out.println("Account 2 balance: " + account2.getBalance());
+        
+        // Perform transactions
+        bankingService.deposit("ACC001", BigDecimal.valueOf(500), "Salary");
+        bankingService.withdraw("ACC002", BigDecimal.valueOf(100), "ATM withdrawal");
+        bankingService.transfer("ACC001", "ACC002", BigDecimal.valueOf(300), "Bill payment");
+        
+        System.out.println("Account 1 new balance: " + bankingService.getBalance("ACC001"));
+        System.out.println("Account 2 new balance: " + bankingService.getBalance("ACC002"));
+        
+        // Get transaction history
+        System.out.println("Account 1 transactions: " + bankingService.getTransactionHistory("ACC001"));
+    }
+}
+
+
+<!-- pom.xml -->
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.banking</groupId>
+    <artifactId>banking-processor</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>5.9.2</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M7</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+# Banking Transaction Processor
+
+A comprehensive banking transaction processing service that manages multiple accounts with deposit, withdrawal, and transfer operations.
+
+## Features
+
+- **Account Management**: Create accounts with unique IDs and initial balances
+- **Transaction Operations**: 
+  - Deposit funds with optional description
+  - Withdraw funds with validation
+  - Transfer between accounts
+- **Validation**: 
+  - Prevents overdrafts (with configurable overdraft limits)
+  - Validates positive amounts
+  - Ensures account existence
+- **Transaction History**: Maintains immutable ledger with timestamps
+- **Query APIs**: 
+  - Get account balances
+  - Get full transaction history
+  - Get filtered history by date range
+
+## Design Principles
+
+- **Test-Driven Development**: Comprehensive unit tests with JUnit 5
+- **Clean Code**: Clear naming, single responsibility, meaningful abstractions
+- **Object-Oriented**: Proper encapsulation, immutability where appropriate
+- **Edge Cases Handled**: Null checks, invalid amounts, overdraft protection
+
+## Technology Stack
+
+- Java 17
+- JUnit 5 for testing
+- Maven for build automation
+
+## Project Structure
+
+
+src/
+├── main/
+│ └── java/
+│ └── com/banking/
+│ ├── model/
+│ │ ├── BankAccount.java
+│ │ ├── Transaction.java
+│ │ ├── TransactionType.java
+│ │ └── InsufficientFundsException.java
+│ ├── service/
+│ │ └── BankingService.java
+│ └── Application.java
+└── test/
+└── java/
+└── com/banking/
+├── service/
+│ └── BankingServiceTest.java
+└── model/
+└── BankAccountTest.java
+
+
+
+## API Usage
+
+### Creating Accounts
+
+```java
+BankingService service = new BankingService();
+
+// Basic account
+BankAccount account = service.createAccount("ACC001", BigDecimal.valueOf(1000));
+
+// Account with overdraft limit
+BankAccount account2 = service.createAccount("ACC002", BigDecimal.valueOf(500), BigDecimal.valueOf(200));
+
+

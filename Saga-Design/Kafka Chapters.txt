@@ -1,0 +1,212 @@
+1️⃣ Introduction to Kafka
+What is Kafka?
+
+Distributed event streaming platform
+
+High throughput
+
+Fault tolerant
+
+Horizontally scalable
+
+Why Kafka?
+
+Event-driven microservices
+
+Log aggregation
+
+Real-time analytics
+
+Messaging system replacement
+
+======
+
+2️⃣ Kafka Core Components
+
+This is the most important foundation chapter.
+
+🔹 Broker
+
+Kafka server instance
+
+Stores data
+
+Handles read/write requests
+
+Multiple brokers form a cluster
+
+Each broker:
+
+Stores partitions
+
+Has unique broker ID
+
+=================================
+
+🔹 Topic
+
+Logical category of messages
+
+Like a table in DB
+
+Producers write to topics
+
+Consumers read from topics
+
+
+🔹 Partition
+
+Topic is divided into partitions
+
+Each partition is an ordered, immutable log
+
+Ordering guaranteed per partition
+
+Why partitions?
+
+Parallelism
+
+Scalability
+
+Load balancing
+
+🔹 Producer
+
+Sends messages to topic
+
+Can choose partition:
+
+By key
+
+Round robin
+
+Custom partitioner
+
+🔹 Consumer
+
+Reads messages from topic
+
+Pull-based model
+
+Belongs to consumer group
+
+Consumer group:
+
+Multiple consumers share partitions
+
+One partition → One consumer in group
+
+===========
+
+3️⃣ How Data Flows in Kafka
+
+Producer sends message
+
+Broker stores in partition
+
+Offset assigned
+
+Consumer polls messages
+
+Consumer commits offset
+
+4️⃣ Offsets
+
+Unique number per partition
+
+Identifies message position
+
+Managed by consumer group
+
+Two types:
+
+Auto commit
+
+Manual commit
+
+5️⃣ Replication & Fault Tolerance
+
+Each partition has:
+
+Leader
+
+Followers (replicas)
+
+Replication factor example:
+
+If leader fails:
+
+Follower becomes leader
+
+6️⃣ Consumer Groups
+
+Important concept.
+
+Rules:
+
+One partition assigned to only one consumer in group
+
+Different groups get full copy of data
+
+7️⃣ Kafka Installation & Setup
+
+8️⃣ Basic Kafka Commands
+
+9️⃣ Producer Basics (Configuration)
+
+10 Consumer Basics (Configuration)
+
+11️⃣️ Message Ordering
+
+Ordering guaranteed within partition
+
+Not across partitions
+
+Use key for consistent ordering
+
+All messages with same key → same partition.
+
+12️⃣Kafka Use Case Examples
+
+Order processing
+
+Payment processing
+
+Notification service
+
+Reward engine
+
+Log streaming
+
+===============
+
+🔥 Kafka with Spring Boot (Producer + Consumer Full Example)
+
+🔥 Kafka Interview Questions (Basic to Advanced)
+
+🔥 Kafka Architecture Diagram Explained
+
+🔥 Kafka vs RabbitMQ Comparison
+
+🔥 Kafka Hands-on Mini Project (Order Processing System)
+
+=======
+
+Install Kafka locally
+
+Create topics
+
+Produce & consume manually
+
+Understand partitions
+
+Implement Java Producer
+
+Implement Java Consumer
+
+Learn consumer groups
+
+Learn replication
+
+
+

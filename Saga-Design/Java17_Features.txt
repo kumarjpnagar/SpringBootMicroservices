@@ -1,0 +1,292 @@
+
+Each feature includes code examples you can run.
+
+Major Java 17 features we will cover:
+
+1️⃣ Sealed Classes
+2️⃣ Pattern Matching for instanceof
+3️⃣ Records
+4️⃣ Text Blocks
+5️⃣ Switch Expressions
+6️⃣ Helpful NullPointerExceptions
+7️⃣ Stream toList()
+8️⃣ Enhanced Pseudo Random Generators
+
+1️⃣ Sealed Classes (Control Inheritance)
+
+Before Java 17, any class could extend another class.
+
+Sealed classes restrict which classes can extend it.
+
+Example
+
+public sealed class Payment 
+        permits CreditCardPayment, UPIPayment {
+}
+
+Allowed subclasses:
+
+final class CreditCardPayment extends Payment {
+}
+
+final class UPIPayment extends Payment {
+}
+
+Now if another class tries:
+
+class CryptoPayment extends Payment {}
+
+Compiler error.
+
+Why useful?
+
+Used in domain models:
+
+Payment
+ ├── CreditCardPayment
+ └── UPIPayment
+
+Ensures controlled hierarchy.
+
+2️⃣ Pattern Matching for instanceof
+
+Before Java 17:
+
+Object obj = "Kafka";
+
+if(obj instanceof String){
+    String s = (String) obj;
+    System.out.println(s.length());
+}
+
+Java 17 simplifies:
+
+Object obj = "Kafka";
+
+if(obj instanceof String s){
+    System.out.println(s.length());
+}
+
+No manual casting required.
+
+Practical Example
+public void process(Object event){
+
+if(event instanceof String s){
+    System.out.println("String event: " + s);
+}
+
+}
+
+Cleaner code.
+
+3️⃣ Records (Immutable Data Objects)
+
+Records reduce boilerplate code.
+
+Before:
+
+public class Order {
+
+private final String id;
+private final double amount;
+
+public Order(String id,double amount){
+this.id=id;
+this.amount=amount;
+}
+
+public String getId(){ return id; }
+public double getAmount(){ return amount; }
+
+}
+
+With Java 17:
+
+public record Order(String id, double amount) {}
+
+Compiler automatically generates:
+
+constructor
+
+getters
+
+equals
+
+hashCode
+
+toString
+
+Example Usage
+Order order = new Order("101",500);
+
+System.out.println(order.id());
+System.out.println(order.amount());
+
+Very useful in microservices DTOs.
+
+4️⃣ Text Blocks (Multiline Strings)
+
+Before Java 17:
+
+String query =
+"SELECT * FROM orders\n" +
+"WHERE amount > 1000\n" +
+"ORDER BY created_date";
+
+Java 17:
+
+String query = """
+SELECT * FROM orders
+WHERE amount > 1000
+ORDER BY created_date
+""";
+
+Cleaner for:
+
+SQL
+
+JSON
+
+HTML
+
+Example JSON:
+
+String json = """
+{
+ "orderId":101,
+ "status":"SUCCESS"
+}
+""";
+
+
+5️⃣ Switch Expressions
+
+Before Java 17:
+
+int day = 3;
+
+switch(day){
+case 1:
+case 2:
+case 3:
+ System.out.println("Weekday");
+ break;
+default:
+ System.out.println("Weekend");
+}
+
+Java 17:
+
+int day = 3;
+
+String result = switch(day){
+case 1,2,3,4,5 -> "Weekday";
+case 6,7 -> "Weekend";
+default -> "Invalid";
+};
+
+System.out.println(result);
+
+Cleaner and returns values.
+
+6️⃣ Helpful NullPointerException
+
+Java 17 provides better error messages.
+
+Example code:
+
+String name = null;
+System.out.println(name.length());
+
+Old message:
+
+NullPointerException
+
+Java 17 message:
+
+Cannot invoke "String.length()" because "name" is null
+
+Very useful for debugging.
+
+7️⃣ Stream toList() Method
+
+Before Java 17:
+
+List<String> list =
+Stream.of("Kafka","Java")
+.collect(Collectors.toList());
+
+Java 17:
+
+List<String> list =
+Stream.of("Kafka","Java")
+.toList();
+
+Cleaner syntax.
+
+8️⃣ Enhanced Random Number Generator
+
+Java 17 introduces new random generators.
+
+Example:
+
+import java.util.random.*;
+
+RandomGenerator generator =
+RandomGenerator.of("L64X128MixRandom");
+
+System.out.println(generator.nextInt());
+
+Better performance for:
+
+simulations
+
+analytics
+
+parallel streams
+
+9️⃣ Practical Real Microservice Example
+
+Using Records + Pattern Matching
+
+public record OrderEvent(String orderId,String status){}
+
+public void process(Object event){
+
+if(event instanceof OrderEvent e){
+System.out.println("Order: "+e.orderId());
+}
+
+}
+
+Used heavily in event-driven systems with Kafka.
+
+🔟 Compile and Run Example
+
+Compile:
+
+javac --release 17 Example.java
+
+Run:
+
+java Example
+
+1️⃣1️⃣ Most Used Java 17 Features in Enterprise
+
+Feature	Use Case
+Records	DTO models
+Sealed Classes	domain hierarchy
+Text Blocks	SQL / JSON
+Switch Expressions	cleaner logic
+Pattern Matching	reduce casting
+
+We can also see next....
+
+Records for REST DTO
+
+Sealed classes for domain events
+
+Pattern matching for event processing
+
+Text blocks for SQL and JSON templates

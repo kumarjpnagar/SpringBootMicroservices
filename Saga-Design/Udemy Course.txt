@@ -1,0 +1,220 @@
+1)Master Microservices with Spring Boot and Spring Cloud:====Need
+
+  https://www.udemy.com/course/microservices-with-spring-boot-and-spring-cloud/?kw=Master+Micro&src=sac
+
+2)Java Microservices: CQRS & Event Sourcing with Kafka:=====Need
+
+   https://www.udemy.com/course/java-microservices-cqrs-event-sourcing-with-kafka/?kw=Java+Microservices&src=sac
+   
+3) https://www.udemy.com/course/functional-programming-with-java/=====Done   
+
+5)Microservices - 12 Factors App -Best Practices in Cloud Native Applications
+
+    https://medium.com/bb-tutorials-and-thoughts/cloud-native-development-a-diagrammatic-approach-to-the-twelve-factor-methodology-b13f9b4a129b==Done
+	
+4  Apache Kafka Series - Learn Apache Kafka for Beginners v3  =====Done
+	https://www.udemy.com/course/apache-kafka/learn/lecture/11566960?start=0#overview	
+	
+5)Java Design Patterns & SOLID Design Principles======Need
+
+   https://www.udemy.com/course/design-patterns-in-java-concepts-hands-on-projects/
+
+6)SOLID Principles: Introducing Software Architecture & Design:==================Need
+
+   https://www.udemy.com/course/solid-design/?kw=SOLID+Principles&src=sac
+
+7)SOLID Principles of Object-Oriented Design and Architecture:
+
+   https://www.udemy.com/course/solid-principles-object-oriented-design-architecture/?kw=SOLID+Principles&src=sac
+   
+ 8)Java Design Patterns & SOLID Design Principles
+
+   https://www.udemy.com/course/design-patterns-in-java-concepts-hands-on-projects/
+  
+
+9) DevOps Project - CI/CD with Git Jenkins Ansible Kubernetes====Need later 
+
+     https://www.udemy.com/course/valaxy-devops/	
+
+10) [NEW] Master Spring Boot 3 & Spring Framework 6 with Java===================Need
+     https://www.udemy.com/course/spring-boot-and-spring-framework-tutorial-for-beginners/?kw=master+spring+boot&src=sac	 
+	 
+11) Docker for Beginners: DevOps for Java & Spring Boot====Need
+		https://www.udemy.com/course/docker-course-with-java-and-spring-boot-for-beginners/
+  
+  
+ 12) Java Multithreading, Concurrency & Performance Optimization
+     https://www.udemy.com/course/java-multithreading-concurrency-performance-optimization/	 
+	 
+13) Design Microservices Architecture with Patterns & Principles
+
+   https://www.udemy.com/course/design-microservices-architecture-with-patterns-principles/?couponCode=JULY23	 
+	 
+14) AWS Lambda & Serverless - Developer Guide with Hands-on Labs
+
+   https://www.udemy.com/course/aws-lambda-serverless-developer-guide-with-hands-on-labs/?couponCode=JULY23	
+
+15) Java 8 New Features In Simple Way
+    https://www.udemy.com/course/java-8-new-features-in-simple-way/   
+
+Docker and K8s By Mumshad ::Kode Cloud
+  
+15)Kubernetes for the Absolute Beginners - Hands-on
+    https://www.udemy.com/course/learn-kubernetes/  
+
+16) Docker for the Absolute Beginner - Hands On - DevOps
+    https://www.udemy.com/course/learn-docker/	
+	
+17) Learn DevOps: CI/CD with Jenkins using Pipelines and Docker
+    https://www.udemy.com/course/learn-devops-ci-cd-with-jenkins-using-pipelines-and-docker/?kw=jenkins+and&src=sac	
+	
+Mumshad: kode Kloud
+
+https://kodekloud.com/blog/kubernetes-tutorial-for-beginners/#
+   
+Kubernetes Architecture Simplified | K8s Explained in 10 Minutes | KodeKloud
+https://www.youtube.com/watch?v=8C_SCDbUJTg
+
+Kubernetes Crash Course: Learn the Basics and Build a Microservice Application
+https://www.youtube.com/watch?v=XuSQU5Grv1g
+
+======================
+K8s  By Nana:
+Kubernetes Crash Course for Absolute Beginners [NEW]
+https://www.youtube.com/watch?v=s_o8dwzRlu4
+
+Kubernetes Tutorial for Beginners [FULL COURSE in 4 Hours]
+https://www.youtube.com/watch?v=X48VuDVv0do   (TechWorld with Nana)
+
+Kubernetes Services explained | ClusterIP vs NodePort vs LoadBalancer vs Headless Service
+https://www.youtube.com/watch?v=T4Z7visMM4E
+
+Kubernetes Tutorial for Beginners [FULL COURSE in 4 Hours]
+https://www.youtube.com/watch?v=X48VuDVv0do&list=RDCMUCdngmbVKX1Tgre699-XLlUA&start_radio=1
+
+Docker Crash Course for Absolute Beginners [NEW]
+https://www.youtube.com/watch?v=pg19Z8LL06w
+
+Kubernetes Services explained | ClusterIP vs NodePort vs LoadBalancer vs Headless Service
+https://www.youtube.com/watch?v=T4Z7visMM4E
+
+Docker Crash Course for Absolute Beginners [NEW]
+https://www.youtube.com/watch?v=pg19Z8LL06w
+
+Docker Tutorial for Beginners [FULL COURSE in 3 Hours]
+https://www.youtube.com/watch?v=3c-iBn73dDE&list=PLy7NrYWoggjxtN4YbSMYFFdpaxb-fR4zC
+
+Docker Tutorial for Beginners [FULL COURSE in 3 Hours]
+https://www.youtube.com/watch?v=3c-iBn73dDE
+
+GitLab CI CD Tutorial for Beginners [Crash Course]
+https://www.youtube.com/watch?v=qP8kir2GUgo
+
+Microservices explained - the What, Why and How?
+https://www.youtube.com/watch?v=rv4LlmLmVWk
+==================   
+Microservices Full Course [2023] | Microservices Explained | Microservices Tutorial | Edureka
+https://www.youtube.com/watch?v=iWJzmV0xRVE
+
+Microservices Full Course - Learn Microservices in 4 Hours | Microservices Tutorial | Edureka
+https://www.youtube.com/watch?v=tuJqH3AV0e8
+
+Microservices explained - the What, Why and How?
+https://www.youtube.com/watch?v=rv4LlmLmVWk
+
+https://techworld-with-nana.teachable.com/
+
+========================
+GITLAB CI CD FULL COURSE IN 3 HOURS | Gitlab CI CD From Zero To Hero(Thetips4you)
+https://www.youtube.com/watch?v=Typ9U6k6g5s
+
+GitLab CI CD Tutorial for Beginners [Crash Course]
+https://www.youtube.com/watch?v=qP8kir2GUgo&t=11s
+
+Microservices Full Course - Learn Microservices in 4 Hours | Microservices Tutorial | Edureka
+https://www.youtube.com/watch?v=tuJqH3AV0e8
+
+=====================================
+Ranga in28Minutes
+
+Kubernetes Tutorial for Beginners - GKE - Google Cloud
+https://www.youtube.com/watch?v=jW_-KZCjsm0
+
+[2023] Spring Framework: A Tutorial for Beginners | in28minutes | Ranga Karanam
+https://www.youtube.com/watch?v=f6DHAgL7FWc
+
+[2023] Spring Boot: A Tutorial for Beginners | in28minutes | Ranga Karanam
+https://www.youtube.com/watch?v=zTAHY0SLQAg
+===============================================
+Durgesh:
+
+Spring boot 🔥🔥💯💯| Creating REST API using spring boot in one video in Hindi
+https://www.youtube.com/watch?v=sdDDuQuX2cg
+
+
+
+
+=======================================
+	 
+15) Java Brains Java 1.8
+
+ https://www.youtube.com/watch?v=gpIUfj3KaOc&list=PLqq-6Pq4lTTa9YGfyhyW2CqdtW9RtY-I3	 
+ 
+ https://github.com/koushikkothagal
+ 
+ https://github.com/mitulagr2/spring-boot-java-brains/tree/main/course-api-data
+ 
+ https://github.com/topics/javabrains
+ 
+ https://github.com/koushikkothagal/javabrains/tree/master/src
+ 
+ 
+ https://github.com/koushikkothagal?tab=overview&from=2013-06-01&to=2013-06-30
+
+==============
+ 16) canary Deployment and blue green deplyment
+ 
+ 17) front end Design patterns-in-java-concepts-hands-on-projects/
+ 
+ 18) kibana/elk
+ 
+ 19) configure grafana
+ 
+ https://dzone.com/articles/design-patterns-for-microservices
+ 
+ You might also be interested in this course from Pluralsight called 
+     Microservices Architectural Design Patterns Playbook. Start a free 10-day trial.	 
+	 https://www.pluralsight.com/courses/microservices-architectural-design-patterns-playbook?clickid=W%3AyQhw21YxyPWaOVSwxXJy2rUkFzIyWt%3AWZkzo0&irgwc=1&mpid=2891898&aid=7010a000001xAKZAA2&utm_medium=digital_affiliate&utm_campaign=2891898&utm_source=impactradius
+ =======
+	20: https://dzone.com/articles/design-patterns-for-microservices
+
+============================================================
+
+https://www.edureka.co/blog/microservices-design-patterns
+
+https://www.baeldung.com/solid-principles
+
+==============================================================
+
+Design Pattern:
+
+https://javatechonline.com/java-design-patterns-java/
+
+https://javatechonline.com/creational-design-patterns-in-java/#Factory_Design_Pattern
+
+=====================================================
+Associate Cloud Engineer Certification | Google Cloud (GCP) | First 25 Steps
+https://www.youtube.com/watch?v=hkiYkJbs0W4
+
+GCP Course | Google Cloud Platform Course | GCP Training | Intellipaat
+https://www.youtube.com/watch?v=mcfnQSs3KqE
+
+Cloud Digital Leader Certification | Google Cloud (GCP)
+https://www.youtube.com/watch?v=kEfaxyz2p-A
+
+Google Cloud Platform Full Course [2024] | Google Cloud Platform Tutorial [2024] | Edureka
+https://www.youtube.com/watch?v=pTm0iI3_pIQ
+
+
+
+	

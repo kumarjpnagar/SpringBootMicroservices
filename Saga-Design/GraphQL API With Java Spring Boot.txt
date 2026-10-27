@@ -1,0 +1,1246 @@
+Can you explain all the topics attached for GraphQL one by one with explanation and Hand-on?
+📘 GraphQL Query with Postman
+
+Although GraphQL APIs are commonly tested using:
+
+Altair GraphQL Client
+GraphiQL
+
+you can also test GraphQL APIs using:
+
+Postman
+
+Why Use Postman for GraphQL?
+
+Benefits:
+
+✔ API testing
+✔ JWT token testing
+✔ Automation testing
+✔ Collection support
+✔ CI/CD integration
+✔ Load/API debugging
+
+GraphQL vs REST in Postman
+REST	GraphQL
+Multiple URLs	Single URL
+GET/POST/PUT	Mostly POST
+JSON Body	GraphQL Query Body
+GraphQL Endpoint
+
+Default Spring Boot GraphQL endpoint:
+
+http://localhost:8080/graphql
+📘 Spring Boot GraphQL Setup
+Schema
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+type Query{
+ students:[Student]
+}
+Resolver
+package com.example.demo.controller;
+
+import com.example.demo.model.Student;
+
+import org.springframework.graphql.data.method.annotation.QueryMapping;
+
+import org.springframework.stereotype.Controller;
+
+import java.util.List;
+
+@Controller
+public class StudentResolver {
+
+    @QueryMapping
+    public List<Student> students(){
+
+        return List.of(
+                new Student(1L,"Ravi",22),
+                new Student(2L,"Rahul",23)
+        );
+    }
+}
+📘 Running GraphQL Query with Postman
+Step 1: Open Postman
+
+Download:
+
+Postman Official Website
+
+Step 2: Create New Request
+
+Click:
+
+New Request
+Step 3: Select HTTP Method
+
+Choose:
+
+POST
+
+because GraphQL requests are generally POST requests.
+
+Step 4: Enter GraphQL Endpoint
+http://localhost:8080/graphql
+Step 5: Add Headers
+
+Headers tab:
+
+Key	Value
+Content-Type	application/json
+Step 6: Add Request Body
+
+Select:
+
+Body → raw → JSON
+Step 7: Write GraphQL Query
+
+Request Body:
+
+{
+  "query":"query{ students{ id name age } }"
+}
+Step 8: Send Request
+
+Click:
+
+Send
+Response
+{
+  "data": {
+    "students": [
+      {
+        "id": "1",
+        "name": "Ravi",
+        "age": 22
+      },
+      {
+        "id": "2",
+        "name": "Rahul",
+        "age": 23
+      }
+    ]
+  }
+}
+📘 GraphQL Query with Variables in Postman
+Schema
+type Query{
+ studentById(id:ID):Student
+}
+Resolver
+@QueryMapping
+public Student studentById(
+      @Argument Long id){
+
+   return new Student(id,"Ravi",22);
+}
+GraphQL Query with Variables
+
+Request Body:
+
+{
+  "query":"query getStudent($id:ID){ studentById(id:$id){ id name age } }",
+
+  "variables":{
+      "id":1
+  }
+}
+Response
+{
+ "data":{
+   "studentById":{
+      "id":"1",
+      "name":"Ravi",
+      "age":22
+   }
+ }
+}
+📘 GraphQL Mutation with Postman
+Schema
+type Mutation{
+ createStudent(name:String,age:Int):Student
+}
+Resolver
+@MutationMapping
+public Student createStudent(
+      @Argument String name,
+      @Argument int age){
+
+   return new Student(1L,name,age);
+}
+Mutation Request
+{
+  "query":"mutation{ createStudent(name:\"Ravi\",age:22){ id name age } }"
+}
+Mutation Response
+{
+ "data":{
+   "createStudent":{
+      "id":"1",
+      "name":"Ravi",
+      "age":22
+   }
+ }
+}
+📘 Mutation with Variables
+Request Body
+{
+  "query":"mutation createStudent($name:String,$age:Int){ createStudent(name:$name,age:$age){ id name age } }",
+
+  "variables":{
+      "name":"Rahul",
+      "age":25
+  }
+}
+📘 GraphQL Input Type with Postman
+Schema
+input StudentInput{
+ name:String
+ age:Int
+}
+
+type Mutation{
+ createStudent(student:StudentInput):Student
+}
+DTO
+@Data
+public class StudentInput {
+
+    private String name;
+    private int age;
+}
+Resolver
+@MutationMapping
+public Student createStudent(
+      @Argument StudentInput student){
+
+   return new Student(
+         1L,
+         student.getName(),
+         student.getAge()
+   );
+}
+Postman Request
+{
+  "query":"mutation createStudent($student:StudentInput){ createStudent(student:$student){ id name age } }",
+
+  "variables":{
+      "student":{
+          "name":"Ravi",
+          "age":22
+      }
+  }
+}
+📘 Adding JWT Token in Postman
+
+For secured GraphQL APIs:
+
+Headers
+Key	Value
+Authorization	Bearer JWT_TOKEN
+Example
+Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+📘 GraphQL Request Execution Flow
+Postman
+   |
+HTTP POST
+   |
+/graphql
+   |
+GraphQL Engine
+   |
+Resolver
+   |
+Service Layer
+   |
+Database
+📘 Common Errors in Postman
+1️⃣ 404 Error
+
+Cause:
+
+Wrong endpoint URL
+
+Solution:
+
+http://localhost:8080/graphql
+2️⃣ 400 Bad Request
+
+Cause:
+
+Invalid GraphQL syntax
+3️⃣ Validation Error
+
+Cause:
+
+Wrong schema field
+
+Example:
+
+studentName
+
+when schema has:
+
+name
+4️⃣ Unauthorized Error
+
+Cause:
+
+Missing JWT token
+📘 Postman Collection for GraphQL
+
+You can save:
+
+✔ Queries
+✔ Mutations
+✔ Variables
+✔ Headers
+
+inside Postman collections.
+
+Useful for:
+
+Team sharing
+Automation
+CI/CD testing
+📘 Difference Between Altair and Postman
+Altair	Postman
+GraphQL-specific	General API tool
+Better schema explorer	Better automation
+Easy subscriptions	Better collections
+Lightweight	Enterprise testing
+Real Industry Usage
+
+Companies use Postman for:
+
+✔ API automation
+✔ Integration testing
+✔ JWT testing
+✔ CI/CD pipelines
+✔ Contract testing
+
+Important Interview Questions
+Q1 Which HTTP method is mostly used for GraphQL?
+POST
+Q2 Default GraphQL endpoint?
+/graphql
+Q3 How to pass GraphQL variables in Postman?
+
+Using:
+
+variables
+
+section in request body.
+
+Q4 How to send JWT token in GraphQL request?
+
+Using:
+
+Authorization Header
+Next Important Topics
+
+1️⃣ GraphQL Mutation Deep Dive
+2️⃣ GraphQL Resolver Execution Flow
+3️⃣ GraphQL DataLoader (N+1 Problem)
+4️⃣ GraphQL with JPA/Hibernate
+5️⃣ GraphQL JWT Security
+6️⃣ GraphQL Subscription
+7️⃣ GraphQL Microservices Gateway
+
+What is GraphQL Variable ? 
+GraphQL Variable with Query 
+GraphQL Variable with Mutation 
+Multiple GraphQL Variables
+📘 What is GraphQL Variable?
+
+GraphQL Variables are used to pass dynamic values into:
+
+✔ Queries
+✔ Mutations
+✔ Filters
+
+instead of hardcoding values.
+
+Problem Without Variables
+
+Example:
+
+query{
+ studentById(id:1){
+   name
+ }
+}
+
+Here:
+
+id = hardcoded
+
+To change ID, query must be modified again.
+
+Solution → GraphQL Variables
+query getStudent($id:ID){
+
+ studentById(id:$id){
+    name
+ }
+}
+
+Now ID becomes dynamic.
+
+Benefits of Variables
+Benefit	Explanation
+Dynamic Queries	Reusable queries
+Cleaner Queries	Better readability
+Security	Prevent query injection
+Better Performance	Query caching
+Reusability	Same query multiple inputs
+GraphQL Variable Syntax
+Query Structure
+query queryName($variable:Type){
+
+ field(argument:$variable){
+   responseFields
+ }
+}
+Variables JSON
+{
+ "variable":value
+}
+Internal Execution Flow
+GraphQL Query
+      |
+Variables JSON
+      |
+GraphQL Engine
+      |
+Resolver
+      |
+Response
+📘 GraphQL Variable with Query
+Step 1: GraphQL Schema
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+type Query{
+ studentById(id:ID):Student
+}
+Step 2: Resolver
+package com.example.demo.controller;
+
+import com.example.demo.model.Student;
+
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.QueryMapping;
+
+import org.springframework.stereotype.Controller;
+
+@Controller
+public class StudentResolver {
+
+    @QueryMapping
+    public Student studentById(
+            @Argument Long id){
+
+        return new Student(
+                id,
+                "Ravi",
+                22
+        );
+    }
+}
+Step 3: Query with Variable
+query getStudent($id:ID){
+
+ studentById(id:$id){
+    id
+    name
+    age
+ }
+}
+Step 4: Variables JSON
+{
+ "id":1
+}
+Response
+{
+ "data":{
+   "studentById":{
+      "id":"1",
+      "name":"Ravi",
+      "age":22
+   }
+ }
+}
+Query Flow
+Variables JSON
+      |
+$id
+      |
+studentById(id:$id)
+      |
+Resolver
+📘 GraphQL Variable with Mutation
+
+Variables are heavily used in mutations.
+
+Step 1: Schema
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+type Mutation{
+ createStudent(
+    name:String,
+    age:Int
+ ):Student
+}
+Step 2: Mutation Resolver
+package com.example.demo.controller;
+
+import com.example.demo.model.Student;
+
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+
+import org.springframework.stereotype.Controller;
+
+@Controller
+public class StudentMutationResolver {
+
+    @MutationMapping
+    public Student createStudent(
+            @Argument String name,
+            @Argument int age){
+
+        return new Student(
+                1L,
+                name,
+                age
+        );
+    }
+}
+Step 3: Mutation with Variables
+mutation createStudent(
+   $name:String,
+   $age:Int
+){
+
+ createStudent(
+    name:$name,
+    age:$age
+ ){
+    id
+    name
+    age
+ }
+}
+Step 4: Variables JSON
+{
+ "name":"Ravi",
+ "age":22
+}
+Response
+{
+ "data":{
+   "createStudent":{
+      "id":"1",
+      "name":"Ravi",
+      "age":22
+   }
+ }
+}
+📘 Multiple GraphQL Variables
+
+GraphQL supports multiple variables.
+
+Example Query
+query searchStudents(
+   $name:String,
+   $age:Int
+){
+
+ searchStudents(
+    name:$name,
+    age:$age
+ ){
+    id
+    name
+ }
+}
+Variables JSON
+{
+ "name":"Ravi",
+ "age":22
+}
+Schema
+type Query{
+ searchStudents(
+    name:String,
+    age:Int
+ ):[Student]
+}
+Resolver
+@QueryMapping
+public List<Student> searchStudents(
+       @Argument String name,
+       @Argument int age){
+
+   return service.search(name,age);
+}
+📘 Variables with Input Type
+
+Most common enterprise approach.
+
+Schema
+input StudentInput{
+ name:String
+ age:Int
+ department:String
+}
+
+type Mutation{
+ createStudent(student:StudentInput):Student
+}
+Mutation Query
+mutation createStudent(
+   $student:StudentInput
+){
+
+ createStudent(student:$student){
+    id
+    name
+ }
+}
+Variables JSON
+{
+ "student":{
+    "name":"Ravi",
+    "age":22,
+    "department":"CS"
+ }
+}
+Resolver
+@MutationMapping
+public Student createStudent(
+      @Argument StudentInput student){
+
+   return service.save(student);
+}
+📘 Default Variable Values
+
+GraphQL supports default values.
+
+Example
+query getStudent($id:ID=1){
+
+ studentById(id:$id){
+    name
+ }
+}
+
+If variable not passed:
+
+id defaults to 1
+📘 Non-Null Variables
+
+Use:
+
+String!
+
+meaning value is mandatory.
+
+Example
+mutation createStudent(
+   $name:String!
+){
+ createStudent(name:$name){
+    id
+ }
+}
+If Missing Variable
+
+Error:
+
+{
+ "errors":[
+   {
+     "message":"Variable 'name' is required"
+   }
+ ]
+}
+📘 Variables in Postman
+
+Request Body:
+
+{
+  "query":"query getStudent($id:ID){ studentById(id:$id){ id name } }",
+
+  "variables":{
+      "id":1
+  }
+}
+📘 Variables in Altair
+
+Altair has:
+
+✔ Query section
+✔ Variables section
+
+Query
+query getStudent($id:ID){
+
+ studentById(id:$id){
+   id
+   name
+ }
+}
+Variables Panel
+{
+ "id":1
+}
+📘 Variable Execution Architecture
+Client
+   |
+Variables JSON
+   |
+GraphQL Engine
+   |
+Schema Validation
+   |
+Resolver
+   |
+Database
+Real Industry Usage
+
+Variables are heavily used in:
+
+✔ Mobile APIs
+✔ Search APIs
+✔ Pagination
+✔ Filtering
+✔ Authentication
+✔ Microservices Gateway
+
+Companies:
+
+Netflix
+GitHub
+Shopify
+Important Interview Questions
+Q1 What is GraphQL Variable?
+
+Variables allow dynamic values in GraphQL queries and mutations.
+
+Q2 Why variables are important?
+Reusability
+Security
+Cleaner queries
+Better caching
+Q3 How are variables passed?
+
+Using:
+
+variables
+
+JSON object.
+
+Q4 Meaning of String! in GraphQL?
+Non-null mandatory value
+Next Important Topics
+
+1️⃣ GraphQL Resolver Deep Dive
+2️⃣ GraphQL DataLoader (N+1 Problem)
+3️⃣ GraphQL Pagination
+4️⃣ GraphQL Filtering & Sorting
+5️⃣ GraphQL JPA/Hibernate
+6️⃣ GraphQL JWT Security
+7️⃣ GraphQL Subscription
+8️⃣ GraphQL Microservices Gateway
+
+Updating GraphQL App with Latest Versions 
+Introduction To GraphQL Client 
+Create GraphQL Client Spring Boot App 
+GraphQL Client To Call GraphQL Query 
+GraphQL Client with Variable 
+GraphQL Client To Call GraphQL Mutation
+📘 Updating GraphQL App with Latest Versions
+
+Modern GraphQL applications use:
+
+Technology	Recommended Version
+Java	17 or 21
+Spring Boot	3.x
+Spring GraphQL	Latest
+Maven	3.9+
+GraphQL Java	Latest stable
+Why Upgrade?
+
+Latest versions provide:
+
+✔ Better performance
+✔ Better GraphQL support
+✔ Security fixes
+✔ Native support for Java 17+
+✔ Improved observability
+✔ Better reactive support
+
+📘 Create Latest Spring Boot GraphQL App
+
+Use:
+
+Spring Initializr
+
+Recommended Dependencies
+Spring Web
+Spring for GraphQL
+Lombok
+Maven Dependencies
+<dependencies>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-graphql</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+    </dependency>
+
+</dependencies>
+application.properties
+spring.graphql.graphiql.enabled=true
+
+server.port=8080
+📘 Introduction To GraphQL Client
+
+A GraphQL Client is used to:
+
+✔ Call GraphQL APIs
+✔ Execute Queries
+✔ Execute Mutations
+✔ Send Variables
+✔ Handle Responses
+
+Types of GraphQL Clients
+Client	Usage
+Altair	Manual testing
+Postman	API testing
+Apollo Client	Frontend
+WebClient	Java backend
+HttpGraphQlClient	Spring Boot GraphQL client
+Spring Boot GraphQL Client
+
+Spring Boot provides:
+
+HttpGraphQlClient
+
+used for calling GraphQL APIs from Java applications.
+
+Architecture
+GraphQL Client App
+        |
+HttpGraphQlClient
+        |
+GraphQL Server
+        |
+Database
+📘 Create GraphQL Client Spring Boot App
+
+We will build:
+
+GraphQL Client Application
+
+which calls another GraphQL server.
+
+Step 1: Create Spring Boot Project
+
+Dependencies:
+
+Spring Web
+Spring for GraphQL
+Lombok
+Step 2: Add GraphQL Client Dependency
+<dependency>
+    <groupId>org.springframework.graphql</groupId>
+    <artifactId>spring-graphql</artifactId>
+</dependency>
+Step 3: Configure GraphQL Client Bean
+package com.example.demo.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import org.springframework.graphql.client.HttpGraphQlClient;
+
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Configuration
+public class GraphQLClientConfig {
+
+    @Bean
+    public HttpGraphQlClient client(){
+
+        WebClient webClient =
+                WebClient.builder()
+                .baseUrl("http://localhost:8080/graphql")
+                .build();
+
+        return HttpGraphQlClient
+                .builder(webClient)
+                .build();
+    }
+}
+Configuration Flow
+WebClient
+    |
+HttpGraphQlClient
+    |
+GraphQL API
+📘 Create GraphQL Server
+
+Server Schema:
+
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+type Query{
+ students:[Student]
+}
+Resolver
+@Controller
+public class StudentResolver {
+
+    @QueryMapping
+    public List<Student> students(){
+
+        return List.of(
+                new Student(1L,"Ravi",22),
+                new Student(2L,"Rahul",23)
+        );
+    }
+}
+📘 GraphQL Client To Call GraphQL Query
+Step 1: Create DTO
+package com.example.demo.dto;
+
+import lombok.Data;
+
+@Data
+public class Student {
+
+    private Long id;
+    private String name;
+    private int age;
+}
+Step 2: Create Service
+package com.example.demo.service;
+
+import com.example.demo.dto.Student;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.graphql.client.HttpGraphQlClient;
+
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class StudentClientService {
+
+    @Autowired
+    private HttpGraphQlClient client;
+
+    public List<Student> getStudents(){
+
+        String query = """
+            query{
+               students{
+                  id
+                  name
+                  age
+               }
+            }
+            """;
+
+        return client.document(query)
+                .retrieve("students")
+                .toEntityList(Student.class)
+                .block();
+    }
+}
+Query Execution Flow
+Client Service
+      |
+GraphQL Query
+      |
+HttpGraphQlClient
+      |
+GraphQL Server
+Step 3: Create REST Controller
+package com.example.demo.controller;
+
+import com.example.demo.dto.Student;
+import com.example.demo.service.StudentClientService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+public class ClientController {
+
+    @Autowired
+    private StudentClientService service;
+
+    @GetMapping("/client/students")
+    public List<Student> getStudents(){
+
+        return service.getStudents();
+    }
+}
+Test Endpoint
+http://localhost:9090/client/students
+📘 GraphQL Client with Variable
+Server Schema
+type Query{
+ studentById(id:ID):Student
+}
+Server Resolver
+@QueryMapping
+public Student studentById(
+      @Argument Long id){
+
+   return new Student(id,"Ravi",22);
+}
+Client Service
+public Student getStudent(Long id){
+
+    String query = """
+        query getStudent($id:ID){
+
+            studentById(id:$id){
+                id
+                name
+                age
+            }
+        }
+        """;
+
+    return client.document(query)
+            .variable("id",id)
+            .retrieve("studentById")
+            .toEntity(Student.class)
+            .block();
+}
+Variable Flow
+variable("id",1)
+       |
+$id
+       |
+studentById(id:$id)
+📘 GraphQL Client To Call GraphQL Mutation
+Server Schema
+type Student{
+ id:ID
+ name:String
+ age:Int
+}
+
+type Mutation{
+ createStudent(
+    name:String,
+    age:Int
+ ):Student
+}
+Server Mutation Resolver
+@MutationMapping
+public Student createStudent(
+      @Argument String name,
+      @Argument int age){
+
+   return new Student(1L,name,age);
+}
+Client Mutation Service
+public Student createStudent(
+        String name,
+        int age){
+
+    String mutation = """
+        mutation createStudent(
+            $name:String,
+            $age:Int
+        ){
+
+            createStudent(
+                name:$name,
+                age:$age
+            ){
+                id
+                name
+                age
+            }
+        }
+        """;
+
+    return client.document(mutation)
+            .variable("name",name)
+            .variable("age",age)
+            .retrieve("createStudent")
+            .toEntity(Student.class)
+            .block();
+}
+REST Controller
+@PostMapping("/client/student")
+
+public Student createStudent(){
+
+    return service.createStudent(
+            "Ravi",
+            22
+    );
+}
+Response
+{
+ "id":1,
+ "name":"Ravi",
+ "age":22
+}
+📘 GraphQL Client with Input Type
+
+Enterprise systems mostly use input types.
+
+Server Schema
+input StudentInput{
+ name:String
+ age:Int
+}
+
+type Mutation{
+ createStudent(student:StudentInput):Student
+}
+Client Request
+String mutation = """
+ mutation createStudent(
+    $student:StudentInput
+ ){
+
+   createStudent(student:$student){
+      id
+      name
+   }
+ }
+ """;
+
+Map<String,Object> input =
+      Map.of(
+        "name","Ravi",
+        "age",22
+      );
+
+return client.document(mutation)
+       .variable("student",input)
+       .retrieve("createStudent")
+       .toEntity(Student.class)
+       .block();
+📘 Add JWT Token in GraphQL Client
+Configure WebClient
+WebClient webClient =
+        WebClient.builder()
+        .baseUrl("http://localhost:8080/graphql")
+        .defaultHeader(
+            "Authorization",
+            "Bearer TOKEN"
+        )
+        .build();
+📘 Reactive GraphQL Client
+
+Spring GraphQL client supports:
+
+✔ Reactive APIs
+✔ Mono
+✔ Flux
+
+Reactive Example
+public Mono<Student> getStudent(Long id){
+
+    return client.document(query)
+            .variable("id",id)
+            .retrieve("studentById")
+            .toEntity(Student.class);
+}
+📘 Internal Execution Flow
+REST Controller
+      |
+GraphQL Client Service
+      |
+HttpGraphQlClient
+      |
+Remote GraphQL Server
+      |
+Response Mapping
+Real Industry Architecture
+Frontend
+   |
+API Gateway
+   |
+GraphQL Client
+   |
+Microservices
+   |
+Database
+
+Companies using GraphQL clients heavily:
+
+Netflix
+GitHub
+Shopify
+Important Interview Questions
+Q1 What is GraphQL Client?
+
+A client used to call GraphQL APIs.
+
+Q2 Which GraphQL client does Spring Boot provide?
+HttpGraphQlClient
+Q3 How to pass GraphQL variables?
+
+Using:
+
+.variable("id",1)
+Q4 How to call GraphQL mutation from Java?
+
+Using:
+
+client.document(mutation)
+Next Important Topics
+
+1️⃣ GraphQL Resolver Deep Dive
+2️⃣ GraphQL DataLoader (N+1 Problem)
+3️⃣ GraphQL Pagination
+4️⃣ GraphQL JPA/Hibernate
+5️⃣ GraphQL JWT Security
+6️⃣ GraphQL Subscription
+7️⃣ GraphQL Federation
+8️⃣ GraphQL Microservices Gateway

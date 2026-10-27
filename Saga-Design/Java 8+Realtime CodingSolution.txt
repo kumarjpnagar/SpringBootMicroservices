@@ -1,0 +1,867 @@
+
+Solving Real Time Queries Using Java 8 Features-Crack Interview
+
+https://neesri.medium.com/solving-real-time-queries-using-java-8-features-69273f8f85ed
+
+We have created Employee class initialize a list of Employee objects using Java 8 by leveraging the Arrays.asList() method along with lambda expressions or method references.
+
+class Employee {
+    private int id;
+    private String firstName;
+    private String lastName;
+    private int age;
+    private String department;
+    private double salary;
+    private int joinedYear;
+    private String city;
+    private String gender;
+
+    public Employee(int id, String firstName, String lastName, int age, String department, 
+                    double salary, int joinedYear, String city, String gender) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.age = age;
+        this.department = department;
+        this.salary = salary;
+        this.joinedYear = joinedYear;
+        this.city = city;
+        this.gender = gender;
+    }
+
+    // Getters and Setters
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public void setSalary(double salary) {
+        this.salary = salary;
+    }
+
+    public int getJoinedYear() {
+        return joinedYear;
+    }
+
+    public void setJoinedYear(int joinedYear) {
+        this.joinedYear = joinedYear;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    // toString method for easy printing of Employee details
+    @Override
+    public String toString() {
+        return "Employee{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", age=" + age +
+                ", department='" + department + '\'' +
+                ", salary=" + salary +
+                ", joinedYear=" + joinedYear +
+                ", city='" + city + '\'' +
+                ", gender='" + gender + '\'' +
+                '}';
+    }
+}
+
+// Initialize a list of Employee objects using Java 8
+        List<Employee> employees = Arrays.asList(
+             new Employee(1, "John", "Doe", 30, "IT", 60000, 2015, "New York", "Male"),
+            new Employee(2, "Alice", "Smith", 28, "HR", 55000, 2017, "Los Angeles", "Female"),
+            new Employee(3, "Mike", "Johnson", 35, "Finance", 70000, 2010, "Chicago", "Male"),
+            new Employee(4, "Ishan", "Kishan", 26, "IT", 80000, 2022, "Bihar India", "Male"),
+            new Employee(4, "prithvi", "Shaw", 28, "Product Development", 90000, 2022, "Bihar India", "Male"),
+            new Employee(4, "Aaksh", "Deep", 25, "Product Development", 70000, 2021, "Delhi India", "Male"),
+            new Employee(1, "sehwag", "Doe", 38, "IT", 90000, 2012, "Noida India", "Male"),
+            new Employee(1, "Ankita", "kohali", 38, "IT", 92000, 2011, "Gurugram India", "Female")
+        );
+		
+1. Filter the list of employees who are from the IT department.
+2. Print the details of IT department employees
+3. Calculate the average salary of IT department employees.
+
+ // Filter the list of employees who are from the IT department.
+ List<Employee> empFromITDepartment= employees.stream()
+          .filter(e -> e.getDepartment().equalsIgnoreCase("It"))
+          .collect(Collectors.toList());
+        
+  System.out.println("employees who are from the IT department "+empFromITDepartment);
+        
+// Print the details of IT department employees
+    empFromITDepartment.forEach(System.out::println);
+                          
+                          
+// Calculate the average salary of IT department employees.
+ 
+      double averageSalOfITEmp=empFromITDepartment.stream()
+            .mapToDouble(Employee::getSalary)
+            .average().orElse(0.0);
+          System.out.println(average salary of IT department employees "+averageSalOfITEmp);
+		  
+Explanation:
+
+We first initialize a list of Employee objects.
+Using Java 8 stream API, we filter the list of employees who belong to the IT department.
+We then calculate the average salary of IT department employees using the average() method of the DoubleStream returned by mapToDouble().
+
+Finally, we print the details of IT department employees and the average salary.
+
+// — — — — — — — -same code in one line — — — — — — — — —
+
+double avgSalary = employees.stream()
+            .filter(e -> e.getDepartment().equals("IT"))
+            .peek(System.out::println)
+            .collect(Collectors.averagingDouble(Employee::getSalary));
+System.out.println("Average Salary: " + avgSalary);
+
+//------------------OR---------------
+        OptionalDouble avgSalary = employees.stream()
+            .filter(e -> e.getDepartment().equals("IT"))
+            .peek(System.out::println)
+            .mapToDouble(Employee::getSalary)
+            .average();
+
+        System.out.println("Average Salary: " + avgSalary.orElse(0.0));
+		
+4. Print the details of the top 3 highest-paid employees who are from the IT department and have a salary greater than 60000.
+
+  List<Employee> empSalGreater=employees.stream()
+            .filter(e ->e.getDepartment().equalsIgnoreCase("it") 
+              && e.getSalary()>60000)
+            .sorted(Comparator.comparingDouble(Employee::getSalary).reversed())
+            .limit(3)
+            .collect(Collectors.toList());
+          System.out.println(empSalGreater);
+
+		  Explanation:
+
+We start with the employees list and create a stream from it using stream().
+We then use filter() to filter out employees who belong to the IT department and have a salary greater than 60000.
+
+Next, we use sorted() to sort the filtered employees based on their salary in descending order.
+Finally, we use limit(3) to limit the stream to the first 3 elements.
+
+5. List down the names of all employees in each department?
+
+🚀Best Optimized Solution — using Collectors.mapping()
+
+Map<String, List<String>> empDepartment = employeesList.stream()
+         .collect(Collectors.groupingBy(emp -> emp.getDepartment(),
+           Collectors.mapping(Employee::getFirstName, Collectors.toList())));
+
+       empDepartment.forEach((department, name) -> {
+        System.out.println("-----------------------");
+        System.out.println(department + name);
+       });
+	   
+
+— — — — — Another way — — — — — —
+
+Map<String, List<Employee>> empListByDepart =
+    employeesList.stream().collect(
+        Collectors.groupingBy(Employee::getDepartment));
+
+/* --- iterate using old way
+
+Set<Entry<String, List<Employee>>> setemp1=empListByDepart.entrySet();
+
+for(Entry<String, List<Employee>> entry1:setemp1) {
+    System.out.println("-------------------------");
+    System.out.println("Employees in "+entry1.getKey());
+    System.out.println("--------------------------------");
+
+    List<Employee> emplist1=entry1.getValue();
+
+    for(Employee emp1 :emplist1) {
+            System.out.println(emp1.getFirstName()+ " " +
+emp1.getLastName());
+
+    } }
+
+    */
+
+// --------- or print like using foreach()
+
+empListByDepart.forEach((department, employeess) -> {
+  System.out.println("----------------------------------------");
+  System.out.println("Employees in " + department + " : ");
+  System.out.println("----------------------------------------");
+  employeess.forEach(emp
+      -> System.out.println(emp.getFirstName() + emp.getLastName()));
+}); 
+
+
+6.Calculate the total salary of employees in the IT department:
+
+double totalSalary = employees.stream()
+    .filter(e -> e.getDepartment().equals("IT"))
+    .mapToDouble(Employee::getSalary)
+    .sum();
+System.out.println("Total Salary: " + totalSalary);
+
+
+Key Points of mapToDouble()
+
+Purpose:
+
+mapToDouble() is used to convert the elements of a stream to double values. It's useful when you need to perform operations that involve primitive double values, such as summing, averaging, or other mathematical computations.
+
+Return Type:
+
+The method returns a DoubleStream, which is a specialized stream for primitive double values.
+
+Function Parameter:
+
+It takes a ToDoubleFunction<? super T> as an argument. This is a functional interface that takes an object of type T and returns a double.
+
+Avoiding Boxing Overhead:
+
+Using mapToDouble() avoids the boxing and unboxing overhead associated with using Stream<Double>. This can lead to performance improvements when working with large datasets.
+
+Common Operations on DoubleStream:
+
+After using mapToDouble(), you can perform various operations specific to DoubleStream, such as:
+
+sum(): To get the sum of all elements.
+average(): To get the average of all elements.
+max(): To get the maximum value.
+min(): To get the minimum value.
+summaryStatistics(): To get a DoubleSummaryStatistics object that provides a summary of the stream.
+
+7. Find the employee with the highest salary in the IT department?
+
+double totalSalary = employees.stream()
+    .filter(e -> e.getDepartment().equals("IT"))
+    .mapToDouble(Employee::getSalary)
+    .sum();
+System.out.println("Total Salary: " + totalSalary);
+
+8.Find the employee with the highest salary in the IT department?
+
+Optional<Employee> highestPaid = employees.stream()
+    .filter(e -> e.getDepartment().equals("IT"))
+    .max(Comparator.comparingDouble(Employee::getSalary));
+highestPaid.ifPresent(System.out::println);
+
+9.Group employees by department and print the count of employees in each department?
+
+Map<String, Long> departmentCounts = employees.stream()
+    .collect(Collectors.groupingBy
+(Employee::getDepartment, Collectors.counting()));
+System.out.println(departmentCounts);
+
+10.Find the average salary of employees in each department?
+
+Map<String, Double> departmentAvgSalary = employees.stream()
+    .collect(Collectors.groupingBy
+(Employee::getDepartment, 
+Collectors.averagingDouble(Employee::getSalary)));
+System.out.println(departmentAvgSalary);
+
+11. Create a summary of salaries (count, sum, min, average, max) for the IT department?
+
+DoubleSummaryStatistics stats = employees.stream()
+    .filter(e -> e.getDepartment().equals("IT"))
+    .mapToDouble(Employee::getSalary)
+    .summaryStatistics();
+System.out.println(stats);
+
+
+12.Find the first employee in the IT department alphabetically by name?
+Optional<Employee> firstAlphabetically = employeesList.stream()
+                     .filter(e -> e.getDepartment().equals("IT"))
+                     .sorted(Comparator.comparing(Employee::getFirstName))
+                     .findFirst();
+                 firstAlphabetically.ifPresent(System.out::println);
+13.Collect the names of all employees in the IT department into a comma-separated string?
+String itEmployees = employees.stream()
+    .filter(e -> e.getDepartment().equals("IT"))
+    .map(Employee::getName)
+    .collect(Collectors.joining(", "));
+System.out.println(itEmployees);
+
+14.Count the number of unique departments in the employee list?
+
+long uniqueDepartments = employees.stream()
+    .map(Employee::getDepartment)
+    .distinct()
+    .count();
+System.out.println("Unique Departments: " + uniqueDepartments);
+
+15. How many male and female employees are there in the organization?
+ Map<String, Long> noOfMaleAndFemaleEmployees = 
+            employeeList.stream()
+        .collect(Collectors.groupingBy(Employee::getGender, 
+          Collectors.counting()));
+
+System.out.println(noOfMaleAndFemaleEmployees);
+
+16.Count the number of employees in each department?
+
+employeesList.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment, Collectors.counting()))
+    .forEach((department, count) -> {
+      System.out.println("------------------------------");
+      System.out.println(department + " : " + count);
+    });
+
+OUTPUT-->
+------------------------------
+Product Development : 2
+------------------------------
+Finance : 1
+------------------------------
+HR : 1
+------------------------------
+IT : 4
+
+17.Get the details of highest paid employee in the organization?
+
+employeesList.stream()
+    .max(Comparator.comparingDouble(Employee::getSalary))
+    .ifPresent(highestPaidEmployee -> {
+      System.out.println("Details Of Highest Paid Employee : ");
+      System.out.println("==================================");
+      System.out.println("ID : " + highestPaidEmployee.getId());
+      System.out.println("Name : " + highestPaidEmployee.getFirstName());
+      System.out.println("Age : " + highestPaidEmployee.getAge());
+      System.out.println("Gender : " + highestPaidEmployee.getGender());
+      System.out.println("Department : " + highestPaidEmployee.getDepartment());
+      System.out.println("Year Of Joining : " + highestPaidEmployee.getJoinedYear());
+      System.out.println("Salary : " + highestPaidEmployee.getSalary());
+    });
+// — — — — — -another way — — — — — — — — — //
+
+Optional<Employee> highestPaidEmployeeWrapper = employeesList.stream().collect(
+    Collectors.maxBy(Comparator.comparingDouble(Employee::getSalary)));
+
+Employee highestPaidEmployee = highestPaidEmployeeWrapper.get();
+
+System.out.println("Details Of Highest Paid Employee : ");
+
+System.out.println("==================================");
+
+System.out.println("ID : " + highestPaidEmployee.getId());
+
+System.out.println("Name : " + highestPaidEmployee.getFirstName());
+
+System.out.println("Age : " + highestPaidEmployee.getAge());
+
+System.out.println("Gender : " + highestPaidEmployee.getGender());
+
+System.out.println("Department : " + highestPaidEmployee.getDepartment());
+
+System.out.println("Year Of Joining : " + highestPaidEmployee.getJoinedYear());
+
+System.out.println("Salary : " + highestPaidEmployee.getSalary());
+Key Changes:
+Simplified Stream Operation: Used max instead of collect(Collectors.maxBy(...)) for a more direct and readable approach.
+Use of ifPresent: Handles the Optional safely without calling get directly, thus avoiding potential NoSuchElementException.
+Streamlined Output: The block inside ifPresent contains all the print statements for the highest paid employee's details.
+
+18. What is the average age of male and female employees?
+
+Map<String, Double> avgAgeOfMaleAndFemaleEmployees = employeesList.stream()
+    .collect(Collectors.groupingBy(Employee::getGender,
+    Collectors.averagingInt(Employee::getAge)));
+
+   System.out.println(avgAgeOfMaleAndFemaleEmployees);
+   
+OUTPUT-->
+{Female=33.0, Male=30.333333333333332}
+— — — — — — — — — — — OR — —another way — — — — —
+
+Map<String, Double> avgAgeOfMaleAndFemaleEmployees1 =
+    employeesList.stream().collect(Collectors.groupingBy(
+        Employee::getGender, Collectors.averagingInt(Employee::getAge)));
+
+avgAgeOfMaleAndFemaleEmployees1.forEach(
+    (gender,
+        avgAge) -> System.out.println("Gender: " + gender + ", Average Age: " + avgAge));
+
+OUTPUT-->
+Gender: Female, Average Age: 33.0
+Gender: Male, Average Age: 30.333333333333332
+Get the names of all employees who have joined after 2012?
+employeesList.stream()
+    .filter(e -> e.getJoinedYear() > 2012)
+    .map(Employee::getFirstName)
+    .forEach(System.out::println);
+	
+What is the average salary of each department?
+Logic:-
+
+groupingBy(Employee::getDepartment): Groups the employees by their department. This means that all employees in the same department are collected together.
+Collectors.averagingDouble(Employee::getSalary): Calculates the average salary of the employees within each group (each department).
+
+employeesList.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDepartment, Collectors.averagingDouble(Employee::getSalary)))
+    .forEach((department, salary) -> {
+      System.out.println("------------------------------");
+      System.out.println(department + " : " + salary);
+    });
+
+//----------------OR--another way ---------------
+
+Map<String, Double> avgSalaryOfDepartments =
+    employeesList.stream().collect(Collectors.groupingBy(
+        Employee::getDepartment, 
+       Collectors.averagingDouble(Employee::getSalary)));
+
+Set<Entry<String, Double>> entrySet = avgSalaryOfDepartments.entrySet();
+
+for (Entry<String, Double> entry : entrySet) {
+  System.out.println(entry.getKey() + " : " + entry.getValue());
+}
+
+OUTPUT-->
+
+------------------------------
+Product Development : 80000.0
+------------------------------
+Finance : 70000.0
+------------------------------
+HR : 55000.0
+------------------------------
+IT : 80500.0
+
+Get the details of youngest male employee in the product development department?
+For this use Stream.min() method , return type of min is Optional.
+
+Get A cup of JAVA coffee with NeeSri’s stories in your inbox
+Join Medium for free to get updates from this writer.
+
+Enter your email
+Subscribe
+
+Remember me for faster sign in
+
+An Optional describing the minimum element of this stream, or an empty Optional if the stream is empty.
+
+Optional<T> min(Comparator<? super T> comparator);
+Optional<Employee> youngMaleWrapper =
+    employeesList.stream()
+        .filter(emp
+            -> emp.getDepartment().equalsIgnoreCase("Product Development")
+                && emp.getGender().equalsIgnoreCase("Male"))
+        .min(Comparator.comparingInt(Employee::getAge));
+
+youngMaleWrapper.ifPresent(e -> {
+  System.out.println("Details Of Youngest Male Employee In Product Development");
+  System.out.println("----------------------------------------------");
+  System.out.println("ID : " + e.getId());
+  System.out.println("Name : " + e.getFirstName());
+  System.out.println("Age : " + e.getAge());
+  System.out.println("Year Of Joining : " + e.getJoinedYear());
+  System.out.println("Salary : " + e.getSalary());
+});
+
+//-------------OR------------
+
+Optional<Employee> youngestMaleEmployeeInProductDevelopmentWrapper =
+    employeesList.stream()
+        .filter(
+            e -> e.getGender() == "Male" && e.getDepartment() == "Product Development")
+        .min(Comparator.comparingInt(Employee::getAge));
+
+Employee youngestMaleEmployeeInProductDevelopment =
+    youngestMaleEmployeeInProductDevelopmentWrapper.get();
+
+System.out.println("Details Of Youngest Male Employee In Product Development");
+
+System.out.println("----------------------------------------------");
+
+System.out.println("ID : " + youngestMaleEmployeeInProductDevelopment.getId());
+
+System.out.println("Name : " + youngestMaleEmployeeInProductDevelopment.getFirstName());
+
+System.out.println("Age : " + youngestMaleEmployeeInProductDevelopment.getAge());
+
+System.out.println(
+    "Year Of Joinging : " + youngestMaleEmployeeInProductDevelopment.getJoinedYear());
+
+System.out.println("Salary : " + youngestMaleEmployeeInProductDevelopment.getSalary());
+Another way to achieve this is by using a method reference for printing the employee details.
+
+This keeps the main logic clean and separates the printing logic. Here’s how you can do it:
+
+//---------------another way--------------------------
+
+Optional<Employee> youngestMaleEmployeeInProductDevelopmentWrapper =
+    employeesList.stream()
+        .filter(e
+            -> "Male".equals(e.getGender())
+                && "Product Development".equals(e.getDepartment()))
+        .min(Comparator.comparingInt(Employee::getAge));
+
+youngestMaleEmployeeInProductDevelopmentWrapper.ifPresent(
+    Java8StreamProgramRealTime::printEmployeeDetails);
+}
+
+private static void printEmployeeDetails(Employee e) {
+  System.out.println("Details Of Youngest Male Employee In Product Development");
+  System.out.println("----------------------------------------------");
+  System.out.println("ID : " + e.getId());
+  System.out.println("Name : " + e.getFirstName());
+  System.out.println("Age : " + e.getAge());
+  System.out.println("Year Of Joining : " + e.getJoinedYear());
+  System.out.println("Salary : " + e.getSalary());
+}
+
+Explanation:
+
+String Comparison: Using equals for comparing strings instead of ==.
+"Male".equals(e.getGender()) && "Product Development".equals(e.getDepartment())
+This ensures the comparison is based on content, not reference.
+
+2. Handling Optional with ifPresent: Safely handles the case where no matching employee is found.
+
+youngestMaleEmployeeInProductDevelopmentWrapper.ifPresent(e -> {    
+ // Print statements });
+This prevents the potential NoSuchElementException from calling get() on an empty Optional.
+
+3. Printing the Details: Encapsulated in a lambda passed to ifPresent, making the code cleaner and ensuring the details are printed only if a matching employee is found.
+
+This approach makes the code safer and more readable by leveraging the power of Optional.
+
+Who has the most working experience in the organization?
+Optional<Employee> seniorMostEmployeeWrapper =
+    employeesList.stream()
+        .sorted(Comparator.comparingInt(Employee::getJoinedYear))
+        .findFirst();
+
+Employee seniorMostEmployee = seniorMostEmployeeWrapper.get();
+
+System.out.println("Senior Most Employee Details :");
+
+System.out.println("----------------------------");
+
+System.out.println("ID : " + seniorMostEmployee.getId());
+
+System.out.println("Name : " + seniorMostEmployee.getFirstName());
+
+System.out.println("Age : " + seniorMostEmployee.getAge());
+
+System.out.println("Gender : " + seniorMostEmployee.getGender());
+
+System.out.println("Age : " + seniorMostEmployee.getDepartment());
+
+System.out.println("Year Of Joinging : " + seniorMostEmployee.getJoinedYear());
+
+System.out.println("Salary : " + seniorMostEmployee.getSalary());
+
+// ---------OR----Another way---------
+
+Optional<Employee> seniorMostEmpWrapper =
+    employeesList.stream()
+        .sorted(Comparator.comparingInt(Employee::getJoinedYear))
+        .findFirst();
+
+seniorMostEmpWrapper.ifPresent(employee -> {
+  System.out.println("Senior Most Employee Details :");
+  System.out.println("----------------------------");
+  System.out.println("ID : " + employee.getId());
+  System.out.println("Name : " + employee.getFirstName());
+  System.out.println("Age : " + employee.getAge());
+  System.out.println("Gender : " + employee.getGender());
+  System.out.println("Department : " + employee.getDepartment());
+  System.out.println("Year Of Joining : " + employee.getJoinedYear());
+  System.out.println("Salary : " + employee.getSalary());
+});
+
+OUTPUT--->
+
+Senior Most Employee Details :
+----------------------------
+ID : 3
+Name : Mike
+Age : 35
+Gender : Male
+Department : Finance
+Year Of Joining : 2010
+Salary : 70000.0
+
+Find highest salary in the organization?
+
+We can write this code in three ways:-
+
+Using max Method:
+
+empList.stream()
+    .max(Comparator.comparingDouble(Employee::getSalary))
+    .ifPresent(emp -> System.out.println("---Highest Salary---- " 
+        + emp.getSalary()));
+
+OUTPUT-->
+
+---Highest Salary---- 60000.0
+
+2. Using Collectors.maxBy:
+
+empList.stream()
+    .collect(Collectors.maxBy
+           (Comparator.comparingDouble(Employee::getSalary)))
+    .ifPresent(emp
+        -> System.out.println(
+            "-----Highest Salary by Collectors.maxBy--- " + emp.getSalary()));
+			
+3. Using sorted and findFirst:
+
+empList.stream()
+    .sorted(Comparator.comparingDouble(Employee::getSalary).reversed())
+    .findFirst()
+    .ifPresent(emp
+        -> System.out.println(
+            "-----Highest Salary by Stream().sorted--- " + emp.getSalary()));
+			
+Explanation and Optimizations
+
+Handling Optional Safely:
+
+In all three cases, ifPresent is used to safely handle the Optional<Employee>. This avoids potential NoSuchElementException that could be thrown by calling .get() on an empty Optional.
+
+2. Performance:
+
+All methods perform efficiently in terms of finding the maximum salary. However, the max and Collectors.maxBy methods are generally preferred because they are direct and do not require full sorting, unlike the sorted().findFirst() approach, which may be less efficient on large lists.
+
+Find the Highest salary of employee department wise?
+
+Map<String, Optional<Employee>> highestPaidByDept =
+    empList.stream().collect(Collectors.groupingBy(Employee::getDeptName,
+        Collectors.collectingAndThen(Collectors.toList(),
+            list -> list.stream().max(Comparator.comparingDouble(Employee::getSalary)))));
+
+highestPaidByDept.forEach((department, employee) -> {
+  System.out.println("Department: " + department);
+  employee.ifPresent(e -> {
+    System.out.println("Highest Paid Employee: " + e.getName());
+    System.out.println("Salary: " + e.getSalary());
+    System.out.println("----------------------------");
+  });
+});
+
+Explanation: -
+
+Stream Creation:
+
+You start with a list of employees and turn it into a stream. A stream is just a way to process collections of data one piece at a time.
+
+2. Grouping by Department:
+
+Collectors.groupingBy(Employee::getDeptName): This part groups the employees based on their department names. So, you get a map where the key is the department name and the value is a list of employees in that department.
+
+3. Finding the Highest Paid Employee:
+
+Collectors.collectingAndThen: This is a special collector that does two things:
+
+1. Collectors.toList(): First, it collects all employees in each department into a list.
+
+2. list -> list.stream().max(Comparator.comparingDouble(Employee::getSalary)): Then, it looks at that list and finds the employee with the highest salary.
+
+4. Result:
+
+You end up with a map where each department name is a key, and the value is an Optional<Employee>. This Optional contains the highest-paid employee for that department, or it might be empty if no employees are in that department.
+
+5. Printing the Results:
+
+Finally, you loop through this map and print out the department and details of the highest-paid employee. If there’s no employee (i.e., the Optional is empty), nothing is printed for that department.
+
+Simple Summary:
+
+Group Employees: Organize employees by their department.
+Find Highest Salary: For each department, find out who has the highest salary.
+Print Results: Show the highest-paid employee in each department.
+Print the list of employees with the second highest salary in each department
+To find and print the list of employees with the second highest salary in each department, you can follow these steps:
+
+Group Employees by Department: Use Collectors.groupingBy to group the employees by their department.
+
+Sort by Salary and Find Second Highest: For each department, sort the employees by salary and then find the second highest.
+
+Collect and Print: Collect the results and print the second highest salary for each department.
+Here’s the code to achieve this:
+
+empList.stream()
+    .collect(Collectors.groupingBy(Employee::getDeptName,
+        Collectors.collectingAndThen(Collectors.toList(),
+            list
+            -> list.stream()
+                   .sorted(Comparator.comparingDouble(Employee::getSalary).reversed())
+                   .skip(1) // Skip the highest salary
+                   .findFirst() // Find the second highest
+            )))
+    .forEach((dept, employeeOpt) -> {
+      System.out.println("Department: " + dept);
+      employeeOpt.ifPresent(emp -> {
+        System.out.println("Second Highest Salary: " + emp.getSalary());
+        System.out.println("Employee Name: " + emp.getName());
+      });
+      System.out.println("--------------------------");
+    });
+	
+Explanation:
+
+Grouping by Department:
+
+Collectors.groupingBy(Employee::getDepartment) groups the employees by their department.
+2. Finding the Second Highest Salary:
+
+Collectors.collectingAndThen(Collectors.toList(), list -> ...) is used to first collect all employees in a department into a list.
+The list is then sorted in descending order by salary using 
+
+.sorted(Comparator.comparingDouble(Employee::getSalary).reversed()).
+.skip(1) is used to skip the highest salary in the sorted list.
+.findFirst() retrieves the second highest employee.
+
+3. Printing the Results:
+
+The forEach method iterates over the map of departments and their respective second highest salary employee.
+The ifPresent method ensures that the result is printed only if a second highest salary employee exists.
+
+Edge Case Considerations:
+
+If a department has only one employee, the skip(1) will result in an empty Optional. This is handled gracefully with ifPresent.
+
+If a department has multiple employees with the same highest salary, the skip(1) logic ensures that it picks the next distinct salary if available.
+
+Note:- To find the second highest salary for each department using max or Collectors.maxBy, you can’t directly use these methods since they are designed to find the maximum element
+
+Separate the employees who are younger or equal to 22 years from those employees who are older than 22 years.
+
+Map<Boolean, List<Employee>> partitionEmployeesByAge =
+    employeesList.stream().collect(Collectors.partitioningBy(e -> e.getAge() > 25));
+
+partitionEmployeesByAge.forEach((isOlderThan25, employees) -> {
+  System.out.println("----------------------------");
+  System.out.println(isOlderThan25 ? "Employees older than 25 years:"
+                                   : "Employees younger than or equal to 25 years:");
+  System.out.println("----------------------------");
+
+  employees.forEach(e -> System.out.println(e.getFirstName()));
+});
+
+
+
+--------------------OR---another way-----------------
+
+Map<Boolean, List<Employee>> partitionEmployeesByAge1 =
+    employeesList.stream().collect(Collectors.partitioningBy(e -> e.getAge() > 25));
+
+Set<Entry<Boolean, List<Employee>>> entrySet = partitionEmployeesByAge.entrySet();
+
+for (Entry<Boolean, List<Employee>> entry : entrySet) {
+  System.out.println("----------------------------");
+
+  if (entry.getKey()) {
+    System.out.println("Employees older than 25 years :");
+  } else {
+    System.out.println("Employees younger than or equal to 25 years :");
+  }
+
+  System.out.println("----------------------------");
+
+  List<Employee> list = entry.getValue();
+
+  for (Employee e : list) {
+    System.out.println(e.getFirstName());
+  }
+}
+
+OUTPUT--
+
+----------------------------
+Employees younger than or equal to 25 years:
+----------------------------
+Aaksh
+----------------------------
+Employees older than 25 years:
+----------------------------
+John
+Alice
+Mike
+Ishan
+prithvi
+sehwag
+Ankita
+Explanation
+
+Partitioning the Employees:
+
+The Collectors.partitioningBy method splits the employees into two groups: those older than 25 and those 25 or younger. The result is a Map<Boolean, List<Employee>> where the key is true for employees older than 25, and false for those 25 or younger.
+
+2. Iterating Over the Partitioned Map:
+
+The forEach method is used to iterate over the entries in the Map. It processes each group (either older or younger employees).
+The isOlderThan25 boolean variable is used to determine the message to print.
+
+3. Printing Employee Names:
+
+For each group, it prints the appropriate message, and then lists the names of the employees in that group.
+
+Benefits of This Approach:
+
+Conciseness: The code is more concise by directly using forEach on the map instead of creating intermediate variables like entrySet.
+
+Readability: It’s easier to read and understand, especially with the ternary operator used for conditional logic.
+
+Efficiency: Eliminating redundant iterations and variables makes the code slightly more efficient and clean.
+
+	   

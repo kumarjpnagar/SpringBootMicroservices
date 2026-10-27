@@ -1,0 +1,41 @@
+How to scope Microservices using bounded context tech stack Java 8, spring boot?
+
+How to Design and architect asynchronous microservices using java 8, spring boot, kafka and db postgresql?
+
+How to architect API based microservices tech stach java 8, spring boot, rest,?
+
+How to compose microservices together?
+
+How to achieve data consistency across microservices?
+
+How to centralise access to microservice using an api gateway?
+
+How to split monolithic db across microservices?
+
+How to make microservices more resilient using circuit breaker with open, half open and closed state hands on and diagram with complet definition and yaml configurations?
+
+How to make microservice backward compatible using spring boot and java, kafka?
+
+How to define and document microservice contracts, spring boot, java, rest api, open swagger api?
+
+How to implement microservice centralised logging using kibana, spring boot, java, zipkin?
+
+How to provide reporting from distributed microservices data ?
+
+How to automate on prem microservices with diagram and complete explanation?
+
+How to approch cloud based microsercices infrastructure?
+
+How to approch GCP Cloud base microservices infrastruture?
+
+What are the things need to take in to considerations while migrating from On Prem to GCP?
+
+How to manage microservice config hands on spring boot java and explanation with comments?
+
+How to manage microservice registration and discovery using Eureka, spring boot and java?
+
+How to Monitor Microservices?
+
+Domain Driven Design - Strategic(Business domain as a hole) and Tactical Design(Design Patterns to model the business) -> Domain analysis->Define Bounded Context->Identify Sub-domains ->Define Entities,aggregates,services->Identify Microsercices
+
+Transforming from monolithic to microservices 1) Decouple monolith a) Add Sevice layer | facade b) Add Service mediation layer 2) Develop local microservices a) Identify microservices b) Develop interface definitions c) Develop microservices 3) Implement local microservices a) migrate data b) Testing | parallel run c) swing channels to microservices 4) Deploy microservices to cloud a) Implement API Gateway b) Deploy microservices 5) Implement microservices in the cloud a) migrate data to cloud b) Run parallel in the cloud c) swing channels to api gateway 6) Decommission monolithic app a) Unplug monolith app?

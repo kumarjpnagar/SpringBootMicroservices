@@ -1,0 +1,1087 @@
+
+
+jwt token in spring security all the steps and spring boot code ?
+
+Below is a complete step-by-step guide to implement JWT Authentication in Spring Boot with Spring Security.
+
+This is the standard architecture used in microservices.
+
+We will cover:
+
+1️⃣ What is JWT
+2️⃣ JWT Flow Architecture
+3️⃣ Spring Boot Project Setup
+4️⃣ Dependencies
+5️⃣ Create JWT Utility
+6️⃣ User Entity + Repository
+7️⃣ UserDetailsService
+8️⃣ JWT Filter
+9️⃣ Security Configuration
+
+🔟 Authentication Controller
+
+1️⃣1️⃣ Login API to generate JWT
+1️⃣2️⃣ Secured API
+1️⃣3️⃣ Run & Test
+
+1️⃣ What is JWT (JSON Web Token)
+JWT is a secure token used for stateless authentication.
+
+Instead of storing sessions on the server, the server generates a token and the client sends it in every request.
+
+Structure of JWT:
+
+xxxxx.yyyyy.zzzzz
+Part	Description
+Header	Algorithm & token type
+Payload	User data (username, role etc)
+Signature	Security verification
+Example Payload
+
+{
+ "sub": "rakesh",
+ "iat": 1710000000,
+ "exp": 1710003600
+}
+
+2️⃣ JWT Authentication Flow
+Architecture used in Spring Boot Microservices
+
+Client
+   |
+   | Login Request
+   v
+Spring Boot API
+
+(AuthenticationController)
+   |
+   | Validate username/password
+   v
+Generate JWT Token
+   |
+   v
+Return Token
+   |
+   | Client sends token in header
+   v
+Authorization Filter
+   |
+   v
+Validate Token
+   |
+   v
+Allow API Access
+Header used:
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+3️⃣ Create Spring Boot Project
+Using Spring Initializr
+
+Dependencies:
+
+Spring Web
+Spring Security
+Spring Data JPA
+Lombok
+MySQL Driver (optional)
+JWT library
+
+4️⃣ Maven Dependencies
+<dependencies>
+
+<!-- Spring Boot Web -->
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<!-- Spring Security -->
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<!-- JWT -->
+<dependency>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-api</artifactId>
+<version>0.11.5</version>
+</dependency>
+
+<dependency>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-impl</artifactId>
+<version>0.11.5</version>
+</dependency>
+
+<dependency>
+<groupId>io.jsonwebtoken</groupId>
+<artifactId>jjwt-jackson</artifactId>
+<version>0.11.5</version>
+</dependency>
+
+<!-- Lombok -->
+<dependency>
+<groupId>org.projectlombok</groupId>
+<artifactId>lombok</artifactId>
+</dependency>
+
+</dependencies>
+
+5️⃣ Project Structure
+
+springboot-jwt-auth
+│
+├── config
+│     SecurityConfig
+│
+├── filter
+│     JwtAuthenticationFilter
+│
+├── service
+│     CustomUserDetailsService
+│
+├── util
+│     JwtUtil
+│
+├── controller
+│     AuthController
+│
+├── entity
+│     User
+│
+├── repository
+│     UserRepository
+
+6️⃣ User Entity
+
+@Entity
+@Data
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String username;
+    private String password;
+    private String role;
+}
+
+7️⃣ UserRepository
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+
+}
+
+8️⃣ CustomUserDetailsService
+Spring Security loads user from DB.
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository repository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username)
+            throws UsernameNotFoundException {
+
+        User user = repository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                List.of(new SimpleGrantedAuthority(user.getRole()))
+        );
+    }
+}
+
+9️⃣ JWT Utility Class
+Responsible for:
+
+create token
+
+validate token
+
+extract username
+
+@Component
+public class JwtUtil {
+
+    private final String SECRET = "mysecretkey";
+
+    public String generateToken(String username) {
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 1000*60*60))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes()))
+                .compact();
+    }
+
+    public String extractUsername(String token) {
+
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET.getBytes())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    public boolean validateToken(String token, String username) {
+
+        return extractUsername(token).equals(username);
+    }
+}
+
+🔟 JWT Authentication Filter
+This filter checks token for every request.
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String header = request.getHeader("Authorization");
+
+        String token = null;
+        String username = null;
+
+        if (header != null && header.startsWith("Bearer ")) {
+
+            token = header.substring(7);
+            username = jwtUtil.extractUsername(token);
+        }
+
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            if (jwtUtil.validateToken(token, userDetails.getUsername())) {
+
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities());
+
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+
+1️⃣1️⃣ Security Configuration
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Autowired
+    private JwtAuthenticationFilter filter;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http
+            .csrf().disable()
+            .authorizeHttpRequests()
+            .requestMatchers("/auth/login").permitAll()
+            .anyRequest().authenticated()
+            .and()
+            .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+}
+
+1️⃣2️⃣ Authentication Controller
+Login API generates JWT.
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @PostMapping("/login")
+    public String login(@RequestBody AuthRequest request) {
+
+        Authentication authentication =
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                request.getUsername(),
+                                request.getPassword()));
+
+        if(authentication.isAuthenticated()) {
+
+            return jwtUtil.generateToken(request.getUsername());
+        }
+
+        throw new RuntimeException("Invalid credentials");
+    }
+}
+
+1️⃣3️⃣ AuthRequest DTO
+@Data
+public class AuthRequest {
+
+    private String username;
+    private String password;
+
+}
+
+1️⃣4️⃣ Secured Controller
+@RestController
+@RequestMapping("/api")
+public class TestController {
+
+    @GetMapping("/hello")
+    public String hello(){
+
+        return "Hello Secure API";
+    }
+
+}
+
+1️⃣5️⃣ How to Test
+
+Step 1 — Login API
+
+POST /auth/login
+
+Body
+
+{
+ "username":"rakesh",
+ "password":"123"
+}
+
+Response
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+Step 2 — Call Secured API
+GET /api/hello
+
+Header
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Response
+
+Hello Secure API
+
+🔥 Complete JWT Flow in Spring Security
+
+Client
+   |
+POST /auth/login
+   |
+AuthenticationManager
+   |
+UserDetailsService
+   |
+Generate JWT
+   |
+Return Token
+   |
+Client sends token
+   |
+JwtAuthenticationFilter
+   |
+Validate Token
+   |
+SecurityContextHolder
+   |
+Controller Access
+
+🚀 Advanced JWT Topics (Very Important for Interviews)
+
+1️⃣ Refresh Token
+Access token expires → generate new token.
+
+2️⃣ Token Blacklisting
+Store invalid tokens in Redis.
+
+3️⃣ JWT with OAuth2
+Used with:
+
+Okta
+
+Keycloak
+
+Auth0
+
+4️⃣ JWT with API Gateway
+Client
+   |
+API Gateway
+   |
+JWT Validation
+   |
+Microservices
+
+⭐ If want, we can also show
+
+✅ Production level JWT + Refresh Token implementation
+✅ JWT + Spring Boot + Microservices + API Gateway architecture
+✅ JWT + Redis Token Blacklist
+✅ JWT + Role Based Authorization (ADMIN / USER)
+✅ Complete Security Flow Diagram used in FAANG companies
+
+Just tell me and I will explain step-by-step.
+
+
+Shall we know partial rollback using saga and spring security and spring transaction
+
+1️⃣ Problem with Distributed Transactions
+In microservices, each service has its own database (Database per Service pattern).
+
+Example:
+
+Order Service  -> Order DB
+Payment Service -> Payment DB
+Inventory Service -> Inventory DB
+Suppose we execute this flow:
+
+Create Order
+ ↓
+Process Payment
+ ↓
+Reserve Inventory
+
+If Inventory fails, we must undo previous steps.
+
+Traditional ACID transaction cannot span multiple services.
+
+So we use SAGA Pattern.
+
+2️⃣ What is SAGA Pattern
+A Saga is a sequence of local transactions.
+
+If one step fails → compensating transaction is executed to undo previous steps.
+
+Example:
+
+1 Create Order
+2 Process Payment
+3 Reserve Inventory
+
+If step 3 fails:
+
+Compensation:
+Cancel Payment
+Cancel Order
+This is called Partial Rollback.
+
+3️⃣ Types of Saga
+
+1️⃣ Choreography Saga
+Services communicate via events (Kafka).
+
+OrderCreated → PaymentService
+PaymentSuccess → InventoryService
+InventoryFailed → PaymentRollback → OrderRollback
+
+2️⃣ Orchestration Saga
+A Saga Orchestrator controls the flow.
+
+Saga Orchestrator
+     |
+     |--> Order Service
+     |--> Payment Service
+     |--> Inventory Service
+	 
+If failure occurs → orchestrator triggers compensation.
+
+4️⃣ Example Business Flow
+Let's implement this scenario.
+
+Place Order
+  |
+  |---> Order Service
+  |
+  |---> Payment Service
+  |
+  |---> Inventory Service
+  
+If Inventory fails → rollback payment + order.
+
+5️⃣ Saga Workflow
+Step 1: Create Order
+Step 2: Deduct Payment
+Step 3: Reserve Inventory
+Failure case:
+
+Inventory Failed
+   |
+Refund Payment
+   |
+Cancel Order
+
+6️⃣ Order Service (Local Transaction)
+@Service
+public class OrderService {
+
+    @Autowired
+    OrderRepository repository;
+
+    @Transactional
+    public Order createOrder(Order order){
+
+        order.setStatus("CREATED");
+
+        return repository.save(order);
+    }
+
+    @Transactional
+    public void cancelOrder(Long orderId){
+
+        Order order = repository.findById(orderId).get();
+        order.setStatus("CANCELLED");
+
+        repository.save(order);
+    }
+}
+Here Spring Transaction ensures local DB consistency.
+
+7️⃣ Payment Service
+
+@Service
+public class PaymentService {
+
+    @Autowired
+    PaymentRepository repository;
+
+    @Transactional
+    public Payment processPayment(Payment payment){
+
+        payment.setStatus("SUCCESS");
+
+        return repository.save(payment);
+    }
+
+    @Transactional
+    public void refundPayment(Long orderId){
+
+        Payment payment = repository.findByOrderId(orderId);
+
+        payment.setStatus("REFUNDED");
+
+        repository.save(payment);
+    }
+}
+
+8️⃣ Inventory Service
+@Service
+public class InventoryService {
+
+    public boolean reserveInventory(Long productId){
+
+        if(productOutOfStock(productId)){
+            throw new RuntimeException("Inventory Not Available");
+        }
+
+        return true;
+    }
+
+}
+
+9️⃣ Saga Orchestrator
+Central service controlling transaction.
+
+@Service
+public class OrderSagaService {
+
+    @Autowired
+    OrderService orderService;
+
+    @Autowired
+    PaymentService paymentService;
+
+    @Autowired
+    InventoryService inventoryService;
+
+    public void placeOrder(Order order){
+
+        Order createdOrder = orderService.createOrder(order);
+
+        try{
+
+            paymentService.processPayment(
+                    new Payment(createdOrder.getId()));
+
+            inventoryService.reserveInventory(
+                    order.getProductId());
+
+        }
+        catch(Exception e){
+
+            paymentService.refundPayment(createdOrder.getId());
+
+            orderService.cancelOrder(createdOrder.getId());
+
+            throw new RuntimeException("Saga Rollback Completed");
+        }
+
+    }
+
+}
+This is partial rollback using compensating transactions.
+
+🔟 Where Spring Transaction Works
+Spring @Transactional only works within one service.
+
+@Transactional
+public void createOrder()
+It guarantees:
+
+BEGIN
+INSERT ORDER
+COMMIT
+But it cannot rollback payment service DB.
+
+That is why we use SAGA compensation.
+
+1️⃣1️⃣ How Spring Security fits here
+Spring Security usually secures API calls between services.
+
+Example:
+
+Client
+ |
+JWT Token
+ |
+API Gateway
+ |
+Order Service
+ |
+Payment Service
+ |
+Inventory Service
+Each service validates JWT token.
+
+Example filter:
+
+http
+.authorizeHttpRequests(auth ->
+auth
+.requestMatchers("/orders/**").hasRole("USER")
+.anyRequest().authenticated()
+)
+.oauth2ResourceServer(oauth -> oauth.jwt());
+JWT ensures only authorized services can trigger saga operations.
+
+1️⃣2️⃣ Real Microservice Architecture
+Client
+  |
+  | JWT
+  |
+API Gateway
+  |
+Order Service
+  |
+Saga Orchestrator
+  |
+  |----> Payment Service
+  |
+  |----> Inventory Service
+  |
+Kafka Event Bus
+
+Rollback events:
+
+InventoryFailed
+     |
+PaymentRefund
+     |
+OrderCancel
+
+1️⃣3️⃣ Production Implementation
+Real production systems use:
+
+Tool	         Purpose
+Kafka	         Saga event communication
+Debezium	     Transaction outbox
+Redis	         Saga state
+
+Camunda	Workflow orchestration
+
+1️⃣4️⃣ Advanced Saga with Kafka Example
+Events:
+
+OrderCreatedEvent
+PaymentProcessedEvent
+InventoryReservedEvent
+InventoryFailedEvent
+PaymentRefundEvent
+OrderCancelledEvent
+
+1️⃣5️⃣ Transaction Outbox Pattern (Important)
+Ensures DB commit + event publish consistency.
+
+Order Service
+   |
+Save Order
+   |
+Save Event in Outbox Table
+   |
+CDC publishes event to Kafka
+
+1️⃣6️⃣ Interview Explanation
+
+If interviewer asks:
+
+How to implement partial rollback in microservices?
+
+Answer:
+
+We use Saga Pattern with compensating transactions.
+
+Each microservice executes a local transaction.
+
+If any step fails, compensating services rollback previously completed steps.
+
+Spring @Transactional ensures local atomicity, while Saga ensures distributed consistency.
+
+🔥 we can also explain:
+
+1️⃣ Full Microservice Saga Project (Spring Boot + Kafka + PostgreSQL)
+2️⃣ Event Driven Saga with Kafka (Real production code)
+3️⃣ Choreography vs Orchestration with diagrams
+4️⃣ Transaction Outbox Pattern implementation
+5️⃣ Saga + CQRS + Event Sourcing architecture
+
+These are very important for senior backend / microservices interviews.
+
+
+Lets consider create and update , want partial roll baack for update using saga and spring transaction?
+
+Let’s design a Create + Update scenario with Partial Rollback using SAGA + Spring Transactions.
+This is a very common real microservices interview problem.
+
+We will cover:
+
+1️⃣ Problem scenario
+2️⃣ Why normal @Transactional is not enough
+3️⃣ Saga approach for Update rollback
+4️⃣ Step-by-step flow
+5️⃣ Spring Boot code example
+6️⃣ Compensation logic
+7️⃣ Best practice for production
+
+1️⃣ Business Scenario
+Suppose we have a User Profile system.
+
+Updating a user requires changes in multiple services.
+
+User Service
+Notification Service
+Audit Service
+User update flow:
+
+Update User
+   ↓
+Update Notification Preferences
+   ↓
+Update Audit Log
+If Audit Service fails, we must rollback the user update.
+
+This is Partial Rollback.
+
+2️⃣ Why @Transactional Alone Cannot Solve It
+@Transactional only works within a single database transaction.
+
+Example:
+
+@Transactional
+public void updateUser(){
+   updateUserTable();
+   callNotificationService();
+}
+Problem:
+
+User DB -> COMMITTED
+Notification -> SUCCESS
+Audit -> FAILED
+Now system is inconsistent.
+
+We need SAGA compensation.
+
+3️⃣ Saga Strategy for Update Rollback
+When performing update operations, we store previous state.
+
+So rollback can restore old data.
+
+Step 1: Save OLD USER STATE
+Step 2: Update User
+Step 3: Update Notification
+Step 4: Update Audit
+
+If step 4 fails:
+
+Compensation
+↓
+Restore Notification
+↓
+Restore User
+
+4️⃣ Saga Workflow
+Client
+  |
+Update User Request
+  |
+Saga Orchestrator
+  |
+1 Update User
+2 Update Notification
+3 Update Audit
+
+Failure:
+
+Audit Failed
+   |
+Rollback Notification
+   |
+Rollback User (restore previous state)
+
+5️⃣ Database Example
+Before update:
+
+User Table
+
+id | name | email
+1  | Rakesh | rakesh@gmail.com
+
+Update request:
+
+name = Rakesh Pandey
+email = rakesh@company.com
+Save previous state:
+
+Old State
+name = Rakesh
+email = rakesh@gmail.com
+Rollback will restore this.
+
+6️⃣ Entity Example
+@Entity
+public class User {
+
+    @Id
+    private Long id;
+
+    private String name;
+    private String email;
+}
+
+7️⃣ User Service (Local Transaction)
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository repository;
+
+    @Transactional
+    public User updateUser(Long id, String name, String email){
+
+        User user = repository.findById(id).get();
+
+        user.setName(name);
+        user.setEmail(email);
+
+        return repository.save(user);
+    }
+
+    @Transactional
+    public void restoreUser(User oldUser){
+
+        repository.save(oldUser);
+    }
+}
+
+8️⃣ Notification Service
+@Service
+public class NotificationService {
+
+    public void updateNotification(Long userId){
+
+        // simulate success
+        System.out.println("Notification Updated");
+    }
+
+    public void rollbackNotification(Long userId){
+
+        System.out.println("Notification rollback executed");
+    }
+}
+
+9️⃣ Audit Service
+@Service
+public class AuditService {
+
+    public void updateAudit(Long userId){
+
+        throw new RuntimeException("Audit Service Failed");
+    }
+}
+
+🔟 Saga Orchestrator (Main Logic)
+@Service
+public class UserSagaService {
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private AuditService auditService;
+
+    public void updateUserSaga(Long id,String name,String email){
+
+        User oldUser = userService.getUser(id);
+
+        try {
+
+            userService.updateUser(id,name,email);
+
+            notificationService.updateNotification(id);
+
+            auditService.updateAudit(id);
+
+        }
+        catch(Exception ex){
+
+            // compensation transactions
+
+            notificationService.rollbackNotification(id);
+
+            userService.restoreUser(oldUser);
+
+            throw new RuntimeException("Saga rollback executed");
+
+        }
+
+    }
+}
+
+1️⃣1️⃣ Flow Diagram
+Client
+  |
+Update Request
+  |
+Saga Orchestrator
+  |
+Update User
+  |
+Update Notification
+  |
+Update Audit
+Failure case:
+
+Audit Failed
+     |
+Rollback Notification
+     |
+Restore User
+
+1️⃣2️⃣ Important Concept
+For update operations, Saga requires:
+
+State Snapshot
+OR
+Event Sourcing
+Because rollback must restore previous values.
+
+1️⃣3️⃣ Production Architecture
+In real systems this runs with events.
+
+UserUpdatedEvent
+NotificationUpdatedEvent
+AuditUpdatedEvent
+Failure:
+
+AuditFailedEvent
+   |
+NotificationRollbackEvent
+   |
+UserRollbackEvent
+Tools used:
+
+Tool	Purpose
+Kafka	Event bus
+Debezium	CDC
+Redis	Saga state
+Camunda	Orchestration
+
+1️⃣4️⃣ Advanced Production Pattern
+Better approach:
+
+Transaction Outbox Pattern
++
+Saga Pattern
+Flow:
+
+DB Update
+ ↓
+Outbox Table
+ ↓
+Kafka Event
+ ↓
+Other Services
+
+1️⃣5️⃣ Interview Answer
+If interviewer asks:
+
+How do you implement partial rollback for update operations?
+
+Answer:
+
+For update operations in distributed microservices we use Saga Pattern.
+
+Before updating, we capture the previous state of the entity.
+
+If a downstream service fails, compensating transactions restore the previous state.
+
+Spring @Transactional guarantees atomicity within each service, while Saga ensures eventual consistency across services.
+
+🔥 we can also explain the production-level architecture
+Including:
+
+✅ Saga + Kafka + Spring Boot complete project
+✅ Choreography Saga with Kafka events
+✅ Orchestration Saga with state machine
+✅ Transaction Outbox Pattern implementation
+✅ Real Netflix / Uber microservices saga architecture
+
+These are very important for senior backend / microservices interviews.
+
+
+

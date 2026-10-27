@@ -1,0 +1,558 @@
+
+https://github.com/conduktor
+https://github.com/conduktor/kafka-beginners-course
+
+https://docs.conduktor.io/learn
+
+
+package io.conduktor.demos.kafka.wikimedia;
+
+import com.launchdarkly.eventsource.EventHandler;
+import com.launchdarkly.eventsource.EventSource;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+
+import java.net.URI;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+public class WikimediaChangesProducer {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        // create Producer Properties
+        Properties properties = new Properties();
+        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
+        // create the Producer
+        KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
+
+        String topic = "wikimedia.recentchange";
+
+        EventHandler eventHandler = new WikimediaChangeHandler(producer, topic);
+        String url = "https://stream.wikimedia.org/v2/stream/recentchange";
+        EventSource.Builder builder = new EventSource.Builder(eventHandler, URI.create(url));
+        EventSource eventSource = builder.build();
+
+
+        // start the producer in another thread
+        eventSource.start();
+
+        // we produce for 10 minutes and block the program until then
+        TimeUnit.MINUTES.sleep(10);
+
+
+    }
+}
+
+
+===================
+
+package io.conduktor.demos.kafka.wikimedia;
+
+import com.launchdarkly.eventsource.EventHandler;
+import com.launchdarkly.eventsource.MessageEvent;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class WikimediaChangeHandler implements EventHandler {
+
+    KafkaProducer<String, String> kafkaProducer;
+    String topic;
+    private final Logger log = LoggerFactory.getLogger(WikimediaChangeHandler.class.getSimpleName());
+
+    public WikimediaChangeHandler(KafkaProducer<String, String> kafkaProducer, String topic){
+        this.kafkaProducer = kafkaProducer;
+        this.topic = topic;
+    }
+
+
+    @Override
+    public void onOpen() {
+        // nothing here
+    }
+
+    @Override
+    public void onClosed() {
+        kafkaProducer.close();
+    }
+
+    @Override
+    public void onMessage(String event, MessageEvent messageEvent) {
+        log.info(messageEvent.getData());
+        // asynchronous
+        kafkaProducer.send(new ProducerRecord<>(topic, messageEvent.getData()));
+    }
+
+    @Override
+    public void onComment(String comment) {
+        // nothing here
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        log.error("Error in Stream Reading", t);
+    }
+}
+
+============================
+
+package opensearch;
+
+import com.google.gson.JsonParser;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
+import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.config.SaslConfigs;
+import org.apache.kafka.common.errors.WakeupException;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.opensearch.action.bulk.BulkRequest;
+import org.opensearch.action.bulk.BulkResponse;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.client.RequestOptions;
+import org.opensearch.client.RestClient;
+import org.opensearch.client.RestHighLevelClient;
+import org.opensearch.client.indices.CreateIndexRequest;
+import org.opensearch.client.indices.GetIndexRequest;
+import org.opensearch.common.xcontent.XContentType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.URI;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+
+public class OpenSearchConsumer {
+
+    public static RestHighLevelClient createOpenSearchClient() {
+        String connString = "http://localhost:9200";
+//        String connString = "https://c9p5mwld41:45zeygn9hy@kafka-course-2322630105.eu-west-1.bonsaisearch.net:443";
+
+        // we build a URI from the connection string
+        RestHighLevelClient restHighLevelClient;
+        URI connUri = URI.create(connString);
+        // extract login information if it exists
+        String userInfo = connUri.getUserInfo();
+
+        if (userInfo == null) {
+            // REST client without security
+            restHighLevelClient = new RestHighLevelClient(RestClient.builder(new HttpHost(connUri.getHost(), connUri.getPort(), "http")));
+
+        } else {
+            // REST client with security
+            String[] auth = userInfo.split(":");
+
+            CredentialsProvider cp = new BasicCredentialsProvider();
+            cp.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(auth[0], auth[1]));
+
+            restHighLevelClient = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost(connUri.getHost(), connUri.getPort(), connUri.getScheme()))
+                            .setHttpClientConfigCallback(
+                                    httpAsyncClientBuilder -> httpAsyncClientBuilder.setDefaultCredentialsProvider(cp)
+                                            .setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy())));
+
+
+        }
+
+        return restHighLevelClient;
+    }
+
+    private static KafkaConsumer<String, String> createKafkaConsumer(){
+
+        String groupId = "consumer-opensearch-demo";
+
+        // create consumer configs
+        Properties properties = new Properties();
+        properties.setProperty(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+        properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+
+        // create consumer
+        return new KafkaConsumer<>(properties);
+
+    }
+
+    private static String extractId(String json){
+        // gson library
+        return JsonParser.parseString(json)
+                .getAsJsonObject()
+                .get("meta")
+                .getAsJsonObject()
+                .get("id")
+                .getAsString();
+    }
+
+    public static void main(String[] args) throws IOException {
+
+        Logger log = LoggerFactory.getLogger(OpenSearchConsumer.class.getSimpleName());
+
+        // first create an OpenSearch Client
+        RestHighLevelClient openSearchClient = createOpenSearchClient();
+
+        // create our Kafka Client
+        KafkaConsumer<String, String> consumer = createKafkaConsumer();
+
+        // get a reference to the main thread
+        final Thread mainThread = Thread.currentThread();
+
+        // adding the shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                log.info("Detected a shutdown, let's exit by calling consumer.wakeup()...");
+                consumer.wakeup();
+
+                // join the main thread to allow the execution of the code in the main thread
+                try {
+                    mainThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        // we need to create the index on OpenSearch if it doesn't exist already
+
+        try(openSearchClient; consumer){
+
+            boolean indexExists = openSearchClient.indices().exists(new GetIndexRequest("wikimedia"), RequestOptions.DEFAULT);
+
+            if (!indexExists){
+                CreateIndexRequest createIndexRequest = new CreateIndexRequest("wikimedia");
+                openSearchClient.indices().create(createIndexRequest, RequestOptions.DEFAULT);
+                log.info("The Wikimedia Index has been created!");
+            } else {
+                log.info("The Wikimedia Index already exits");
+            }
+
+            // we subscribe the consumer
+            consumer.subscribe(Collections.singleton("wikimedia.recentchange"));
+
+
+            while(true) {
+
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(3000));
+
+                int recordCount = records.count();
+                log.info("Received " + recordCount + " record(s)");
+
+                BulkRequest bulkRequest = new BulkRequest();
+
+                for (ConsumerRecord<String, String> record : records) {
+
+                    // send the record into OpenSearch
+
+                    // strategy 1
+                    // define an ID using Kafka Record coordinates
+//                    String id = record.topic() + "_" + record.partition() + "_" + record.offset();
+
+                    try {
+                        // strategy 2
+                        // we extract the ID from the JSON value
+                        String id = extractId(record.value());
+
+                        IndexRequest indexRequest = new IndexRequest("wikimedia")
+                                .source(record.value(), XContentType.JSON)
+                                .id(id);
+
+//                        IndexResponse response = openSearchClient.index(indexRequest, RequestOptions.DEFAULT);
+
+                        bulkRequest.add(indexRequest);
+
+//                        log.info(response.getId());
+                    } catch (Exception e){
+
+                    }
+
+                }
+
+
+                if (bulkRequest.numberOfActions() > 0){
+                    BulkResponse bulkResponse = openSearchClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+                    log.info("Inserted " + bulkResponse.getItems().length + " record(s).");
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    // commit offsets after the batch is consumed
+                    consumer.commitSync();
+                    log.info("Offsets have been committed!");
+                }
+
+
+
+
+            }
+
+
+        } catch (WakeupException e) {
+            log.info("Consumer is starting to shut down");
+        } catch (Exception e) {
+            log.error("Unexpected exception in the consumer", e);
+        } finally {
+            consumer.close(); // close the consumer, this will also commit offsets
+            openSearchClient.close();
+            log.info("The consumer is now gracefully shut down");
+        }
+
+    }
+}
+
+======================
+
+docker-compose.yaml
+
+version: '3.7'
+services:
+  opensearch:
+    image: opensearchproject/opensearch:1.2.4
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true" # disable https and logins
+      compatibility.override_main_response_version: "true"
+    ports:
+      - 9200:9200
+      - 9600:9600 # required for Performance Analyzer
+
+  # console at http://localhost:5601/app/dev_tools#/console
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:1.2.0
+    ports:
+      - 5601:5601
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS
+	  
+===================================
+
+package io.conduktor.demos.kafka.streams.wikimedia;
+
+import io.conduktor.demos.kafka.streams.wikimedia.processor.BotCountStreamBuilder;
+import io.conduktor.demos.kafka.streams.wikimedia.processor.EventCountTimeseriesBuilder;
+import io.conduktor.demos.kafka.streams.wikimedia.processor.WebsiteCountStreamBuilder;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.KStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Properties;
+
+public class WikimediaStreamsApp {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WikimediaStreamsApp.class);
+    private static final Properties properties;
+    private static final String INPUT_TOPIC = "wikimedia.recentchange";
+
+    static {
+        properties = new Properties();
+        properties.put(StreamsConfig.APPLICATION_ID_CONFIG, "wikimedia-stats-application");
+        properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+        properties.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        properties.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+    }
+
+    public static void main(String[] args) {
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, String> changeJsonStream = builder.stream(INPUT_TOPIC);
+
+        BotCountStreamBuilder botCountStreamBuilder = new BotCountStreamBuilder(changeJsonStream);
+        botCountStreamBuilder.setup();
+
+        WebsiteCountStreamBuilder websiteCountStreamBuilder = new WebsiteCountStreamBuilder(changeJsonStream);
+        websiteCountStreamBuilder.setup();
+
+        EventCountTimeseriesBuilder eventCountTimeseriesBuilder = new EventCountTimeseriesBuilder(changeJsonStream);
+        eventCountTimeseriesBuilder.setup();
+
+        final Topology appTopology = builder.build();
+        LOGGER.info("Topology: {}", appTopology.describe());
+        KafkaStreams streams = new KafkaStreams(appTopology, properties);
+        streams.start();
+    }
+}
+
+===============
+
+package io.conduktor.demos.kafka.streams.wikimedia.processor;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Materialized;
+
+import java.io.IOException;
+import java.util.Map;
+
+public class BotCountStreamBuilder {
+
+    private static final String BOT_COUNT_STORE = "bot-count-store";
+    private static final String BOT_COUNT_TOPIC = "wikimedia.stats.bots";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final KStream<String, String> inputStream;
+
+    public BotCountStreamBuilder(KStream<String, String> inputStream) {
+        this.inputStream = inputStream;
+    }
+
+    public void setup() {
+        this.inputStream
+                .mapValues(changeJson -> {
+                    try {
+                        final JsonNode jsonNode = OBJECT_MAPPER.readTree(changeJson);
+                        if (jsonNode.get("bot").asBoolean()) {
+                            return "bot";
+                        }
+                        return "non-bot";
+                    } catch (IOException e) {
+                        return "parse-error";
+                    }
+                })
+                .groupBy((key, botOrNot) -> botOrNot)
+                .count(Materialized.as(BOT_COUNT_STORE))
+                .toStream()
+                .mapValues((key, value) -> {
+                    final Map<String, Long> kvMap = Map.of(String.valueOf(key), value);
+                    try {
+                        return OBJECT_MAPPER.writeValueAsString(kvMap);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .to(BOT_COUNT_TOPIC);
+    }
+}
+
+===================================
+
+package io.conduktor.demos.kafka.streams.wikimedia.processor;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.kstream.*;
+
+import java.time.Duration;
+import java.util.Map;
+
+public class EventCountTimeseriesBuilder {
+
+    private static final String TIMESERIES_TOPIC = "wikimedia.stats.timeseries";
+    private static final String TIMESERIES_STORE = "event-count-store";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final KStream<String, String> inputStream;
+
+    public EventCountTimeseriesBuilder(KStream<String, String> inputStream) {
+        this.inputStream = inputStream;
+    }
+
+    public void setup() {
+        final TimeWindows timeWindows = TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10));
+        this.inputStream
+                .selectKey((key, value) -> "key-to-group")
+                .groupByKey()
+                .windowedBy(timeWindows)
+                .count(Materialized.as(TIMESERIES_STORE))
+                .toStream()
+                .mapValues((readOnlyKey, value) -> {
+                    final Map<String, Object> kvMap = Map.of(
+                            "start_time", readOnlyKey.window().startTime().toString(),
+                            "end_time", readOnlyKey.window().endTime().toString(),
+                            "window_size", timeWindows.size(),
+                            "event_count", value
+                    );
+                    try {
+                        return OBJECT_MAPPER.writeValueAsString(kvMap);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .to(TIMESERIES_TOPIC, Produced.with(
+                        WindowedSerdes.timeWindowedSerdeFrom(String.class, timeWindows.size()),
+                        Serdes.String()
+                ));
+    }
+}
+
+=============================
+
+package io.conduktor.demos.kafka.streams.wikimedia.processor;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.kstream.*;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Map;
+
+public class WebsiteCountStreamBuilder {
+    private static final String WEBSITE_COUNT_STORE = "website-count-store";
+    private static final String WEBSITE_COUNT_TOPIC = "wikimedia.stats.website";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private final KStream<String, String> inputStream;
+
+    public WebsiteCountStreamBuilder(KStream<String, String> inputStream) {
+        this.inputStream = inputStream;
+    }
+
+    public void setup() {
+        final TimeWindows timeWindows = TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(1L));
+        this.inputStream
+                .selectKey((k, changeJson) -> {
+                    try {
+                        final JsonNode jsonNode = OBJECT_MAPPER.readTree(changeJson);
+                        return jsonNode.get("server_name").asText();
+                    } catch (IOException e) {
+                        return "parse-error";
+                    }
+                })
+                .groupByKey()
+                .windowedBy(timeWindows)
+                .count(Materialized.as(WEBSITE_COUNT_STORE))
+                .toStream()
+                .mapValues((key, value) -> {
+                    final Map<String, Object> kvMap = Map.of(
+                            "website", key.key(),
+                            "count", value
+                    );
+                    try {
+                        return OBJECT_MAPPER.writeValueAsString(kvMap);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .to(WEBSITE_COUNT_TOPIC, Produced.with(
+                        WindowedSerdes.timeWindowedSerdeFrom(String.class, timeWindows.size()),
+                        Serdes.String()
+                ));
+    }
+}	  

@@ -1,0 +1,3700 @@
+
+
+Here's the full Spring Security syllabus from the official docs (version 7.0.5), structured as it appears on docs.spring.io:
+
+Spring Security — Official Documentation Syllabus
+
+Spring Security is a framework providing authentication, authorization, and protection against common attacks, and is the de-facto standard for securing Spring-based applications. 
+Spring
+
+🔰 Overview & Setup
+What is Spring Security
+Prerequisites
+Getting Spring Security (Maven / Gradle)
+Community & Support
+What's New / Migration Guides (6.x → 7, preparing for 8.0)
+Project Modules & Samples
+⚙️ Features
+Authentication — Password Storage (BCrypt, encoding strategies)
+Authorization — Access control rules
+Protection Against Exploits
+CSRF (Cross-Site Request Forgery)
+HTTP Security Headers
+HTTP Request protection
+Integrations — REST Clients, Cryptography, Spring Data, Concurrency APIs, Jackson, Localization
+🧱 Servlet Applications (Imperative / MVC)
+
+Getting Started & Architecture
+
+Filter Chain, Security Context, Dispatcher integration
+
+Authentication
+
+Authentication Architecture
+Username/Password Authentication
+Form Login, HTTP Basic, Digest
+Password Storage: In-Memory, JDBC, UserDetailsService, PasswordEncoder, DaoAuthenticationProvider, LDAP
+Multi-Factor Authentication (MFA)
+Passkeys
+One-Time Token Login
+Session Management
+Remember-Me
+Anonymous Authentication
+Pre-Authentication
+JAAS, CAS, X.509, Run-As
+Logout & Authentication Events
+Kerberos (intro, reference, samples)
+
+Authorization
+
+Authorization Architecture
+Authorize HTTP Requests
+Method Security (@PreAuthorize, @PostAuthorize, @PreFilter, @PostFilter)
+Domain Object Security (ACLs)
+Authorization Events
+
+OAuth2
+
+OAuth2 Login (Core & Advanced Config, OIDC Logout)
+OAuth2 Client (Authorization Grants, Client Authentication, Authorized Clients)
+OAuth2 Resource Server (JWT, Opaque Token, Multitenancy, Bearer Tokens, DPoP-bound Tokens)
+OAuth2 Authorization Server (Config Model, Core Components, Protocol Endpoints)
+
+SAML 2.0
+
+SAML2 Login (Overview, Auth Requests & Responses)
+SAML2 Logout & Metadata
+
+Protection Against Exploits
+
+CSRF, Security HTTP Response Headers, HTTP, HttpFirewall
+
+Integrations
+
+Concurrency, Localization, Servlet APIs, Spring Data, Spring MVC, WebSocket, CORS, JSP Taglib, Observability
+
+Configuration
+
+Java Configuration, Kotlin Configuration, XML Namespace Configuration
+
+Testing
+
+Method Security Testing
+MockMvc Support (Setup, Mocking Users, CSRF, Form Login, HTTP Basic, OAuth2, Logout)
+RequestBuilders, ResultMatchers, ResultHandlers
+
+Appendix
+
+Database Schemas, XML Namespace Reference, Proxy Server Config, FAQ
+⚡ Reactive Applications (WebFlux)
+
+Getting Started
+
+Authentication
+
+X.509, Logout, Concurrent Sessions Control
+
+Authorization
+
+Authorize HTTP Requests
+@EnableReactiveMethodSecurity
+
+OAuth2
+
+OAuth2 Login, Client, Resource Server (JWT, Opaque Token, Multitenancy, Bearer Tokens)
+
+Protection Against Exploits
+
+CSRF, Headers, HTTP Requests, ServerWebExchangeFirewall
+
+Integrations
+
+CORS, RSocket, Observability
+
+Testing
+
+Method Security Testing, WebTestClient (Authentication, CSRF, OAuth 2.0, X.509)
+
+WebFlux Security Configuration
+
+🖼️ GraalVM Native Image Support
+Native Image overview
+Method Security in native images
+
+The latest stable version is 7.0.5 and the full reference docs live at docs.spring.io/spring-security/reference. You can also download the entire documentation as a ZIP from that page.
+
+PDF
+
+Can you please provide solution for all the chapter with hands on and exmples?
+
+That's a comprehensive 30-chapter syllabus — covering everything in one response would produce an unusably massive wall of text. Let me help you in the most effective way.
+
+Let me know your preferences above and I'll tailor the content perfectly for you — with working code, explanations, and hands-on examples for each topic!
+
+How would you like to proceed?
+Chapter by chapter (start from Chapter 1)
+What's your current experience level?
+Advanced (want microservices/enterprise patterns)
+
+Perfect! Since you're advanced, I'll keep theory tight and focus on production-quality code with enterprise patterns. Let's begin.
+==============================================
+Chapter 1: Introduction to Security
+
+Here's a complete hands-on guide covering every topic in Chapter 1, written at an advanced/enterprise level.
+
+1.1 Authentication vs Authorization
+
+These are the two pillars of every security system. Often confused, but fundamentally different.
+
+Authentication = Who are you? (Identity verification)
+Authorization = What can you do? (Permission enforcement)
+
+In Spring Security, this maps directly to two separate filter chains.
+
+Key distinction in HTTP status codes:
+
+401 Unauthorized → Authentication failed (identity unknown)
+403 Forbidden → Authorization failed (identity known, but permission denied)
+java
+// Spring Security maps these automatically in ExceptionTranslationFilter
+// AuthenticationException  → 401
+// AccessDeniedException    → 403
+1.2 Common Security Threats
+SQL Injection
+
+The most dangerous vulnerability (OWASP #1 for years). An attacker injects malicious SQL into input fields.
+
+java
+// VULNERABLE — never do this
+String query = "SELECT * FROM users WHERE username='" + username + "'";
+// Input: admin' OR '1'='1  → bypasses auth entirely
+
+// SAFE — always use PreparedStatement or JPA/Hibernate
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    // Spring Data auto-generates safe parameterized queries
+    Optional<User> findByUsername(String username);
+
+    // Custom query — use @Param, never string concat
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.active = true")
+    Optional<User> findActiveByEmail(@Param("email") String email);
+}
+
+// JDBC Template — also safe
+jdbcTemplate.queryForObject(
+    "SELECT * FROM users WHERE id = ?",
+    new Object[]{userId},
+    userRowMapper
+);
+Cross-Site Scripting (XSS)
+
+Attacker injects malicious scripts into pages viewed by other users.
+
+java
+// VULNERABLE — rendering raw user input in HTML
+model.addAttribute("comment", userInput); // if userInput = <script>steal()</script>
+
+// SAFE approach 1: Thymeleaf auto-escapes by default
+// th:text escapes HTML, th:utext does NOT (avoid th:utext with user input)
+
+// SAFE approach 2: Spring Security HTTP headers (enabled by default)
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        .headers(headers -> headers
+            // Prevents browser from MIME-sniffing
+            .contentTypeOptions(Customizer.withDefaults())
+            // Enables XSS filter in older browsers
+            .xssProtection(Customizer.withDefaults())
+            // Content Security Policy — restricts script sources
+            .contentSecurityPolicy(csp -> csp
+                .policyDirectives("default-src 'self'; script-src 'self'; object-src 'none'")
+            )
+        );
+    return http.build();
+}
+
+// SAFE approach 3: Sanitize HTML input with OWASP Java HTML Sanitizer
+// <dependency> org.owasp.antisamy / antisamy </dependency>
+PolicyFactory policy = Sanitizers.FORMATTING.and(Sanitizers.LINKS);
+String safeOutput = policy.sanitize(userInput);
+CSRF (Cross-Site Request Forgery)
+
+Tricks authenticated users into submitting malicious requests.
+
+java
+// How CSRF works:
+// 1. User is logged into bank.com (has valid session cookie)
+// 2. User visits evil.com which has: <img src="bank.com/transfer?to=evil&amount=9999">
+// 3. Browser auto-sends the cookie → bank executes the transfer
+
+// Spring Security CSRF protection (enabled by default for stateful apps)
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        // For stateful web apps — keep CSRF enabled (default)
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            // For SPA — store token in cookie, JS reads it
+        );
+
+    // For stateless REST APIs with JWT — disable CSRF (no session = no CSRF risk)
+    // .csrf(csrf -> csrf.disable())
+
+    return http.build();
+}
+1.3 Spring Security Overview
+
+Spring Security works as a chain of Servlet filters. Every HTTP request passes through each filter in order before reaching your controller. This is the foundation of every concept in the syllabus.
+
+1.4 Enterprise Security Architecture
+
+A production enterprise setup typically has multiple layers. Here's how they fit together:
+
+java
+// Enterprise-grade Spring Boot Security starter setup
+// build.gradle / pom.xml
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    testImplementation 'org.springframework.security:spring-security-test'
+}
+java
+// Security configuration — production-ready baseline
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)          // enables @PreAuthorize
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            // 1. Session management — stateless for REST APIs
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            // 2. CSRF — disabled for stateless JWT-based APIs
+            .csrf(csrf -> csrf.disable())
+            // 3. Authorization rules
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            // 4. JWT filter — added before UsernamePasswordAuthenticationFilter
+            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
+            // 5. Exception handling
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(customAuthEntryPoint())
+                .accessDeniedHandler(customAccessDeniedHandler())
+            )
+            // 6. Security headers
+            .headers(headers -> headers
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                .contentSecurityPolicy(csp ->
+                    csp.policyDirectives("default-src 'self'"))
+            )
+            .build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        // BCrypt with strength 12 — production standard
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+}
+java
+// Custom AuthenticationEntryPoint — returns JSON instead of redirect
+@Component
+public class CustomAuthEntryPoint implements AuthenticationEntryPoint {
+
+    @Override
+    public void commence(HttpServletRequest request,
+                         HttpServletResponse response,
+                         AuthenticationException ex) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+        Map<String, Object> body = Map.of(
+            "status", 401,
+            "error", "Unauthorized",
+            "message", ex.getMessage(),
+            "path", request.getServletPath(),
+            "timestamp", Instant.now().toString()
+        );
+
+        new ObjectMapper().writeValue(response.getOutputStream(), body);
+    }
+}
+java
+// Custom AccessDeniedHandler — JSON 403 response
+@Component
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
+
+    @Override
+    public void handle(HttpServletRequest request,
+                       HttpServletResponse response,
+                       AccessDeniedException ex) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+
+        Map<String, Object> body = Map.of(
+            "status", 403,
+            "error", "Forbidden",
+            "message", "You don't have permission to access this resource",
+            "path", request.getServletPath()
+        );
+
+        new ObjectMapper().writeValue(response.getOutputStream(), body);
+    }
+}
+1.5 Security Threat Demo — SQL Injection Prevention
+
+A complete runnable example:
+
+java
+// User entity
+@Entity
+@Table(name = "users")
+public class User {
+    @Id @GeneratedValue
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @Column(nullable = false)
+    private String password;  // always store hashed
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Set<String> roles = new HashSet<>();
+}
+java
+// UserRepository — Spring Data generates safe parameterized SQL
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r = :role")
+    List<User> findAllByRole(@Param("role") String role);
+
+    // NEVER write:  "WHERE username = '" + username + "'"
+}
+java
+// UserDetailsService implementation — connects Spring Security to your DB
+@Service
+@RequiredArgsConstructor
+public class CustomUserDetailsService implements UserDetailsService {
+
+    private final UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username)
+            throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+            .map(user -> org.springframework.security.core.userdetails.User
+                .withUsername(user.getUsername())
+                .password(user.getPassword())       // already BCrypt-hashed in DB
+                .roles(user.getRoles().toArray(String[]::new))
+                .build()
+            )
+            .orElseThrow(() ->
+                new UsernameNotFoundException("User not found: " + username));
+    }
+}
+Chapter 1 — Quick Reference
+Threat	Attack vector	Spring Security defense
+SQL Injection	Malicious SQL in input	JpaRepository, @Param, PreparedStatement
+XSS	<script> in input/output	CSP headers, Thymeleaf auto-escape, Sanitizers
+CSRF	Forged cross-site requests	CsrfFilter + CookieCsrfTokenRepository
+Auth bypass	Missing auth checks	authorizeHttpRequests + anyRequest().authenticated()
+Insecure passwords	Plain-text storage	BCryptPasswordEncoder(12)
+Sensitive data exposure	Info in error responses	Custom AuthenticationEntryPoint + AccessDeniedHandler
+
+Ready for Chapter 2: Spring Security Fundamentals (Filter Chain, SecurityContext, UserDetailsService, PasswordEncoder with hands-on code)? Just say "Chapter 2" and we'll dive in!
+
+Chapter 3: Spring Security Configuration
+
+This chapter covers everything about wiring Spring Security for real-world applications — multiple chains, role-based rules, custom matchers, and production patterns.
+
+3.1 SecurityFilterChain — Complete Configuration
+java
+// Full enterprise SecurityFilterChain setup
+// Three separate chains for different parts of the app
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final CustomUserDetailsService userDetailsService;
+    private final CustomAuthEntryPoint authEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
+
+    // ─────────────────────────────────────────────
+    // Chain 1: Actuator — @Order(1) = highest priority
+    // ─────────────────────────────────────────────
+    @Bean
+    @Order(1)
+    public SecurityFilterChain actuatorChain(HttpSecurity http) throws Exception {
+        return http
+            .securityMatcher("/actuator/**")
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/actuator/health",
+                                 "/actuator/info").permitAll()
+                .anyRequest().hasRole("MONITORING")
+            )
+            .httpBasic(Customizer.withDefaults())
+            .sessionManagement(s -> s
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .build();
+    }
+
+    // ─────────────────────────────────────────────
+    // Chain 2: REST API — @Order(2) — JWT stateless
+    // ─────────────────────────────────────────────
+    @Bean
+    @Order(2)
+    public SecurityFilterChain apiChain(HttpSecurity http) throws Exception {
+        return http
+            .securityMatcher("/api/**")
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(s -> s
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/auth/login",
+                                               "/api/auth/register",
+                                               "/api/auth/refresh").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/public/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "MANAGER")
+                .requestMatchers(HttpMethod.DELETE).hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter,
+                             UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
+            )
+            .build();
+    }
+
+    // ─────────────────────────────────────────────
+    // Chain 3: Web MVC — @Order(3) — Form login + session
+    // ─────────────────────────────────────────────
+    @Bean
+    @Order(3)
+    public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
+        return http
+            .securityMatcher("/**")           // catch-all — runs last
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/public/**",
+                                 "/css/**", "/js/**",
+                                 "/images/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/user/**").hasRole("USER")
+                .anyRequest().authenticated()
+            )
+            .formLogin(form -> form
+                .loginPage("/login")
+                .loginProcessingUrl("/login")
+                .defaultSuccessUrl("/dashboard", true)
+                .failureUrl("/login?error=true")
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout=true")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID", "remember-me")
+                .clearAuthentication(true)
+            )
+            .rememberMe(rm -> rm
+                .key("uniqueAndSecretKey")
+                .tokenValiditySeconds(86400 * 14)   // 14 days
+                .userDetailsService(userDetailsService)
+            )
+            .sessionManagement(s -> s
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)    // new login kicks old session
+            )
+            .build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    public AuthenticationManager authManager(
+            AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+}
+3.2 Role-Based Security — Every Pattern
+java
+// ── URL-level rules (inside SecurityFilterChain) ──────────────────────────
+
+.authorizeHttpRequests(auth -> auth
+
+    // 1. Permit all — no auth required
+    .requestMatchers("/public/**").permitAll()
+
+    // 2. Must be authenticated (any role)
+    .requestMatchers("/profile/**").authenticated()
+
+    // 3. Single role
+    .requestMatchers("/admin/**").hasRole("ADMIN")
+    // hasRole("ADMIN") is shorthand for hasAuthority("ROLE_ADMIN")
+
+    // 4. Any of multiple roles
+    .requestMatchers("/reports/**").hasAnyRole("ADMIN", "MANAGER")
+
+    // 5. Fine-grained authority (not a role)
+    .requestMatchers("/api/payments/**").hasAuthority("payment:write")
+
+    // 6. SpEL expression — full power
+    .requestMatchers("/api/sensitive/**")
+        .access(new WebExpressionAuthorizationManager(
+            "hasRole('ADMIN') and hasIpAddress('192.168.1.0/24')"
+        ))
+
+    // 7. HTTP method scoped
+    .requestMatchers(HttpMethod.GET,    "/api/products/**").hasRole("USER")
+    .requestMatchers(HttpMethod.POST,   "/api/products/**").hasRole("MANAGER")
+    .requestMatchers(HttpMethod.PUT,    "/api/products/**").hasRole("MANAGER")
+    .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
+
+    // 8. Catch-all — ALWAYS last
+    .anyRequest().authenticated()
+)
+3.3 Method-Level Security
+
+URL rules are coarse-grained. Method security gives per-method, per-object control — the real enterprise pattern.
+
+java
+// Enable on your config class (Chapter 3 config already has this)
+// @EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
+
+@RestController
+@RequestMapping("/api/orders")
+@RequiredArgsConstructor
+public class OrderController {
+
+    private final OrderService orderService;
+
+    // 1. Basic role check
+    @GetMapping
+    @PreAuthorize("hasRole('USER')")
+    public List<OrderDto> getMyOrders(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        return orderService.findByUser(principal.getUserId());
+    }
+
+    // 2. Admin sees all, user sees own
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOwner(#id, authentication)")
+    public OrderDto getById(@PathVariable Long id) {
+        return orderService.findById(id);
+    }
+
+    // 3. Authority-based (fine-grained permission)
+    @PostMapping
+    @PreAuthorize("hasAuthority('order:create')")
+    public OrderDto create(@RequestBody @Valid CreateOrderRequest req,
+                           @AuthenticationPrincipal CustomUserPrincipal principal) {
+        return orderService.create(req, principal.getUserId());
+    }
+
+    // 4. PostAuthorize — check AFTER method returns
+    // (useful when you need the return value to make the decision)
+    @GetMapping("/invoice/{id}")
+    @PostAuthorize("returnObject.userId == authentication.principal.userId")
+    public InvoiceDto getInvoice(@PathVariable Long id) {
+        return orderService.getInvoice(id);   // returns InvoiceDto with userId field
+    }
+
+    // 5. PreFilter — filter input collection before method runs
+    @PutMapping("/bulk")
+    @PreFilter("filterObject.userId == authentication.principal.userId")
+    public List<OrderDto> bulkUpdate(@RequestBody List<UpdateOrderRequest> orders) {
+        return orderService.bulkUpdate(orders);
+    }
+
+    // 6. PostFilter — filter output collection after method runs
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('MANAGER')")
+    @PostFilter("filterObject.tenantId == authentication.principal.tenantId")
+    public List<OrderDto> getAllOrders() {
+        return orderService.findAll();
+    }
+
+    // 7. @Secured — simpler, less flexible than @PreAuthorize
+    @DeleteMapping("/{id}")
+    @Secured({"ROLE_ADMIN"})
+    public void delete(@PathVariable Long id) {
+        orderService.delete(id);
+    }
+}
+java
+// Custom security bean for domain-object ownership checks
+// Referenced in SpEL as @orderSecurity.isOwner(...)
+@Component("orderSecurity")
+@RequiredArgsConstructor
+public class OrderSecurityService {
+
+    private final OrderRepository orderRepository;
+
+    public boolean isOwner(Long orderId, Authentication authentication) {
+        if (authentication == null) return false;
+
+        CustomUserPrincipal principal =
+            (CustomUserPrincipal) authentication.getPrincipal();
+
+        return orderRepository.findById(orderId)
+            .map(order -> order.getUserId().equals(principal.getUserId()))
+            .orElse(false);
+    }
+
+    // Tenant-level ownership — multi-tenant apps
+    public boolean isSameTenant(Long resourceId, Authentication authentication) {
+        CustomUserPrincipal principal =
+            (CustomUserPrincipal) authentication.getPrincipal();
+
+        return orderRepository.findById(resourceId)
+            .map(order -> order.getTenantId().equals(principal.getTenantId()))
+            .orElse(false);
+    }
+}
+3.4 Custom Security Rules — RequestMatchers
+java
+// AntPathRequestMatcher — wildcard patterns
+.requestMatchers(new AntPathRequestMatcher("/api/v*/users/**"))
+
+// MvcRequestMatcher — Spring MVC-aware (respects @RequestMapping)
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http,
+                                       HandlerMappingIntrospector introspector)
+        throws Exception {
+    MvcRequestMatcher.Builder mvc =
+        new MvcRequestMatcher.Builder(introspector);
+
+    return http
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers(mvc.pattern("/api/users")).hasRole("ADMIN")
+            .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/products")).permitAll()
+            .anyRequest().authenticated()
+        )
+        .build();
+}
+
+// RegexRequestMatcher — for complex URL patterns
+.requestMatchers(new RegexRequestMatcher("/api/v[0-9]+/.*", "GET"))
+
+// Custom RequestMatcher — full control
+public class TenantRequestMatcher implements RequestMatcher {
+
+    private final String tenantHeader;
+
+    public TenantRequestMatcher(String tenantHeader) {
+        this.tenantHeader = tenantHeader;
+    }
+
+    @Override
+    public boolean matches(HttpServletRequest request) {
+        // Only match requests that include a tenant header
+        return StringUtils.hasText(request.getHeader(tenantHeader));
+    }
+}
+
+// Use it in config
+.requestMatchers(new TenantRequestMatcher("X-Tenant-ID")).authenticated()
+3.5 PermitAll vs Authenticated vs DenyAll
+java
+// Complete reference for access rules
+.authorizeHttpRequests(auth -> auth
+
+    // permitAll() — no authentication required, SecurityContext may be empty
+    .requestMatchers("/public/**").permitAll()
+
+    // anonymous() — only anonymous users (NOT logged-in users)
+    // useful for: show login page only if not already logged in
+    .requestMatchers("/login", "/register").anonymous()
+
+    // authenticated() — any authenticated user (any role)
+    .requestMatchers("/profile").authenticated()
+
+    // fullyAuthenticated() — authenticated AND not via remember-me token
+    // Use for sensitive operations like password change
+    .requestMatchers("/change-password").fullyAuthenticated()
+
+    // hasRole() — has specific role (prepends ROLE_ automatically)
+    .requestMatchers("/admin").hasRole("ADMIN")
+
+    // hasAuthority() — exact authority string match (no ROLE_ prepend)
+    .requestMatchers("/reports/export").hasAuthority("report:export")
+
+    // hasAnyRole() / hasAnyAuthority() — OR logic
+    .requestMatchers("/dashboard").hasAnyRole("ADMIN", "MANAGER", "USER")
+
+    // denyAll() — block everything (useful as safety catch-all during development)
+    .requestMatchers("/internal/**").denyAll()
+
+    // access() with custom AuthorizationManager — maximum flexibility
+    .requestMatchers("/api/sensitive")
+        .access((authentication, context) -> {
+            boolean isAdmin = authentication.get().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            String ip = context.getRequest().getRemoteAddr();
+            boolean isInternalIp = ip.startsWith("10.") || ip.startsWith("192.168.");
+            return new AuthorizationDecision(isAdmin && isInternalIp);
+        })
+
+    .anyRequest().authenticated()
+)
+3.6 Custom Security Rules — Real-World Patterns
+java
+// Pattern 1: IP Whitelist for admin endpoints
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    return http
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/admin/**")
+                .access(new WebExpressionAuthorizationManager(
+                    "hasRole('ADMIN') and hasIpAddress('10.0.0.0/8')"
+                ))
+            .anyRequest().authenticated()
+        )
+        .build();
+}
+java
+// Pattern 2: Time-based access (e.g., maintenance window)
+@Component
+public class BusinessHoursAuthorizationManager
+        implements AuthorizationManager<RequestAuthorizationContext> {
+
+    @Override
+    public AuthorizationDecision check(
+            Supplier<Authentication> authentication,
+            RequestAuthorizationContext context) {
+
+        LocalTime now = LocalTime.now();
+        LocalTime start = LocalTime.of(8, 0);
+        LocalTime end   = LocalTime.of(20, 0);
+
+        boolean withinHours = now.isAfter(start) && now.isBefore(end);
+        boolean isAdmin = authentication.get().getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        // Admins bypass time restriction
+        return new AuthorizationDecision(withinHours || isAdmin);
+    }
+}
+
+// Wire it in
+.requestMatchers("/api/trading/**")
+    .access(businessHoursAuthorizationManager)
+java
+// Pattern 3: Hierarchy of roles — ADMIN inherits USER permissions
+@Bean
+public RoleHierarchy roleHierarchy() {
+    RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
+    hierarchy.setHierarchy("""
+        ROLE_ADMIN > ROLE_MANAGER
+        ROLE_MANAGER > ROLE_USER
+        ROLE_USER > ROLE_GUEST
+        """);
+    return hierarchy;
+}
+
+@Bean
+public DefaultWebSecurityExpressionHandler expressionHandler() {
+    DefaultWebSecurityExpressionHandler handler =
+        new DefaultWebSecurityExpressionHandler();
+    handler.setRoleHierarchy(roleHierarchy());
+    return handler;
+}
+
+// Now: ADMIN can access USER routes without explicitly having ROLE_USER
+// .requestMatchers("/user/**").hasRole("USER")  ← ADMIN passes this too
+java
+// Pattern 4: Dynamic rules from database — enterprise multi-tenant
+@Component
+@RequiredArgsConstructor
+public class DynamicAuthorizationManager
+        implements AuthorizationManager<RequestAuthorizationContext> {
+
+    private final PermissionRepository permissionRepository;
+
+    // Cache to avoid DB hit on every request
+    @Cacheable("route-permissions")
+    public Set<String> getRequiredRoles(String method, String path) {
+        return permissionRepository
+            .findByMethodAndPathPattern(method, path)
+            .stream()
+            .map(Permission::getRole)
+            .collect(Collectors.toSet());
+    }
+
+    @Override
+    public AuthorizationDecision check(
+            Supplier<Authentication> authentication,
+            RequestAuthorizationContext context) {
+
+        HttpServletRequest req = context.getRequest();
+        Set<String> required = getRequiredRoles(
+            req.getMethod(),
+            req.getRequestURI()
+        );
+
+        if (required.isEmpty()) return new AuthorizationDecision(true);
+
+        Set<String> userRoles = authentication.get().getAuthorities()
+            .stream()
+            .map(GrantedAuthority::getAuthority)
+            .collect(Collectors.toSet());
+
+        boolean granted = required.stream().anyMatch(userRoles::contains);
+        return new AuthorizationDecision(granted);
+    }
+}
+3.7 Security Configuration Testing
+java
+// Always write tests for your security config — misconfiguration = breach
+@SpringBootTest
+@AutoConfigureMockMvc
+class SecurityConfigTest {
+
+    @Autowired MockMvc mockMvc;
+
+    // ── Public endpoints ──────────────────────────────────────────────────
+
+    @Test
+    void publicEndpoint_noAuth_returns200() throws Exception {
+        mockMvc.perform(get("/api/public/products"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void loginEndpoint_noAuth_returns200() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"test\",\"password\":\"pass\"}"))
+            .andExpect(status().isOk());
+    }
+
+    // ── Protected endpoints — unauthenticated ─────────────────────────────
+
+    @Test
+    void protectedEndpoint_noAuth_returns401() throws Exception {
+        mockMvc.perform(get("/api/orders"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401));
+    }
+
+    // ── Role-based access ─────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void adminEndpoint_userRole_returns403() throws Exception {
+        mockMvc.perform(get("/api/admin/users"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminEndpoint_adminRole_returns200() throws Exception {
+        mockMvc.perform(get("/api/admin/users"))
+            .andExpect(status().isOk());
+    }
+
+    // ── Custom principal ──────────────────────────────────────────────────
+
+    @Test
+    @WithUserDetails("john@example.com")   // loads from UserDetailsService
+    void userProfile_authenticatedUser_returnsProfile() throws Exception {
+        mockMvc.perform(get("/api/users/profile"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value("john@example.com"));
+    }
+
+    // ── Method security ───────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "alice", roles = "USER")
+    void getOrder_notOwner_throws403() throws Exception {
+        mockMvc.perform(get("/api/orders/999"))  // order owned by bob
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "alice", roles = "ADMIN")
+    void getOrder_admin_canAccessAnyOrder() throws Exception {
+        mockMvc.perform(get("/api/orders/999"))
+            .andExpect(status().isOk());
+    }
+}
+Chapter 3 — Configuration Cheatsheet
+Rule                    When to use
+──────────────────────────────────────────────────────────────────
+permitAll()             Public pages, login, static assets
+anonymous()             Login/register pages (redirect if already logged in)
+authenticated()         Any logged-in user, any role
+fullyAuthenticated()    Sensitive ops — rejects remember-me tokens
+hasRole("X")            Coarse-grained role access (ROLE_ prepended auto)
+hasAuthority("x:y")     Fine-grained permission (exact string, no ROLE_ prepend)
+hasAnyRole(...)         OR across multiple roles
+denyAll()               Block a path entirely (dev safety net)
+access(manager)         Custom logic: IP, time, tenant, DB-driven rules
+@PreAuthorize           Per-method rules — most powerful, use this most
+@PostAuthorize          Check return value (ownership on loaded object)
+@PreFilter              Filter input collection before method runs
+@PostFilter             Filter output collection after method returns
+Pattern	Use case
+Multiple @Order chains	Separate REST API, Web MVC, Actuator configs
+RoleHierarchy	ADMIN inherits MANAGER inherits USER
+@orderSecurity.isOwner() SpEL	Domain-object ownership checks
+DynamicAuthorizationManager	DB-driven per-route permissions (multi-tenant SaaS)
+BusinessHoursAuthorizationManager	Time/context-based access policies
+
+Chapter 4: Authentication Mechanisms
+
+This chapter covers every authentication mechanism Spring Security supports — wired together in a production-ready enterprise setup.
+
+4.1 HTTP Basic Authentication
+
+Simplest mechanism — credentials sent as Base64 in every request header. Best for machine-to-machine, internal APIs, and Actuator endpoints.
+
+java
+// HTTP Basic config — typically for internal/actuator chains
+@Bean
+@Order(1)
+public SecurityFilterChain basicAuthChain(HttpSecurity http) throws Exception {
+    return http
+        .securityMatcher("/actuator/**", "/internal/**")
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/actuator/health").permitAll()
+            .anyRequest().hasRole("MONITORING")
+        )
+        .httpBasic(basic -> basic
+            // Custom realm name shown in browser auth dialog
+            .realmName("Enterprise Monitoring")
+            // Custom entry point — returns JSON instead of WWW-Authenticate header
+            .authenticationEntryPoint(new BasicAuthEntryPoint())
+        )
+        .sessionManagement(s -> s
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .build();
+}
+java
+// Custom BasicAuth entry point — JSON response for API clients
+@Component
+public class BasicAuthEntryPoint implements AuthenticationEntryPoint {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public void commence(HttpServletRequest request,
+                         HttpServletResponse response,
+                         AuthenticationException ex) throws IOException {
+
+        // Only send WWW-Authenticate for browser clients
+        String accept = request.getHeader(HttpHeaders.ACCEPT);
+        if (accept != null && accept.contains(MediaType.TEXT_HTML_VALUE)) {
+            response.addHeader(HttpHeaders.WWW_AUTHENTICATE,
+                               "Basic realm=\"Enterprise\"");
+        }
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+        objectMapper.writeValue(response.getOutputStream(), Map.of(
+            "status",    401,
+            "error",     "Unauthorized",
+            "message",   "Valid credentials required",
+            "timestamp", Instant.now().toString()
+        ));
+    }
+}
+java
+// Testing HTTP Basic
+@SpringBootTest
+@AutoConfigureMockMvc
+class BasicAuthTest {
+
+    @Autowired MockMvc mockMvc;
+
+    @Test
+    void withValidCredentials_returns200() throws Exception {
+        mockMvc.perform(get("/actuator/metrics")
+                .with(httpBasic("monitor", "secret")))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void withNoCredentials_returns401() throws Exception {
+        mockMvc.perform(get("/actuator/metrics"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void withWrongCredentials_returns401() throws Exception {
+        mockMvc.perform(get("/actuator/metrics")
+                .with(httpBasic("monitor", "wrongpassword")))
+            .andExpect(status().isUnauthorized());
+    }
+}
+4.2 Form-Based Authentication
+
+The classic browser login flow — Spring Security handles the entire lifecycle.
+
+java
+// Full form login configuration
+@Bean
+@Order(3)
+public SecurityFilterChain formLoginChain(HttpSecurity http) throws Exception {
+    return http
+        .securityMatcher("/**")
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/", "/login", "/register",
+                             "/forgot-password", "/reset-password",
+                             "/css/**", "/js/**", "/images/**").permitAll()
+            .requestMatchers("/admin/**").hasRole("ADMIN")
+            .anyRequest().authenticated()
+        )
+        .formLogin(form -> form
+            .loginPage("/login")                        // custom login page
+            .loginProcessingUrl("/login")               // POST endpoint Spring handles
+            .usernameParameter("email")                 // custom field names
+            .passwordParameter("password")
+            .defaultSuccessUrl("/dashboard", true)      // always redirect here on success
+            .successHandler(customSuccessHandler())     // OR use custom handler
+            .failureUrl("/login?error=true")
+            .failureHandler(customFailureHandler())     // OR use custom handler
+            .permitAll()
+        )
+        .logout(logout -> logout
+            .logoutUrl("/logout")
+            .logoutSuccessUrl("/login?logout=true")
+            .logoutSuccessHandler(customLogoutSuccessHandler())
+            .addLogoutHandler(auditLogoutHandler())     // custom: write audit log
+            .invalidateHttpSession(true)
+            .deleteCookies("JSESSIONID", "remember-me")
+            .clearAuthentication(true)
+            .permitAll()
+        )
+        .build();
+}
+java
+// Custom AuthenticationSuccessHandler
+// — redirect based on role, write audit log, set last-login timestamp
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class CustomAuthSuccessHandler
+        implements AuthenticationSuccessHandler {
+
+    private final UserRepository userRepository;
+    private final AuditService auditService;
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication)
+            throws IOException {
+
+        String username = authentication.getName();
+        log.info("Login success: {}", username);
+
+        // Update last login timestamp
+        userRepository.updateLastLogin(username, Instant.now());
+
+        // Write audit event
+        auditService.record(AuditEvent.builder()
+            .type("LOGIN_SUCCESS")
+            .username(username)
+            .ip(getClientIp(request))
+            .userAgent(request.getHeader("User-Agent"))
+            .build());
+
+        // Role-based redirect
+        String redirectUrl = determineRedirectUrl(authentication);
+        new DefaultRedirectStrategy()
+            .sendRedirect(request, response, redirectUrl);
+    }
+
+    private String determineRedirectUrl(Authentication auth) {
+        Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
+
+        if (hasRole(authorities, "ROLE_ADMIN"))   return "/admin/dashboard";
+        if (hasRole(authorities, "ROLE_MANAGER")) return "/manager/dashboard";
+        return "/user/dashboard";
+    }
+
+    private boolean hasRole(Collection<? extends GrantedAuthority> auths,
+                            String role) {
+        return auths.stream()
+            .anyMatch(a -> a.getAuthority().equals(role));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        return StringUtils.hasText(forwarded)
+            ? forwarded.split(",")[0].trim()
+            : request.getRemoteAddr();
+    }
+}
+java
+// Custom AuthenticationFailureHandler
+// — track failed attempts, lock account after threshold
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class CustomAuthFailureHandler
+        implements AuthenticationFailureHandler {
+
+    private final LoginAttemptService loginAttemptService;
+    private final AuditService auditService;
+    private final ObjectMapper objectMapper;
+
+    @Override
+    public void onAuthenticationFailure(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        AuthenticationException ex)
+            throws IOException {
+
+        String username = request.getParameter("email");
+        String ip       = request.getRemoteAddr();
+
+        log.warn("Login failed for user: {} from IP: {}", username, ip);
+
+        // Track and lock
+        loginAttemptService.recordFailure(username, ip);
+
+        // Audit
+        auditService.record(AuditEvent.builder()
+            .type("LOGIN_FAILURE")
+            .username(username)
+            .ip(ip)
+            .reason(ex.getMessage())
+            .build());
+
+        // Respond — API clients get JSON, browsers get redirect
+        String accept = request.getHeader(HttpHeaders.ACCEPT);
+        if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(response.getOutputStream(), Map.of(
+                "status",  401,
+                "error",   "Authentication failed",
+                "message", sanitizeMessage(ex),
+                "locked",  loginAttemptService.isLocked(username)
+            ));
+        } else {
+            String redirectUrl = loginAttemptService.isLocked(username)
+                ? "/login?locked=true"
+                : "/login?error=true";
+            response.sendRedirect(redirectUrl);
+        }
+    }
+
+    // Never expose internal exception messages to clients
+    private String sanitizeMessage(AuthenticationException ex) {
+        if (ex instanceof LockedException)          return "Account is locked";
+        if (ex instanceof DisabledException)        return "Account is disabled";
+        if (ex instanceof BadCredentialsException)  return "Invalid credentials";
+        return "Authentication failed";
+    }
+}
+java
+// Login attempt tracking — brute force protection
+@Service
+@RequiredArgsConstructor
+public class LoginAttemptService {
+
+    private static final int MAX_ATTEMPTS = 5;
+    private static final Duration LOCK_DURATION = Duration.ofMinutes(30);
+
+    // Use Redis in production for distributed apps
+    private final RedisTemplate<String, Integer> redisTemplate;
+
+    public void recordFailure(String username, String ip) {
+        String userKey = "login:fail:user:" + username;
+        String ipKey   = "login:fail:ip:"   + ip;
+
+        increment(userKey);
+        increment(ipKey);
+    }
+
+    public void recordSuccess(String username) {
+        // Clear on success
+        redisTemplate.delete("login:fail:user:" + username);
+    }
+
+    public boolean isLocked(String username) {
+        Integer attempts = redisTemplate.opsForValue()
+            .get("login:fail:user:" + username);
+        return attempts != null && attempts >= MAX_ATTEMPTS;
+    }
+
+    private void increment(String key) {
+        redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, LOCK_DURATION);
+    }
+}
+4.3 Session-Based Authentication
+
+Stateful sessions — browser apps, traditional MVC, SSO within a cluster.
+
+java
+// Session management — enterprise patterns
+@Bean
+public SecurityFilterChain sessionChain(HttpSecurity http) throws Exception {
+    return http
+        .sessionManagement(session -> session
+            // Strategy: ALWAYS | IF_REQUIRED | NEVER | STATELESS
+            .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+
+            // Prevent session fixation attacks
+            // CHANGE_SESSION_ID (default) — keeps attributes, issues new ID
+            // NEW_SESSION — new session, copies only Spring Security attrs
+            // MIGRATE_SESSION — new session ID, copies all attributes
+            // NONE — no protection (never use in production)
+            .sessionFixation(fix -> fix.changeSessionId())
+
+            // Concurrent session control
+            .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)     // kick old session (true = block new)
+                .expiredSessionStrategy(customExpiredStrategy())
+        )
+        .build();
+}
+java
+// SessionRegistry — track all active sessions (needed for admin: force logout)
+@Configuration
+public class SessionConfig {
+
+    // Required bean for concurrent session control
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    // Spring Boot needs this to register sessions automatically
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
+}
+java
+// Admin: force-logout any user by username
+@Service
+@RequiredArgsConstructor
+public class SessionManagementService {
+
+    private final SessionRegistry sessionRegistry;
+
+    // Force-expire all sessions for a user
+    public void forceLogout(String username) {
+        sessionRegistry.getAllPrincipals().stream()
+            .filter(p -> {
+                if (p instanceof UserDetails ud) {
+                    return ud.getUsername().equals(username);
+                }
+                return p.toString().equals(username);
+            })
+            .flatMap(p -> sessionRegistry.getAllSessions(p, false).stream())
+            .forEach(SessionInformation::expireNow);
+    }
+
+    // List all active sessions (for admin dashboard)
+    public List<ActiveSessionDto> getActiveSessions() {
+        return sessionRegistry.getAllPrincipals().stream()
+            .flatMap(p -> sessionRegistry.getAllSessions(p, false).stream())
+            .map(info -> new ActiveSessionDto(
+                info.getSessionId(),
+                info.getPrincipal().toString(),
+                info.getLastRequest()
+            ))
+            .collect(Collectors.toList());
+    }
+}
+java
+// Custom expired session strategy — JSON or redirect
+@Component
+public class CustomExpiredSessionStrategy
+        implements SessionInformationExpiredStrategy {
+
+    @Override
+    public void onExpiredSessionDetected(
+            SessionInformationExpiredEvent event) throws IOException {
+
+        HttpServletResponse response = event.getResponse();
+        HttpServletRequest  request  = event.getRequest();
+
+        String accept = request.getHeader(HttpHeaders.ACCEPT);
+        if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write("""
+                {"status":401,"message":"Session expired — logged in elsewhere"}
+                """);
+        } else {
+            response.sendRedirect("/login?expired=true");
+        }
+    }
+}
+4.4 Custom Login & Logout — Full REST API Flow
+
+For JWT-based REST APIs you own the entire auth flow — no form, no redirect.
+
+java
+// AuthController — the entry point for all auth operations
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+@Slf4j
+public class AuthController {
+
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
+    private final LoginAttemptService loginAttemptService;
+
+    // ── Login ─────────────────────────────────────────────────────────────
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(
+            @RequestBody @Valid LoginRequest request,
+            HttpServletRequest httpRequest) {
+
+        String ip = getClientIp(httpRequest);
+
+        // Check brute-force lock before even attempting auth
+        if (loginAttemptService.isLocked(request.getUsername())) {
+            throw new AccountLockedException(
+                "Account locked. Try again in 30 minutes.");
+        }
+
+        try {
+            // Delegate to Spring Security's AuthenticationManager
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    request.getUsername(),
+                    request.getPassword()
+                )
+            );
+
+            // Auth succeeded — clear failure count
+            loginAttemptService.recordSuccess(request.getUsername());
+
+            CustomUserPrincipal principal =
+                (CustomUserPrincipal) authentication.getPrincipal();
+
+            // Generate tokens
+            String accessToken  = jwtService.generateAccessToken(principal);
+            String refreshToken = refreshTokenService.create(principal.getUserId());
+
+            log.info("Login success: {} from {}", request.getUsername(), ip);
+
+            return ResponseEntity.ok(AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtService.getAccessTokenExpiry())
+                .userId(principal.getUserId())
+                .username(principal.getUsername())
+                .roles(principal.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList()))
+                .build());
+
+        } catch (AuthenticationException ex) {
+            loginAttemptService.recordFailure(request.getUsername(), ip);
+            log.warn("Login failed: {} from {} — {}", request.getUsername(), ip,
+                     ex.getMessage());
+            // Sanitize — never reveal if username or password was wrong
+            throw new BadCredentialsException("Invalid credentials");
+        }
+    }
+
+    // ── Refresh Token ─────────────────────────────────────────────────────
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(
+            @RequestBody @Valid RefreshRequest request) {
+
+        RefreshToken refreshToken = refreshTokenService
+            .validateAndGet(request.getRefreshToken());
+
+        CustomUserPrincipal principal =
+            userService.loadPrincipalById(refreshToken.getUserId());
+
+        String newAccessToken  = jwtService.generateAccessToken(principal);
+        String newRefreshToken = refreshTokenService.rotate(refreshToken);
+
+        return ResponseEntity.ok(AuthResponse.builder()
+            .accessToken(newAccessToken)
+            .refreshToken(newRefreshToken)
+            .tokenType("Bearer")
+            .expiresIn(jwtService.getAccessTokenExpiry())
+            .build());
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @RequestBody @Valid LogoutRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        // Revoke refresh token
+        refreshTokenService.revoke(request.getRefreshToken());
+
+        // Add access token to blacklist until expiry
+        jwtService.blacklistToken(request.getAccessToken());
+
+        log.info("Logout: {}", principal.getUsername());
+
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Logout All Devices ────────────────────────────────────────────────
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAllDevices(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        refreshTokenService.revokeAllForUser(principal.getUserId());
+        jwtService.blacklistAllTokensForUser(principal.getUserId());
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        return StringUtils.hasText(xff)
+            ? xff.split(",")[0].trim()
+            : request.getRemoteAddr();
+    }
+}
+java
+// DTOs — clean API contracts
+public record LoginRequest(
+    @NotBlank @Email String username,
+    @NotBlank @Size(min = 8) String password
+) {}
+
+public record RefreshRequest(
+    @NotBlank String refreshToken
+) {}
+
+public record LogoutRequest(
+    @NotBlank String accessToken,
+    @NotBlank String refreshToken
+) {}
+
+@Builder
+public record AuthResponse(
+    String accessToken,
+    String refreshToken,
+    String tokenType,
+    long   expiresIn,
+    Long   userId,
+    String username,
+    List<String> roles
+) {}
+java
+// RefreshToken entity + service
+@Entity
+@Table(name = "refresh_tokens")
+@Data @Builder
+public class RefreshToken {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String token;
+
+    @Column(nullable = false)
+    private Long userId;
+
+    @Column(nullable = false)
+    private Instant expiresAt;
+
+    private boolean revoked;
+}
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class RefreshTokenService {
+
+    private final RefreshTokenRepository tokenRepository;
+
+    @Value("${app.jwt.refresh-expiry:604800}")  // 7 days default
+    private long refreshExpirySeconds;
+
+    public String create(Long userId) {
+        RefreshToken token = RefreshToken.builder()
+            .token(UUID.randomUUID().toString())
+            .userId(userId)
+            .expiresAt(Instant.now().plusSeconds(refreshExpirySeconds))
+            .revoked(false)
+            .build();
+        return tokenRepository.save(token).getToken();
+    }
+
+    public RefreshToken validateAndGet(String tokenValue) {
+        RefreshToken token = tokenRepository.findByToken(tokenValue)
+            .orElseThrow(() ->
+                new InvalidTokenException("Refresh token not found"));
+
+        if (token.isRevoked()) {
+            // Token reuse detected — revoke ALL tokens for this user
+            // (indicates refresh token theft)
+            log.warn("Refresh token reuse detected for userId: {}",
+                     token.getUserId());
+            revokeAllForUser(token.getUserId());
+            throw new InvalidTokenException("Refresh token reuse detected");
+        }
+
+        if (token.getExpiresAt().isBefore(Instant.now())) {
+            throw new InvalidTokenException("Refresh token expired");
+        }
+
+        return token;
+    }
+
+    // Token rotation — one-time use tokens
+    public String rotate(RefreshToken old) {
+        old.setRevoked(true);
+        tokenRepository.save(old);
+        return create(old.getUserId());
+    }
+
+    public void revoke(String tokenValue) {
+        tokenRepository.findByToken(tokenValue)
+            .ifPresent(t -> {
+                t.setRevoked(true);
+                tokenRepository.save(t);
+            });
+    }
+
+    public void revokeAllForUser(Long userId) {
+        tokenRepository.revokeAllByUserId(userId);
+    }
+}
+4.5 Custom AuthenticationProvider
+
+When you need an auth mechanism beyond username/password — OTP, API keys, certificates.
+
+java
+// Custom AuthenticationProvider — API Key authentication
+public class ApiKeyAuthenticationProvider
+        implements AuthenticationProvider {
+
+    private final ApiKeyRepository apiKeyRepository;
+
+    @Override
+    public Authentication authenticate(Authentication authentication)
+            throws AuthenticationException {
+
+        ApiKeyAuthentication request = (ApiKeyAuthentication) authentication;
+        String apiKey = request.getCredentials().toString();
+
+        return apiKeyRepository.findByKeyAndActive(apiKey, true)
+            .map(key -> {
+                List<GrantedAuthority> authorities = key.getScopes().stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+
+                return (Authentication) new ApiKeyAuthentication(
+                    key.getClientId(),  // principal
+                    apiKey,             // credentials
+                    authorities
+                );
+            })
+            .orElseThrow(() ->
+                new BadCredentialsException("Invalid API key"));
+    }
+
+    @Override
+    public boolean supports(Class<?> authentication) {
+        return ApiKeyAuthentication.class.isAssignableFrom(authentication);
+    }
+}
+java
+// Custom Authentication token for API keys
+public class ApiKeyAuthentication extends AbstractAuthenticationToken {
+
+    private final Object principal;
+    private final Object credentials;
+
+    // Pre-auth (not yet verified)
+    public ApiKeyAuthentication(String apiKey) {
+        super(null);
+        this.principal   = null;
+        this.credentials = apiKey;
+        setAuthenticated(false);
+    }
+
+    // Post-auth (verified)
+    public ApiKeyAuthentication(String clientId, String apiKey,
+                                List<GrantedAuthority> authorities) {
+        super(authorities);
+        this.principal   = clientId;
+        this.credentials = apiKey;
+        setAuthenticated(true);
+    }
+
+    @Override public Object getPrincipal()   { return principal; }
+    @Override public Object getCredentials() { return credentials; }
+}
+java
+// ApiKey filter — extracts key from header and triggers authentication
+@Component
+@RequiredArgsConstructor
+public class ApiKeyAuthFilter extends OncePerRequestFilter {
+
+    private static final String API_KEY_HEADER = "X-API-Key";
+    private final AuthenticationManager authenticationManager;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain chain)
+            throws ServletException, IOException {
+
+        String apiKey = request.getHeader(API_KEY_HEADER);
+
+        if (StringUtils.hasText(apiKey)) {
+            try {
+                Authentication auth = authenticationManager.authenticate(
+                    new ApiKeyAuthentication(apiKey)
+                );
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (AuthenticationException ex) {
+                SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write(
+                    "{\"status\":401,\"error\":\"Invalid API Key\"}");
+                return;
+            }
+        }
+
+        chain.doFilter(request, response);
+    }
+}
+4.6 Authentication Flow — End-to-End Test
+java
+@SpringBootTest
+@AutoConfigureMockMvc
+class AuthenticationFlowTest {
+
+    @Autowired MockMvc mockMvc;
+    @Autowired ObjectMapper objectMapper;
+
+    // Full login → access → refresh → logout cycle
+    @Test
+    void fullAuthCycle_succeeds() throws Exception {
+
+        // 1. Login
+        String loginBody = """
+            {"username":"user@example.com","password":"P@ssword1"}
+            """;
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+            .andReturn();
+
+        AuthResponse auth = objectMapper.readValue(
+            loginResult.getResponse().getContentAsString(), AuthResponse.class);
+
+        // 2. Access protected resource
+        mockMvc.perform(get("/api/users/profile")
+                .header("Authorization", "Bearer " + auth.accessToken()))
+            .andExpect(status().isOk());
+
+        // 3. Refresh token
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"refreshToken":"%s"}
+                    """.formatted(auth.refreshToken())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andReturn();
+
+        AuthResponse refreshed = objectMapper.readValue(
+            refreshResult.getResponse().getContentAsString(), AuthResponse.class);
+
+        // 4. Old refresh token is now invalid (token rotation)
+        mockMvc.perform(post("/api/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"refreshToken":"%s"}
+                    """.formatted(auth.refreshToken())))
+            .andExpect(status().isUnauthorized());
+
+        // 5. Logout
+        mockMvc.perform(post("/api/auth/logout")
+                .header("Authorization", "Bearer " + refreshed.accessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"accessToken":"%s","refreshToken":"%s"}
+                    """.formatted(refreshed.accessToken(), refreshed.refreshToken())))
+            .andExpect(status().isNoContent());
+
+        // 6. Access token now invalid
+        mockMvc.perform(get("/api/users/profile")
+                .header("Authorization", "Bearer " + refreshed.accessToken()))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void bruteForce_locksAfter5Failures() throws Exception {
+        String badLogin = """
+            {"username":"victim@example.com","password":"wrong"}
+            """;
+
+        // 5 failures
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(badLogin))
+                .andExpect(status().isUnauthorized());
+        }
+
+        // 6th attempt — even with correct password — is locked
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"victim@example.com","password":"P@ssword1"}
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.locked").value(true));
+    }
+}
+Chapter 4 — Mechanisms at a Glance
+Mechanism	Best for	Session?	Token
+HTTP Basic	Internal APIs, Actuator, M2M	Stateless	Base64 credentials per request
+Form Login	Browser MVC apps	Stateful	JSESSIONID cookie
+Session-based	Clustered web apps	Stateful	Spring Session + Redis
+JWT / Custom	REST APIs, microservices, SPAs	Stateless	Bearer token in Authorization
+API Key	B2B integrations, webhooks	Stateless	X-API-Key header
+Login Request
+    │
+    ▼
+AuthenticationManager.authenticate()
+    │
+    ├── DaoAuthenticationProvider   ← username + password
+    ├── ApiKeyAuthenticationProvider ← X-API-Key header
+    └── CustomOtpProvider           ← OTP / MFA
+              │
+              ▼ (on success)
+        SecurityContext.setAuthentication()
+              │
+              ▼
+        Generate JWT / Session / API Key response
+              │
+              ▼
+        AuditLog.record(LOGIN_SUCCESS)
+
+Say "Chapter 5" to continue with User Management — JdbcUserDetailsManager, custom UserDetailsService, Role & Permission tables, User Registration APIs with full enterprise code!
+
+"Chapter 5" to continue with User Management
+
+Chapter 5: User Management
+
+This chapter covers the complete user management stack — from database schema design to registration APIs, role/permission modeling, and enterprise patterns like multi-tenancy and account lifecycle management.
+
+5.1 Database Schema — Role & Permission Tables
+
+The foundation. Get this right and everything else is clean.
+
+sql
+-- Full RBAC schema — production-ready
+-- users
+CREATE TABLE users (
+    id                  BIGSERIAL PRIMARY KEY,
+    username            VARCHAR(50)  NOT NULL UNIQUE,
+    email               VARCHAR(100) NOT NULL UNIQUE,
+    password            VARCHAR(255) NOT NULL,          -- BCrypt hash
+    first_name          VARCHAR(50),
+    last_name           VARCHAR(50),
+    tenant_id           VARCHAR(50)  NOT NULL DEFAULT 'default',
+    enabled             BOOLEAN      NOT NULL DEFAULT TRUE,
+    account_locked      BOOLEAN      NOT NULL DEFAULT FALSE,
+    credentials_expired BOOLEAN      NOT NULL DEFAULT FALSE,
+    account_expired     BOOLEAN      NOT NULL DEFAULT FALSE,
+    email_verified      BOOLEAN      NOT NULL DEFAULT FALSE,
+    failed_attempts     INT          NOT NULL DEFAULT 0,
+    last_login          TIMESTAMP,
+    password_changed_at TIMESTAMP,
+    created_at          TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+-- roles
+CREATE TABLE roles (
+    id          BIGSERIAL    PRIMARY KEY,
+    name        VARCHAR(50)  NOT NULL UNIQUE,  -- e.g. ADMIN, MANAGER, USER
+    description VARCHAR(255),
+    created_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+-- permissions (fine-grained authorities)
+CREATE TABLE permissions (
+    id          BIGSERIAL    PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL UNIQUE,  -- e.g. user:read, order:write
+    description VARCHAR(255),
+    module      VARCHAR(50)                    -- group by feature module
+);
+
+-- role ↔ permission (many-to-many)
+CREATE TABLE role_permissions (
+    role_id       BIGINT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id BIGINT NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id)
+);
+
+-- user ↔ role (many-to-many)
+CREATE TABLE user_roles (
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id BIGINT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- email verification & password reset tokens
+CREATE TABLE user_tokens (
+    id         BIGSERIAL    PRIMARY KEY,
+    user_id    BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token      VARCHAR(255) NOT NULL UNIQUE,
+    type       VARCHAR(20)  NOT NULL,   -- VERIFY_EMAIL | RESET_PASSWORD
+    expires_at TIMESTAMP    NOT NULL,
+    used       BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+-- indexes
+CREATE INDEX idx_users_email     ON users(email);
+CREATE INDEX idx_users_tenant    ON users(tenant_id);
+CREATE INDEX idx_tokens_token    ON user_tokens(token);
+CREATE INDEX idx_tokens_user_type ON user_tokens(user_id, type);
+
+-- seed default roles and permissions
+INSERT INTO roles (name, description) VALUES
+    ('ADMIN',   'Full system access'),
+    ('MANAGER', 'Department-level access'),
+    ('USER',    'Standard user access'),
+    ('GUEST',   'Read-only access');
+
+INSERT INTO permissions (name, description, module) VALUES
+    ('user:read',    'View users',    'user'),
+    ('user:write',   'Create/update users', 'user'),
+    ('user:delete',  'Delete users',  'user'),
+    ('order:read',   'View orders',   'order'),
+    ('order:write',  'Create orders', 'order'),
+    ('order:delete', 'Delete orders', 'order'),
+    ('report:read',  'View reports',  'report'),
+    ('report:export','Export reports','report');
+
+-- Assign permissions to roles
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'ADMIN';   -- admin gets all permissions
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'MANAGER'
+  AND p.name IN ('user:read','order:read','order:write','report:read');
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name = 'USER'
+  AND p.name IN ('order:read','order:write');
+5.2 JPA Entities
+java
+// User entity — maps exactly to schema above
+@Entity
+@Table(name = "users")
+@Data @Builder
+@NoArgsConstructor @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
+public class User {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 50)
+    private String username;
+
+    @Column(unique = true, nullable = false, length = 100)
+    private String email;
+
+    @Column(nullable = false)
+    @JsonIgnore                          // never serialize password
+    private String password;
+
+    private String firstName;
+    private String lastName;
+
+    @Column(nullable = false)
+    private String tenantId = "default";
+
+    @Builder.Default
+    private boolean enabled             = true;
+    @Builder.Default
+    private boolean accountLocked       = false;
+    @Builder.Default
+    private boolean credentialsExpired  = false;
+    @Builder.Default
+    private boolean accountExpired      = false;
+    @Builder.Default
+    private boolean emailVerified       = false;
+
+    @Builder.Default
+    private int failedAttempts          = 0;
+    private Instant lastLogin;
+    private Instant passwordChangedAt;
+
+    @CreatedDate
+    private Instant createdAt;
+    @LastModifiedDate
+    private Instant updatedAt;
+
+    // Roles — eagerly loaded so UserDetailsService has them immediately
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns        = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+}
+java
+// Role entity
+@Entity
+@Table(name = "roles")
+@Data @Builder
+@NoArgsConstructor @AllArgsConstructor
+public class Role {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 50)
+    private String name;
+
+    private String description;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "role_permissions",
+        joinColumns        = @JoinColumn(name = "role_id"),
+        inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    @Builder.Default
+    private Set<Permission> permissions = new HashSet<>();
+}
+java
+// Permission entity
+@Entity
+@Table(name = "permissions")
+@Data @Builder
+@NoArgsConstructor @AllArgsConstructor
+public class Permission {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 100)
+    private String name;       // e.g. "order:write"
+
+    private String description;
+    private String module;     // e.g. "order"
+}
+java
+// UserToken entity — verification + reset tokens
+@Entity
+@Table(name = "user_tokens")
+@Data @Builder
+@NoArgsConstructor @AllArgsConstructor
+public class UserToken {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(unique = true, nullable = false)
+    private String token;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TokenType type;
+
+    @Column(nullable = false)
+    private Instant expiresAt;
+
+    @Builder.Default
+    private boolean used = false;
+
+    @CreatedDate
+    private Instant createdAt;
+
+    public enum TokenType {
+        VERIFY_EMAIL, RESET_PASSWORD
+    }
+
+    public boolean isExpired() {
+        return Instant.now().isAfter(expiresAt);
+    }
+}
+5.3 Repositories
+java
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+
+    Optional<User> findByEmail(String email);
+    Optional<User> findByUsername(String username);
+
+    boolean existsByEmail(String email);
+    boolean existsByUsername(String username);
+
+    // Fetch with roles + permissions in one query — avoids N+1
+    @Query("""
+        SELECT DISTINCT u FROM User u
+        LEFT JOIN FETCH u.roles r
+        LEFT JOIN FETCH r.permissions
+        WHERE u.email = :email
+        """)
+    Optional<User> findByEmailWithRoles(@Param("email") String email);
+
+    // Multi-tenant listing with pagination
+    Page<User> findByTenantId(String tenantId, Pageable pageable);
+
+    // Bulk operations
+    @Modifying
+    @Query("UPDATE User u SET u.lastLogin = :time WHERE u.email = :email")
+    void updateLastLogin(@Param("email") String email,
+                         @Param("time") Instant time);
+
+    @Modifying
+    @Query("UPDATE User u SET u.failedAttempts = u.failedAttempts + 1 " +
+           "WHERE u.email = :email")
+    void incrementFailedAttempts(@Param("email") String email);
+
+    @Modifying
+    @Query("UPDATE User u SET u.failedAttempts = 0, u.accountLocked = false " +
+           "WHERE u.email = :email")
+    void resetFailedAttempts(@Param("email") String email);
+
+    @Modifying
+    @Query("UPDATE User u SET u.accountLocked = true WHERE u.email = :email")
+    void lockAccount(@Param("email") String email);
+}
+
+@Repository
+public interface RoleRepository extends JpaRepository<Role, Long> {
+    Optional<Role> findByName(String name);
+    List<Role> findByNameIn(Set<String> names);
+}
+
+@Repository
+public interface UserTokenRepository extends JpaRepository<UserToken, Long> {
+    Optional<UserToken> findByTokenAndType(String token, UserToken.TokenType type);
+
+    @Modifying
+    @Query("UPDATE UserToken t SET t.used = true " +
+           "WHERE t.user.id = :userId AND t.type = :type")
+    void invalidateAllForUserAndType(@Param("userId") Long userId,
+                                     @Param("type") UserToken.TokenType type);
+
+    // Cleanup job — delete expired tokens
+    @Modifying
+    @Query("DELETE FROM UserToken t WHERE t.expiresAt < :now OR t.used = true")
+    void deleteExpiredAndUsed(@Param("now") Instant now);
+}
+5.4 Custom UserDetailsService — Production Grade
+java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EnterpriseUserDetailsService implements UserDetailsService {
+
+    private final UserRepository userRepository;
+
+    // Cache loaded user details — keyed by email
+    @Cacheable(value = "userDetails", key = "#email",
+               unless = "#result == null")
+    @Override
+    public UserDetails loadUserByUsername(String email)
+            throws UsernameNotFoundException {
+
+        log.debug("Loading UserDetails for: {}", email);
+
+        User user = userRepository.findByEmailWithRoles(email)
+            .orElseThrow(() -> {
+                // Same message for "not found" and "wrong password"
+                // prevents user enumeration
+                log.warn("UserDetails not found for: {}", email);
+                return new UsernameNotFoundException("Invalid credentials");
+            });
+
+        return buildPrincipal(user);
+    }
+
+    // Called by JwtAuthFilter to reload user by ID (from JWT claims)
+    @Cacheable(value = "userDetailsById", key = "#userId")
+    public UserDetails loadUserById(Long userId) {
+        return userRepository.findById(userId)
+            .map(this::buildPrincipal)
+            .orElseThrow(() ->
+                new UsernameNotFoundException("User not found: " + userId));
+    }
+
+    private CustomUserPrincipal buildPrincipal(User user) {
+        return CustomUserPrincipal.builder()
+            .userId(user.getId())
+            .username(user.getEmail())
+            .email(user.getEmail())
+            .tenantId(user.getTenantId())
+            .authorities(buildAuthorities(user))
+            .enabled(user.isEnabled())
+            .accountNonLocked(!user.isAccountLocked())
+            .accountNonExpired(!user.isAccountExpired())
+            .credentialsNonExpired(!user.isCredentialsExpired())
+            .build();
+    }
+
+    private List<GrantedAuthority> buildAuthorities(User user) {
+        return user.getRoles().stream()
+            .flatMap(role -> {
+                List<GrantedAuthority> auths = new ArrayList<>();
+                // Add the role itself
+                auths.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+                // Add all fine-grained permissions from this role
+                role.getPermissions().stream()
+                    .map(p -> new SimpleGrantedAuthority(p.getName()))
+                    .forEach(auths::add);
+                return auths.stream();
+            })
+            .distinct()
+            .collect(Collectors.toList());
+    }
+
+    @CacheEvict(value = {"userDetails", "userDetailsById"},
+                allEntries = true)
+    public void evictCache() {
+        log.info("User details cache evicted");
+    }
+
+    @CacheEvict(value = "userDetails", key = "#email")
+    public void evictCacheForUser(String email) {
+        log.info("Cache evicted for: {}", email);
+    }
+}
+5.5 User Registration API
+java
+// RegistrationService — full lifecycle
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class RegistrationService {
+
+    private final UserRepository         userRepository;
+    private final RoleRepository         roleRepository;
+    private final UserTokenRepository    tokenRepository;
+    private final PasswordEncoder        passwordEncoder;
+    private final EmailService           emailService;
+    private final EnterpriseUserDetailsService userDetailsService;
+
+    private static final Duration EMAIL_TOKEN_EXPIRY = Duration.ofHours(24);
+
+    // ── Register ──────────────────────────────────────────────────────────
+    public UserResponseDto register(RegisterRequest request) {
+
+        // 1. Validate uniqueness
+        if (userRepository.existsByEmail(request.email())) {
+            throw new UserAlreadyExistsException(
+                "Email already registered: " + request.email());
+        }
+        if (userRepository.existsByUsername(request.username())) {
+            throw new UserAlreadyExistsException(
+                "Username already taken: " + request.username());
+        }
+
+        // 2. Assign default role
+        Role userRole = roleRepository.findByName("USER")
+            .orElseThrow(() -> new IllegalStateException("Role USER not found"));
+
+        // 3. Build and persist user
+        User user = User.builder()
+            .username(request.username())
+            .email(request.email())
+            .password(passwordEncoder.encode(request.password()))
+            .firstName(request.firstName())
+            .lastName(request.lastName())
+            .tenantId(request.tenantId() != null
+                       ? request.tenantId() : "default")
+            .roles(Set.of(userRole))
+            .enabled(true)
+            .emailVerified(false)
+            .build();
+
+        User saved = userRepository.save(user);
+        log.info("Registered user: {} (id={})", saved.getEmail(), saved.getId());
+
+        // 4. Send verification email
+        sendVerificationEmail(saved);
+
+        return UserResponseDto.from(saved);
+    }
+
+    // ── Verify Email ──────────────────────────────────────────────────────
+    public void verifyEmail(String token) {
+        UserToken userToken = tokenRepository
+            .findByTokenAndType(token, UserToken.TokenType.VERIFY_EMAIL)
+            .orElseThrow(() ->
+                new InvalidTokenException("Invalid verification token"));
+
+        if (userToken.isUsed()) {
+            throw new InvalidTokenException("Token already used");
+        }
+        if (userToken.isExpired()) {
+            throw new InvalidTokenException("Verification token expired");
+        }
+
+        User user = userToken.getUser();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        userToken.setUsed(true);
+        tokenRepository.save(userToken);
+
+        // Evict cache so next login loads fresh verified state
+        userDetailsService.evictCacheForUser(user.getEmail());
+        log.info("Email verified for: {}", user.getEmail());
+    }
+
+    // ── Resend Verification ───────────────────────────────────────────────
+    public void resendVerification(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                new UsernameNotFoundException("User not found"));
+
+        if (user.isEmailVerified()) {
+            throw new IllegalStateException("Email already verified");
+        }
+
+        // Invalidate old tokens
+        tokenRepository.invalidateAllForUserAndType(
+            user.getId(), UserToken.TokenType.VERIFY_EMAIL);
+
+        sendVerificationEmail(user);
+    }
+
+    // ── Forgot Password ───────────────────────────────────────────────────
+    public void forgotPassword(String email) {
+        // Always return success — prevents user enumeration
+        userRepository.findByEmail(email).ifPresent(user -> {
+            tokenRepository.invalidateAllForUserAndType(
+                user.getId(), UserToken.TokenType.RESET_PASSWORD);
+            sendPasswordResetEmail(user);
+        });
+    }
+
+    // ── Reset Password ────────────────────────────────────────────────────
+    public void resetPassword(ResetPasswordRequest request) {
+        UserToken userToken = tokenRepository
+            .findByTokenAndType(request.token(),
+                                UserToken.TokenType.RESET_PASSWORD)
+            .orElseThrow(() ->
+                new InvalidTokenException("Invalid reset token"));
+
+        if (userToken.isUsed() || userToken.isExpired()) {
+            throw new InvalidTokenException("Token is invalid or expired");
+        }
+
+        User user = userToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordChangedAt(Instant.now());
+        user.setCredentialsExpired(false);
+        userRepository.save(user);
+
+        userToken.setUsed(true);
+        tokenRepository.save(userToken);
+
+        // Force re-login everywhere
+        userDetailsService.evictCacheForUser(user.getEmail());
+        log.info("Password reset for: {}", user.getEmail());
+    }
+
+    // ── Private Helpers ───────────────────────────────────────────────────
+    private void sendVerificationEmail(User user) {
+        String token = generateAndSaveToken(
+            user, UserToken.TokenType.VERIFY_EMAIL, EMAIL_TOKEN_EXPIRY);
+        emailService.sendVerificationEmail(user.getEmail(), token);
+    }
+
+    private void sendPasswordResetEmail(User user) {
+        String token = generateAndSaveToken(
+            user, UserToken.TokenType.RESET_PASSWORD, Duration.ofHours(1));
+        emailService.sendPasswordResetEmail(user.getEmail(), token);
+    }
+
+    private String generateAndSaveToken(User user,
+                                        UserToken.TokenType type,
+                                        Duration expiry) {
+        String tokenValue = UUID.randomUUID().toString();
+        tokenRepository.save(UserToken.builder()
+            .user(user)
+            .token(tokenValue)
+            .type(type)
+            .expiresAt(Instant.now().plus(expiry))
+            .build());
+        return tokenValue;
+    }
+}
+5.6 Registration Controller
+java
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+@Slf4j
+public class RegistrationController {
+
+    private final RegistrationService registrationService;
+
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponseDto register(
+            @RequestBody @Valid RegisterRequest request) {
+        return registrationService.register(request);
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(
+            @RequestParam String token) {
+        registrationService.verifyEmail(token);
+        return ResponseEntity.ok(Map.of(
+            "message", "Email verified successfully. You can now log in."));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(
+            @RequestBody @Valid EmailRequest request) {
+        registrationService.resendVerification(request.email());
+        return ResponseEntity.ok(Map.of(
+            "message", "Verification email sent if account exists."));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @RequestBody @Valid EmailRequest request) {
+        registrationService.forgotPassword(request.email());
+        // Always same response — no user enumeration
+        return ResponseEntity.ok(Map.of(
+            "message", "If that email exists, a reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(
+            @RequestBody @Valid ResetPasswordRequest request) {
+        registrationService.resetPassword(request);
+        return ResponseEntity.ok(Map.of(
+            "message", "Password reset successfully."));
+    }
+}
+5.7 Admin User Management API
+java
+@RestController
+@RequestMapping("/api/admin/users")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminUserController {
+
+    private final AdminUserService adminUserService;
+
+    // Paginated user listing with filtering
+    @GetMapping
+    public Page<UserResponseDto> listUsers(
+            @RequestParam(defaultValue = "0")   int page,
+            @RequestParam(defaultValue = "20")  int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false) String tenantId,
+            @RequestParam(required = false) String search) {
+
+        return adminUserService.listUsers(
+            PageRequest.of(page, size, Sort.by(sortBy).descending()),
+            tenantId, search);
+    }
+
+    @GetMapping("/{id}")
+    public UserResponseDto getUser(@PathVariable Long id) {
+        return adminUserService.findById(id);
+    }
+
+    // Assign roles to user
+    @PutMapping("/{id}/roles")
+    public UserResponseDto updateRoles(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateRolesRequest request) {
+        return adminUserService.updateRoles(id, request.roleNames());
+    }
+
+    // Account lifecycle actions
+    @PutMapping("/{id}/enable")
+    public ResponseEntity<Void> enableUser(@PathVariable Long id) {
+        adminUserService.setEnabled(id, true);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/disable")
+    public ResponseEntity<Void> disableUser(@PathVariable Long id) {
+        adminUserService.setEnabled(id, false);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/lock")
+    public ResponseEntity<Void> lockUser(@PathVariable Long id) {
+        adminUserService.setLocked(id, true);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/unlock")
+    public ResponseEntity<Void> unlockUser(@PathVariable Long id) {
+        adminUserService.setLocked(id, false);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Force password reset on next login
+    @PutMapping("/{id}/expire-credentials")
+    public ResponseEntity<Void> expireCredentials(@PathVariable Long id) {
+        adminUserService.expireCredentials(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('user:delete')")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        adminUserService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+java
+// AdminUserService
+@Service
+@RequiredArgsConstructor
+@Transactional
+@Slf4j
+public class AdminUserService {
+
+    private final UserRepository     userRepository;
+    private final RoleRepository     roleRepository;
+    private final EnterpriseUserDetailsService userDetailsService;
+
+    public Page<UserResponseDto> listUsers(Pageable pageable,
+                                           String tenantId,
+                                           String search) {
+        // Dynamic query with Specifications
+        Specification<User> spec = Specification.where(null);
+
+        if (StringUtils.hasText(tenantId)) {
+            spec = spec.and((root, q, cb) ->
+                cb.equal(root.get("tenantId"), tenantId));
+        }
+        if (StringUtils.hasText(search)) {
+            spec = spec.and((root, q, cb) -> cb.or(
+                cb.like(cb.lower(root.get("email")),
+                        "%" + search.toLowerCase() + "%"),
+                cb.like(cb.lower(root.get("username")),
+                        "%" + search.toLowerCase() + "%")
+            ));
+        }
+
+        return userRepository.findAll(spec, pageable)
+            .map(UserResponseDto::from);
+    }
+
+    public UserResponseDto findById(Long id) {
+        return userRepository.findById(id)
+            .map(UserResponseDto::from)
+            .orElseThrow(() ->
+                new UserNotFoundException("User not found: " + id));
+    }
+
+    public UserResponseDto updateRoles(Long userId, Set<String> roleNames) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() ->
+                new UserNotFoundException("User not found: " + userId));
+
+        Set<Role> roles = new HashSet<>(roleRepository.findByNameIn(roleNames));
+        if (roles.size() != roleNames.size()) {
+            throw new IllegalArgumentException("One or more roles not found");
+        }
+
+        user.setRoles(roles);
+        User saved = userRepository.save(user);
+
+        userDetailsService.evictCacheForUser(user.getEmail());
+        log.info("Roles updated for user {}: {}", userId, roleNames);
+
+        return UserResponseDto.from(saved);
+    }
+
+    public void setEnabled(Long userId, boolean enabled) {
+        User user = getUser(userId);
+        user.setEnabled(enabled);
+        userRepository.save(user);
+        userDetailsService.evictCacheForUser(user.getEmail());
+        log.info("User {} {}", userId, enabled ? "enabled" : "disabled");
+    }
+
+    public void setLocked(Long userId, boolean locked) {
+        User user = getUser(userId);
+        user.setAccountLocked(locked);
+        if (!locked) user.setFailedAttempts(0);   // reset on unlock
+        userRepository.save(user);
+        userDetailsService.evictCacheForUser(user.getEmail());
+        log.info("User {} {}", userId, locked ? "locked" : "unlocked");
+    }
+
+    public void expireCredentials(Long userId) {
+        User user = getUser(userId);
+        user.setCredentialsExpired(true);
+        userRepository.save(user);
+        userDetailsService.evictCacheForUser(user.getEmail());
+    }
+
+    public void delete(Long userId) {
+        User user = getUser(userId);
+        userRepository.delete(user);
+        userDetailsService.evictCacheForUser(user.getEmail());
+        log.info("User deleted: {}", userId);
+    }
+
+    private User getUser(Long id) {
+        return userRepository.findById(id)
+            .orElseThrow(() ->
+                new UserNotFoundException("User not found: " + id));
+    }
+}
+5.8 DTOs & Validation
+java
+// RegisterRequest — strict validation
+public record RegisterRequest(
+    @NotBlank @Size(min = 3, max = 50)
+    @Pattern(regexp = "^[a-zA-Z0-9_]+$",
+             message = "Username: letters, numbers, underscores only")
+    String username,
+
+    @NotBlank @Email(message = "Valid email required")
+    String email,
+
+    @NotBlank @Size(min = 8, max = 100)
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$",
+        message = "Password needs uppercase, lowercase, digit, special char"
+    )
+    String password,
+
+    @NotBlank String firstName,
+    @NotBlank String lastName,
+    String tenantId             // optional — multi-tenant
+) {}
+
+public record ResetPasswordRequest(
+    @NotBlank String token,
+    @NotBlank @Size(min = 8)
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$"
+    )
+    String newPassword
+) {}
+
+public record EmailRequest(@NotBlank @Email String email) {}
+
+public record UpdateRolesRequest(
+    @NotEmpty Set<@NotBlank String> roleNames
+) {}
+
+// UserResponseDto — safe to return (no password)
+@Builder
+public record UserResponseDto(
+    Long         id,
+    String       username,
+    String       email,
+    String       firstName,
+    String       lastName,
+    String       tenantId,
+    boolean      enabled,
+    boolean      emailVerified,
+    boolean      accountLocked,
+    Set<String>  roles,
+    Set<String>  permissions,
+    Instant      lastLogin,
+    Instant      createdAt
+) {
+    public static UserResponseDto from(User user) {
+        Set<String> roles = user.getRoles().stream()
+            .map(Role::getName)
+            .collect(Collectors.toSet());
+
+        Set<String> perms = user.getRoles().stream()
+            .flatMap(r -> r.getPermissions().stream())
+            .map(Permission::getName)
+            .collect(Collectors.toSet());
+
+        return UserResponseDto.builder()
+            .id(user.getId())
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .firstName(user.getFirstName())
+            .lastName(user.getLastName())
+            .tenantId(user.getTenantId())
+            .enabled(user.isEnabled())
+            .emailVerified(user.isEmailVerified())
+            .accountLocked(user.isAccountLocked())
+            .roles(roles)
+            .permissions(perms)
+            .lastLogin(user.getLastLogin())
+            .createdAt(user.getCreatedAt())
+            .build();
+    }
+}
+5.9 JdbcUserDetailsManager — When to Use It
+
+Spring's built-in JDBC-based user manager — useful for simpler apps or migrating legacy systems.
+
+java
+// Only use JdbcUserDetailsManager for simple/legacy apps
+// For enterprise use CustomUserDetailsService (Section 5.4)
+@Bean
+public UserDetailsManager jdbcUserDetailsManager(DataSource dataSource) {
+    JdbcUserDetailsManager manager = new JdbcUserDetailsManager(dataSource);
+
+    // Override default queries to match your schema
+    manager.setUsersByUsernameQuery(
+        "SELECT email, password, enabled FROM users WHERE email = ?");
+
+    manager.setAuthoritiesByUsernameQuery(
+        "SELECT u.email, r.name FROM users u " +
+        "JOIN user_roles ur ON u.id = ur.user_id " +
+        "JOIN roles r ON ur.role_id = r.id " +
+        "WHERE u.email = ?");
+
+    return manager;
+}
+
+// Creating users via JdbcUserDetailsManager
+userDetailsManager.createUser(
+    User.withUsername("admin@example.com")
+        .password(passwordEncoder.encode("Admin@123"))
+        .roles("ADMIN")
+        .build()
+);
+Chapter 5 — Architecture Summary
+POST /api/auth/register
+    │
+    ▼
+RegistrationService
+    ├── validate uniqueness (email + username)
+    ├── encode password (BCrypt strength 12)
+    ├── assign default ROLE_USER
+    ├── save User entity
+    ├── generate VERIFY_EMAIL token
+    └── send verification email
+          │
+          ▼ (user clicks link)
+GET /api/auth/verify-email?token=...
+    ├── validate token (not used, not expired)
+    ├── mark emailVerified = true
+    └── evict UserDetails cache
+          │
+          ▼ (user logs in)
+POST /api/auth/login
+    ├── AuthenticationManager.authenticate()
+    ├── EnterpriseUserDetailsService.loadUserByUsername()
+    │       └── User + Roles + Permissions (single JOIN FETCH query)
+    ├── BCryptPasswordEncoder.matches()
+    └── JWT issued → see Chapter 8
+Component	Responsibility
+User entity	Identity + account state + roles
+Role entity	Named permission group
+Permission entity	Fine-grained authority string (order:write)
+UserToken entity	Email verification + password reset tokens
+EnterpriseUserDetailsService	Loads + caches UserDetails for Spring Security
+RegistrationService	Full registration lifecycle + email flows
+AdminUserService	CRUD + role management for admin API
+LoginAttemptService	Brute-force tracking via Redis
+
+Say "Chapter 6" to continue with Password Encoding — BCrypt, SCrypt, PBKDF2, Argon2, DelegatingPasswordEncoder, migration strategies, and password policy enforcement with full hands-on code!
+
+Chapter 15: Spring Security Filters
+
+This chapter covers the complete filter architecture — custom filters, OncePerRequestFilter, and a production-grade JWT authentication filter with every edge case handled.
+
+15.1 Filter Fundamentals — How the Chain Works
+java
+// Spring Security's filter chain is a series of javax/jakarta Filters
+// Each filter can:
+//   1. Pre-process the request  (before chain.doFilter)
+//   2. Pass to next filter      (chain.doFilter)
+//   3. Post-process the response (after chain.doFilter returns)
+//   4. Short-circuit the chain  (write response directly, skip doFilter)
+
+// Minimal custom filter example — raw Servlet Filter
+public class MinimalFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest  request,
+                         ServletResponse response,
+                         FilterChain     chain)
+            throws IOException, ServletException {
+
+        HttpServletRequest  req = (HttpServletRequest)  request;
+        HttpServletResponse res = (HttpServletResponse) response;
+
+        // ── PRE-PROCESSING ─────────────────────────────────────────────
+        System.out.println("Before: " + req.getRequestURI());
+
+        // ── DELEGATE ───────────────────────────────────────────────────
+        chain.doFilter(request, response);   // passes to next filter
+
+        // ── POST-PROCESSING ────────────────────────────────────────────
+        System.out.println("After: " + res.getStatus());
+    }
+}
+
+// Registering custom filters — 4 placement options
+http
+    .addFilter(myFilter)                                    // at its @Order position
+    .addFilterBefore(myFilter, SomeFilter.class)            // immediately before
+    .addFilterAfter(myFilter,  SomeFilter.class)            // immediately after
+    .addFilterAt(myFilter,     SomeFilter.class);           // replaces
+java
+// Full filter order reference (Spring Security 6.x)
+// Lower number = runs first
+SecurityProperties.DEFAULT_FILTER_ORDER = -100   // DelegatingFilterProxy position
+
+// Inside SecurityFilterChain (excerpt, in execution order):
+//  100  DisableEncodeUrlFilter
+//  200  SecurityContextHolderFilter
+//  300  HeaderWriterFilter
+//  400  CorsFilter
+//  500  CsrfFilter
+//  600  LogoutFilter
+//  700  OAuth2AuthorizationRequestRedirectFilter
+//  800  Saml2WebSsoAuthenticationRequestFilter
+//  900  X509AuthenticationFilter
+// 1000  AbstractPreAuthenticatedProcessingFilter
+// 1100  UsernamePasswordAuthenticationFilter
+// 1200  BasicAuthenticationFilter
+// 1300  RequestCacheAwareFilter
+// 1400  SecurityContextHolderAwareRequestFilter
+// 1500  AnonymousAuthenticationFilter
+// 1600  ExceptionTranslationFilter
+// 1700  AuthorizationFilter
+15.2 OncePerRequestFilter — The Right Base Class
+java
+// Always extend OncePerRequestFilter for custom security filters
+// Guarantees doFilterInternal is called EXACTLY ONCE per request
+// even when RequestDispatcher.forward() or include() is used
+
+@Component
+@Slf4j
+public class RequestLoggingFilter extends OncePerRequestFilter {
+
+    // ── Skip logic — declarative ───────────────────────────────────────────
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        // Skip static resources and health checks — no logging needed
+        return path.startsWith("/actuator/") ||
+               path.startsWith("/static/")   ||
+               path.startsWith("/favicon")   ||
+               path.endsWith(".css")         ||
+               path.endsWith(".js")          ||
+               path.endsWith(".png");
+    }
+
+    // ── Main logic ─────────────────────────────────────────────────────────
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+
+        long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString();
+
+        // Attach requestId to MDC for log correlation
+        MDC.put("requestId", requestId);
+        MDC.put("method",    request.getMethod());
+        MDC.put("path",      request.getServletPath());
+
+        // Add requestId to response header so clients can trace
+        response.setHeader("X-Request-Id", requestId);
+
+        try {
+            log.info("→ {} {} [{}]",
+                request.getMethod(),
+                request.getRequestURI(),
+                request.getRemoteAddr());
+
+            chain.doFilter(request, response);   // continue chain
+
+            log.info("← {} {} {}ms status={}",
+                request.getMethod(),
+                request.getRequestURI(),
+                System.currentTimeMillis() - start,
+                response.getStatus());
+
+        } finally {
+            MDC.clear();   // CRITICAL — always clear MDC on same thread
+        }
+    }
+}
+15.3 Complete Custom Filter Gallery
+Filter 1 — Tenant Context Filter
+java
+// Extracts tenant from subdomain or header, stores in thread-local
+// Runs AFTER JwtAuthFilter so tenantId is already in SecurityContext
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class TenantContextFilter extends OncePerRequestFilter {
+
+    private final TenantRepository tenantRepository;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+
+        String tenantId = resolveTenantId(request);
+
+        if (tenantId != null) {
+            // Validate tenant exists and is active
+            boolean valid = tenantRepository.existsByIdAndActive(tenantId, true);
+            if (!valid) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.getWriter().write("""
+                    {"status":403,"error":"Invalid or inactive tenant"}
+                    """);
+                return;
+            }
+            TenantContext.setTenantId(tenantId);
+        }
+
+        try {
+            chain.doFilter(request, response);
+        } finally {
+            TenantContext.clear();   // CRITICAL — clear thread-local after request
+        }
+    }
+
+    private String resolveTenantId(HttpServletRequest request) {
+        // Strategy 1: from JWT principal (most reliable)
+        Authentication auth = SecurityContextHolder.getContext()
+            .getAuthentication();
+        if (auth != null && auth.getPrincipal()
+                instanceof CustomUserPrincipal p) {
+            return p.getTenantId();
+        }
+
+        // Strategy 2: from X-Tenant-Id header (gateway-injected)
+        String header = request.getHeader("X-Tenant-Id");
+        if (StringUtils.hasText(header)) return header;
+
+        // Strategy 3: from subdomain (tenant.yourapp.com)
+        String host = request.getServerName();
+        if (host.contains(".yourapp.com")) {
+            String subdomain = host.split("\\.")[0];
+            if (!"www".equals(subdomain) && !"api".equals(subdomain)) {
+                return subdomain;
+            }
+        }
+
+        return null;
+    }
+}
+
+// Thread-local tenant context — accessible anywhere in the request thread
+public final class TenantContext {
+    private static final ThreadLocal<String> TENANT =
+        new ThreadLocal<>();
+
+    public static void setTenantId(String id) { TENANT.set(id); }
+    public static String getTenantId()         { return TENANT.get(); }
+    public static void clear()                 { TENANT.remove(); }
+}
+Filter 2 — API Key Authentication Filter
+java
+// Accepts API key in header alongside OR instead of JWT
+// Useful for machine clients, webhooks, partner integrations
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String API_KEY_HEADER = "X-Api-Key";
+
+    private final ApiKeyService   apiKeyService;
+    private final RateLimitService rateLimitService;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Only process if API key header is present
+        // If absent, fall through to JWT filter
+        return !StringUtils.hasText(request.getHeader(API_KEY_HEADER));
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+
+        String apiKey = request.getHeader(API_KEY_HEADER);
+
+        // Rate-limit by API key BEFORE any DB lookup
+        if (rateLimitService.isRateLimited(apiKey)) {
+            sendError(response, 429,
+                "RATE_LIMITED", "API key rate limit exceeded");
+            return;
+        }
+
+        apiKeyService.findByKey(apiKey)
+            .filter(ApiKeyEntity::isActive)
+            .filter(k -> !k.isExpired())
+            .ifPresentOrElse(
+                key -> {
+                    // Valid key — build authentication
+                    List<GrantedAuthority> authorities = key.getScopes()
+                        .stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList());
+
+                    UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                            key.getClientId(),
+                            null,
+                            authorities
+                        );
+                    auth.setDetails(
+                        new WebAuthenticationDetailsSource()
+                            .buildDetails(request));
+
+                    SecurityContextHolder.getContext()
+                        .setAuthentication(auth);
+
+                    // Track API key usage asynchronously
+                    apiKeyService.recordUsageAsync(key.getId(),
+                        request.getRemoteAddr());
+
+                    log.debug("API key auth: client={}",
+                        key.getClientId());
+                },
+                () -> {
+                    // Invalid key — reject immediately
+                    SecurityContextHolder.clearContext();
+                    try {
+                        sendError(response, 401,
+                            "INVALID_API_KEY", "Invalid or expired API key");
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return;
+                }
+            );
+
+        // Only continue if authentication was set
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            chain.doFilter(request, response);
+        }
+    }
+
+    private void sendError(HttpServletResponse response,
+                           int status, String code, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("""
+            {"status":%d,"code":"%s","message":"%s","timestamp":"%s"}
+            """.formatted(status, code, message, Instant.now()));
+    }
+}
+Filter 3 — Request Validation Filter
+java
+// Sanitize and validate every request before it reaches controllers
+// Defence-in-depth against injection attacks, oversized payloads
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class RequestValidationFilter extends OncePerRequestFilter {
+
+    private static final int    MAX_HEADER_SIZE    = 8_192;    // 8 KB
+    private static final int    MAX_PARAM_LENGTH   = 2_048;
+    private static final int    MAX_URI_LENGTH     = 2_048;
+    private static final Set<String> BLOCKED_HEADERS = Set.of(
+        "X-Forwarded-Host",     // can be used for host header injection
+        "X-Original-URL",
+        "X-Rewrite-URL"
+    );
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+
+        // 1. URI length check
+        if (request.getRequestURI().length() > MAX_URI_LENGTH) {
+            log.warn("URI too long: {} chars from {}",
+                request.getRequestURI().length(),
+                request.getRemoteAddr());
+            sendError(response, 414, "URI_TOO_LONG",
+                "Request URI too long");
+            return;
+        }
+
+        // 2. Blocked headers
+        for (String blocked : BLOCKED_HEADERS) {
+            if (request.getHeader(blocked) != null) {
+                log.warn("Blocked header present: {} from {}",
+                    blocked, request.getRemoteAddr());
+                sendError(response, 400, "INVALID_HEADER",
+                    "Invalid request header");
+                return;
+            }
+        }
+
+        // 3. Header size check
+        long totalHeaderSize = Collections.list(request.getHeaderNames())
+            .stream()
+            .mapToLong(name ->
+                name.length() +
+                request.getHeader(name).length())
+            .sum();
+
+        if (totalHeaderSize > MAX_HEADER_SIZE) {
+            sendError(response, 431, "HEADERS_TOO_LARGE",
+                "Request headers too large");
+            return;
+        }
+
+        // 4. Query parameter length check
+        if (request.getQueryString() != null &&
+            request.getQueryString().length() > MAX_PARAM_LENGTH) {
+            sendError(response, 400, "PARAMS_TOO_LONG",
+                "Query string too long");
+            return;
+        }
+
+        // 5. Path traversal check
+        String uri = request.getRequestURI();
+        if (uri.contains("../") || uri.contains("..\\") ||
+            uri.contains("%2e%2e") || uri.contains("%2E%2E")) {
+            log.warn("Path traversal attempt: {} from {}",
+                uri, request.getRemoteAddr());
+            sendError(response, 400, "INVALID_PATH",
+                "Invalid request path");
+            return;
+        }
+
+        chain.doFilter(request, response);
+    }
+
+    private void sendError(HttpServletResponse response,
+                           int status, String code, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write("""
+            {"status":%d,"code":"%s","message":"%s"}
+            """.formatted(status, code, message));
+    }
+}
+Filter 4 — Response Security Headers Filter
+java
+// Add security headers to every response
+// Complements Spring Security's built-in headers but adds custom ones
+@Component
+public class SecurityResponseHeadersFilter extends OncePerRequestFilter {
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+
+        chain.doFilter(request, response);
+
+        // Content Security Policy
+        response.setHeader("Content-Security-Policy",
+            "default-src 'self'; " +
+            "script-src 'self' 'nonce-{nonce}'; " +
+            "style-src 'self' https://fonts.googleapis.com; " +
+            "font-src 'self' https://fonts.gstatic.com; " +
+            "img-src 'self' data: https:; " +
+            "connect-src 'self' https://api.yourapp.com; " +
+            "frame-ancestors 'none'; " +
+            "object-src 'none'; " +
+            "base-uri 'self'");
+
+        // Prevent MIME sniffing
+        response.setHeader("X-Content-Type-Options", "nosniff");
+
+        // Clickjacking protection
+        response.setHeader("X-Frame-Options", "DENY");
+
+        // HSTS — 1 year, include subdomains
+        response.setHeader("Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains; preload");
+
+        // Referrer policy
+        response.setHeader("Referrer-Policy",
+            "strict-origin-when-cross-origin");
+
+        // Permissions policy
+        response.setHeader("Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), " +
+            "payment=(), usb=()");
+
+        // Cache control for API responses
+        if (request.getRequestURI().startsWith("/api/")) {
+            response.setHeader("Cache-Control",
+                "no-store, no-cache, must-revalidate, private");
+            response.setHeader("Pragma", "no-cache");
+        }
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Don't add security headers to static resources
+        // (CDN handles those)
+        String path = request.getServletPath();
+        return path.startsWith("/static/") ||
+               path.startsWith("/public/assets/");
+    }
+}
+15.4 JWT Authentication Filter — Production Grade
+java
+// The most important custom filter in any JWT-based application
+// This is the complete, production-hardened implementation
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtService            jwtService;
+    private final TokenBlacklistService blacklistService;
+    private final UserRepository        userRepository;
+    private final MeterRegistry         meterRegistry;   // Micrometer metrics
+
+    // Counters for observability
+    private Counter authSuccessCounter;
+    private Counter authFailureCounter;
+    private Counter tokenExpiredCounter;
+
+    @PostConstruct
+    public void initMetrics() {
+        authSuccessCounter = Counter.builder("jwt.auth.success")
+            .description("Successful JWT authentications")
+            .register(meterRegistry);
+        authFailureCounter = Counter.builder("jwt.auth.failure")
+            .description("Failed JWT authentications")
+            .register(meterRegistry);
+        tokenExpiredCounter = Counter.builder("jwt.auth.expired")
+            .description("Expired JWT tokens")
+            .register(meterRegistry);
+    }
+
+    // ── Skip paths — never authenticate these ─────────────────────────────
+    private static final Set<String> SKIP_EXACT = Set.of(
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/refresh",
+        "/api/auth/forgot-password",
+        "/api/auth/verify-email",
+        "/actuator/health",
+        "/actuator/info",
+        "/.well-known/jwks.json"
+    );
+
+    private static final Set<String> SKIP_PREFIXES = Set.of(
+        "/api/public/",
+        "/api/auth/reset-password",
+        "/static/",
+        "/swagger-ui",
+        "/v3/api-docs"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return SKIP_EXACT.contains(path) ||
+               SKIP_PREFIXES.stream().anyMatch(path::startsWith) ||
+               HttpMethod.OPTIONS.name().equals(request.getMethod());
+    }
+
+    // ── Core filter logic ──────────────────────────────────────────────────
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+
+        // 1. Extract token from request
+        String token = extractToken(request);
+
+        if (!StringUtils.hasText(token)) {
+            // No token — let the request through
+            // AuthorizationFilter will handle unauthenticated endpoints
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // 2. Process token
+        try {
+            processToken(token, request);
+            authSuccessCounter.increment();
+            chain.doFilter(request, response);
+
+        } catch (TokenExpiredException ex) {
+            tokenExpiredCounter.increment();
+            log.debug("Expired token path={}", request.getServletPath());
+            sendTokenError(response, "TOKEN_EXPIRED",
+                "Access token has expired", HttpStatus.UNAUTHORIZED);
+
+        } catch (InvalidTokenException ex) {
+            authFailureCounter.increment();
+            log.warn("Invalid token path={} reason={}",
+                request.getServletPath(), ex.getMessage());
+            sendTokenError(response, "INVALID_TOKEN",
+                "Token is invalid or has been revoked",
+                HttpStatus.UNAUTHORIZED);
+
+        } catch (DisabledException | LockedException ex) {
+            authFailureCounter.increment();
+            log.warn("Account issue: {} path={}",
+                ex.getMessage(), request.getServletPath());
+            sendTokenError(response, "ACCOUNT_ISSUE",
+                ex.getMessage(), HttpStatus.FORBIDDEN);
+
+        } catch (Exception ex) {
+            authFailureCounter.increment();
+            log.error("JWT filter unexpected error path={}: {}",
+                request.getServletPath(), ex.getMessage(), ex);
+            sendTokenError(response, "AUTH_ERROR",
+                "Authentication processing failed",
+                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // ── Token processing pipeline ──────────────────────────────────────────
+    private void processToken(String token, HttpServletRequest request) {
+
+        // Step 1: Validate signature, expiry, issuer, audience
+        Claims claims = jwtService.validateAndExtractClaims(token);
+
+        // Step 2: Verify token type = ACCESS (not REFRESH)
+        String tokenType = claims.get("type", String.class);
+        if (!"ACCESS".equals(tokenType)) {
+            throw new InvalidTokenException(
+                "Token type mismatch: expected ACCESS, got " + tokenType);
+        }
+
+        // Step 3: Check Redis blacklist — revoked tokens
+        String jti = claims.getId();
+        if (jti == null) {
+            throw new InvalidTokenException("Token missing jti claim");
+        }
+        if (blacklistService.isBlacklisted(jti)) {
+            throw new InvalidTokenException("Token has been revoked");
+        }
+
+        // Step 4: Token version check — invalidates all tokens on
+        // password change / security event (optional — costs 1 DB read)
+        if (isTokenVersionCheckEnabled()) {
+            verifyTokenVersion(claims);
+        }
+
+        // Step 5: Build SecurityContext (no DB read — from JWT claims)
+        CustomUserPrincipal principal = buildPrincipalFromClaims(claims);
+        List<GrantedAuthority> authorities =
+            jwtService.extractAuthorities(token);
+
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(
+                principal,
+                null,          // credentials null after validation
+                authorities
+            );
+
+        // Attach request details for audit logging
+        authentication.setDetails(
+            new WebAuthenticationDetailsSource().buildDetails(request));
+
+        SecurityContextHolder.getContext()
+            .setAuthentication(authentication);
+
+        // Enrich MDC for structured logging
+        MDC.put("userId",   String.valueOf(principal.getUserId()));
+        MDC.put("tenantId", principal.getTenantId());
+        MDC.put("jti",      jti);
+    }
+
+    // ── Token extraction strategies ────────────────────────────────────────
+    private String extractToken(HttpServletRequest request) {
+
+        // Strategy 1: Authorization: Bearer <token> (primary — REST APIs)
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.hasText(authHeader) &&
+            authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7).trim();
+            if (StringUtils.hasText(token)) return token;
+        }
+
+        // Strategy 2: X-Auth-Token header (legacy support)
+        String xAuthToken = request.getHeader("X-Auth-Token");
+        if (StringUtils.hasText(xAuthToken)) return xAuthToken;
+
+        // Strategy 3: Cookie (HttpOnly cookie for browser apps)
+        // ONLY if CSRF protection is also enabled
+        if (isCookieAuthEnabled()) {
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                return Arrays.stream(cookies)
+                    .filter(c -> "access_token".equals(c.getName()))
+                    .map(Cookie::getValue)
+                    .filter(StringUtils::hasText)
+                    .findFirst()
+                    .orElse(null);
+            }
+        }
+
+        // Strategy 4: Query param (NEVER for production APIs)
+        // Only for WebSocket handshakes where headers aren't available
+        if (isWebSocketHandshake(request)) {
+            String tokenParam = request.getParameter("token");
+            if (StringUtils.hasText(tokenParam)) return tokenParam;
+        }
+
+        return null;
+    }
+
+    // ── Build principal from JWT claims — zero DB calls ───────────────────
+    private CustomUserPrincipal buildPrincipalFromClaims(Claims claims) {
+        Long   userId   = Long.valueOf(claims.getSubject());
+        String email    = claims.get("email",    String.class);
+        String username = claims.get("username", String.class);
+        String tenantId = claims.get("tenantId", String.class);
+
+        return CustomUserPrincipal.builder()
+            .userId(userId)
+            .email(email)
+            .username(username != null ? username : email)
+            .tenantId(tenantId != null ? tenantId : "default")
+            .build();
+    }
+
+    // ── Optional: token version check ─────────────────────────────────────
+    // Enables immediate invalidation of all tokens without Redis
+    // Trade-off: 1 DB read per request vs instant revocation
+    private void verifyTokenVersion(Claims claims) {
+        Integer tokenVersion = claims.get("tokenVersion", Integer.class);
+        if (tokenVersion == null) return;
+
+        Long userId = Long.valueOf(claims.getSubject());
+
+        // Cache this check to reduce DB load
+        int dbVersion = userRepository.getTokenVersion(userId);
+        if (tokenVersion < dbVersion) {
+            throw new InvalidTokenException(
+                "Token invalidated by security event");
+        }
+    }
+
+    @Value("${app.jwt.token-version-check-enabled:false}")
+    private boolean tokenVersionCheckEnabled;
+
+    @Value("${app.jwt.cookie-auth-enabled:false}")
+    private boolean cookieAuthEnabled;
+
+    private boolean isTokenVersionCheckEnabled() {
+        return tokenVersionCheckEnabled;
+    }
+
+    private boolean isCookieAuthEnabled() {
+        return cookieAuthEnabled;
+    }
+
+    private boolean isWebSocketHandshake(HttpServletRequest request) {
+        String upgrade = request.getHeader("Upgrade");
+        return "websocket".equalsIgnoreCase(upgrade);
+    }
+
+    // ── Error response ─────────────────────────────────────────────────────
+    private void sendTokenError(HttpServletResponse response,
+                                 String code,
+                                 String message,
+                                 HttpStatus status) throws IOException {
+        // Clear any partial SecurityContext
+        SecurityContextHolder.clearContext();
+
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+
+        // Never include internal details in error response
+        String body = """
+            {
+              "status": %d,
+              "code": "%s",
+              "message": "%s",
+              "timestamp": "%s",
+              "requestId": "%s"
+            }
+            """.formatted(
+                status.value(),
+                code,
+                message,
+                Instant.now(),
+                MDC.get("requestId") != null
+                    ? MDC.get("requestId")
+                    : UUID.randomUUID().toString()
+            );
+
+        response.getWriter().write(body);
+        response.getWriter().flush();
+    }
+}
+15.5 Wiring All Filters Into Security Config
+java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    // Custom filters
+    private final JwtAuthenticationFilter    jwtFilter;
+    private final ApiKeyAuthenticationFilter apiKeyFilter;
+    private final RequestLoggingFilter       loggingFilter;
+    private final RequestValidationFilter    validationFilter;
+    private final TenantContextFilter        tenantFilter;
+    private final SecurityResponseHeadersFilter headersFilter;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http)
+            throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(s -> s
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .cors(cors -> cors.configurationSource(corsSource()))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/public/**",
+                                 "/actuator/health").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+
+            // ── Filter ordering ──────────────────────────────────────────
+            // 1. Validation first — reject malformed requests early
+            .addFilterBefore(validationFilter,
+                SecurityContextHolderFilter.class)
+
+            // 2. Logging — wraps everything after validation
+            .addFilterAfter(loggingFilter,
+                validationFilter.getClass())
+
+            // 3. API Key auth — before JWT
+            .addFilterBefore(apiKeyFilter,
+                UsernamePasswordAuthenticationFilter.class)
+
+            // 4. JWT auth — core auth filter
+            .addFilterBefore(jwtFilter,
+                UsernamePasswordAuthenticationFilter.class)
+
+            // 5. Tenant context — after auth so principal is available
+            .addFilterAfter(tenantFilter,
+                jwtFilter.getClass())
+
+            // 6. Security response headers — wraps everything
+            .addFilterAfter(headersFilter,
+                TenantContextFilter.class)
+
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authEntryPoint())
+                .accessDeniedHandler(accessDeniedHandler())
+            )
+            .build();
+    }
+}
+15.6 Filter Testing
+java
+@WebMvcTest
+@Import({JwtAuthenticationFilter.class,
+         RequestValidationFilter.class})
+class FilterTest {
+
+    @Autowired MockMvc mockMvc;
+
+    @MockBean JwtService            jwtService;
+    @MockBean TokenBlacklistService blacklistService;
+    @MockBean UserRepository        userRepository;
+    @MockBean MeterRegistry         meterRegistry;
+
+    // ── JWT filter ────────────────────────────────────────────────────────
+
+    @Test
+    void validJwt_populatesSecurityContext() throws Exception {
+        Claims claims = buildClaims("42", "alice@test.com", "tenant-1");
+        when(jwtService.validateAndExtractClaims(anyString()))
+            .thenReturn(claims);
+        when(jwtService.extractAuthorities(anyString()))
+            .thenReturn(List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        when(blacklistService.isBlacklisted(anyString()))
+            .thenReturn(false);
+
+        mockMvc.perform(get("/api/orders")
+                .header("Authorization", "Bearer valid.jwt.token"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void expiredJwt_returns401WithCode() throws Exception {
+        when(jwtService.validateAndExtractClaims(anyString()))
+            .thenThrow(new TokenExpiredException("Token expired"));
+
+        mockMvc.perform(get("/api/orders")
+                .header("Authorization", "Bearer expired.jwt.token"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+    }
+
+    @Test
+    void blacklistedJwt_returns401() throws Exception {
+        Claims claims = buildClaims("42", "alice@test.com", "tenant-1");
+        when(jwtService.validateAndExtractClaims(anyString()))
+            .thenReturn(claims);
+        when(blacklistService.isBlacklisted(anyString()))
+            .thenReturn(true);
+
+        mockMvc.perform(get("/api/orders")
+                .header("Authorization", "Bearer blacklisted.token"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void noToken_passesThrough_authFilterDecides() throws Exception {
+        // No JWT — filter passes through, AuthorizationFilter rejects
+        mockMvc.perform(get("/api/orders"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void publicPath_noJwt_allowed() throws Exception {
+        mockMvc.perform(get("/api/public/products"))
+            .andExpect(status().isOk());
+    }
+
+    // ── Validation filter ─────────────────────────────────────────────────
+
+    @Test
+    void pathTraversal_returns400() throws Exception {
+        mockMvc.perform(get("/api/../etc/passwd"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_PATH"));
+    }
+
+    @Test
+    void uriTooLong_returns414() throws Exception {
+        String longUri = "/api/" + "a".repeat(3000);
+        mockMvc.perform(get(longUri))
+            .andExpect(status().is(414));
+    }
+
+    // ── Tenant filter ─────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser
+    void tenantHeader_setsTenantContext() throws Exception {
+        mockMvc.perform(get("/api/orders")
+                .header("X-Tenant-Id", "acme"))
+            .andExpect(status().isOk());
+
+        // TenantContext.getTenantId() == "acme" during request processing
+        // verified via service mock interactions
+    }
+}
+Chapter 15 — Quick Reference
+Filter placement guide
+──────────────────────────────────────────────────────────────
+addFilterBefore(myFilter, SecurityContextHolderFilter.class)
+    → Runs before security context is loaded
+    → Use for: request validation, rate limiting
+
+addFilterBefore(myFilter, UsernamePasswordAuthenticationFilter.class)
+    → Standard position for custom auth filters (JWT, API key)
+    → Use for: JwtAuthFilter, ApiKeyFilter, OAuth token filters
+
+addFilterAfter(myFilter, UsernamePasswordAuthenticationFilter.class)
+    → Runs after auth attempt
+    → Use for: tenant context, MFA check, audit enrichment
+
+addFilterAfter(myFilter, AuthorizationFilter.class)
+    → Runs after authorization check passes
+    → Use for: response headers, response logging
+
+OncePerRequestFilter contract
+──────────────────────────────────────────────────────────────
+✓  Override shouldNotFilter()  for skip logic
+✓  Override doFilterInternal() for main logic
+✓  Always call chain.doFilter() OR write response (never both)
+✓  Always clear ThreadLocal in finally block
+✓  Never throw exceptions — catch and write error response
+
+JwtAuthFilter pipeline
+──────────────────────────────────────────────────────────────
+1. Extract token  (Bearer header → X-Auth-Token → Cookie)
+2. Validate claims (signature, expiry, issuer, audience)
+3. Verify type = ACCESS (not REFRESH)
+4. Check blacklist (Redis jti lookup)
+5. Verify token version (optional — 1 DB read)
+6. Build principal from claims (zero DB reads)
+7. Set SecurityContext
+8. Enrich MDC (userId, tenantId, jti)

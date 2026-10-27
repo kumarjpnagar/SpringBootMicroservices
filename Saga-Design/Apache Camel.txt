@@ -1,0 +1,85 @@
+
+
+
+----Apache Camel with Springboot Masterclass-------
+
+--------------------------------------------------------
+
+Chapter 1: Simple Apache camel Route and Junit
+
+Camel Basics and Springboot boilerplate
+
+Simple Timer Route
+
+Simple Time Route Junit
+
+----------------------------------------
+
+Chapter 2: Legacy file transfer Route
+
+Simple File Poller
+
+Simple File Poller JUnits - Mocking to endpoints
+
+Simple File Poller JUnits(contd.) - Mocking From endpoint
+
+----------------------------------------------
+
+Chapter 3:Camel Patterns and Components
+
+Introduction to Inline Processors
+
+Using the Splitter EIP
+
+Convert CSV data to POJO using BeanIO Mapping
+
+Externalizing Processors to Java Classes
+
+Section recap - File Poller Legacy Use Case
+
+-----------------------------------------------
+
+Chapter 4: Replace souce system integration with Rest endpoint and Persistence
+
+Solution to Section 4 exercise
+
+System Setup - Postman and MySQL installation
+
+Build simple REST endpoint using Apache Camel
+
+Insert Data Records to MySQL DB using JPA and Hibernate
+
+Batch Route to read data records from DB and writing to File using Named Query
+
+Named Query (contd)
+
+Deleting records from DB using Native Parameterized Query and Dynamic Routing
+
+-----------------------------------------------
+
+Chapter 5: Replace destination system with message bus
+
+Kafka Installation and Setup
+
+Publishing to Kafka
+
+Subscribing to Kafka messages
+
+Use Case Recap - Rest Endpoint to Kafka Publisher consumer via topics partition
+
+-----------------------------------------------------
+
+Chapter 6: Understanding the apache camel toolkit and using camel in enterprise
+
+Managing Camel Routes and reusing routes
+
+Understanding flow of Camel Exchange - using direct vs seda and wireTap
+
+Tracing Apache Camel
+
+Exception Handling and graceful error handling
+
+Overriding default REST response; managing rest contracts
+
+Using Headers, choice, when using Simple and Predicates
+

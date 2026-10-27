@@ -1,0 +1,2036 @@
+
+Q::Can you convert below all question answer in java 8 using streams api? 
+
+-----------------------
+
+String s = "abcdcaf" . 
+Write java program to find count of characters. e.g. a=2, b=1, c=2, d=1, f=1
+
+
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class CharacterCount {
+    public static void main(String[] args) {
+        String s = "abcdefabc"; // Example string, 'a' and 'c' appear twice
+
+        // Use streams to count characters
+        Map<Character, Long> charCounts = s.chars()
+            .mapToObj(c -> (char) c) // Convert IntStream to Stream<Character>
+            .collect(Collectors.groupingBy(
+                Function.identity(), // Group by the character itself
+                Collectors.counting() // Count occurrences of each character
+            ));
+
+        // Print the results
+        System.out.println("Character counts for string \"" + s + "\":");
+        charCounts.forEach((character, count) -> 
+            System.out.println(character + "=" + count)
+        );
+    }
+}
+		
+---
+
+Explanation of the code:
+s.chars(): This method converts the string s into an IntStream where each element is the ASCII value of a character.
+.mapToObj(c -> (char) c): This maps each integer (ASCII value) in the IntStream to its corresponding Character object to work with the groupingBy collector.
+.collect(Collectors.groupingBy(...)): This is a terminal operation that collects the stream elements into a Map.
+Function.identity(): This is the classifier function that groups elements by their own value (i.e., all 'a's are grouped together, all 'b's together, etc.).
+Collectors.counting(): This is a downstream collector used to count the number of elements in each group, resulting in a Map<Character, Long>		
+							 
+===========================================
+
+Map<Integer, String> map = new HashMap<>();  
+write program to sort Hashmap by value using java 8
+
+map.put(1, "x");
+map.put(2, "s");
+map. Put(3, "z");
+-------------------
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class SortHashMapByValue {
+    public static void main(String[] args) {
+        Map<Integer, String> map = new HashMap<>();
+        map.put(1, "x");
+        map.put(2, "s");
+        map.put(3, "z");
+
+        // Sort by value (ascending)
+        Map<Integer, String> sortedMap = map.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (v1, v2) -> v1,
+                        LinkedHashMap::new
+                ));
+
+        System.out.println("Sorted Map: " + sortedMap);
+    }
+}
+
+Key Steps:
+.stream() & .sorted(): Converts the map to a stream and uses Map.Entry.comparingByValue() to sort by values.
+.collect(): Uses Collectors.toMap to collect results, specifically using LinkedHashMap::new to maintain the sorted order.
+
+====================
+
+Optional<List<Employee>> employees = getEmployees();
+use java 8, use optional methods and iterate over the list. for employees whose age is > 30, provide them extra 1000 rs to their existing salary. if no employees then print employee doesnot exist. Use java 8 stream
+
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+class Employee {
+    String name;
+    int age;
+    double salary;
+
+    public Employee(String name, int age, double salary) {
+        this.name = name;
+        this.age = age;
+        this.salary = salary;
+    }
+
+    public void setSalary(double salary) 
+	{ 
+	this.salary = salary;
+	}
+    public double getSalary() 
+	{ 
+	return salary;
+	}
+    public int getAge() 
+	{ 
+	return age; 
+	}
+    @Override
+    public String toString() 
+	{ 
+	return name + " (Age: " + age + ", Salary: " + salary + ")"; 
+	}
+}
+
+public class EmployeeProcessor {
+    public static void main(String[] args) {
+        // Example with data
+        Optional<List<Employee>> employeesOpt = getEmployees();
+        
+        // Java 8: Use ifPresent to process, orElse to handle empty
+        employeesOpt.ifPresent(list -> {
+            if (list.isEmpty()) {
+                System.out.println("employee doesnot exist");
+            } else {
+                list.stream()
+                    .filter(e -> e.getAge() > 30)
+                    .forEach(e -> e.setSalary(e.getSalary() + 1000));
+                
+                System.out.println("Updated employees: " + list);
+            }
+        });
+        
+        if (!employeesOpt.isPresent() || employeesOpt.get().isEmpty()) {
+            System.out.println("employee doesnot exist");
+        }
+    }
+
+    // Dummy method
+    public static Optional<List<Employee>> getEmployees() {
+        // Return Optional.empty() to test the "not exist" scenario
+        return Optional.of(Arrays.asList(
+            new Employee("Alice", 25, 50000),
+            new Employee("Bob", 35, 60000),
+            new Employee("Charlie", 40, 70000)
+        ));
+    }
+}
+
+
+Key Java 8 Stream/Optional Techniques:
+Optional.ifPresent(...): Executes a block if the Optional contains a list.
+stream(): Converts the list into a stream.
+filter(e -> e.getAge() > 30): Filters employees older than 30.
+forEach(...): Iterates through the filtered stream to modify the employee objects.
+
+
+=============================
+
+Using streams, find repeated strings and count how many times it occur from the list "aa","cc","bb","aa","dd","bb"?
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class RepeatedStringsCount {
+    public static void main(String[] args) {
+
+        List<String> list = Arrays.asList("aa","cc","bb","aa","dd","bb");
+
+        Map<String, Long> result =
+                list.stream()
+                    .collect(Collectors.groupingBy(
+                            Function.identity(),
+                            Collectors.counting()))
+                    .entrySet()
+                    .stream()
+                    .filter(e -> e.getValue() > 1)
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue));
+
+        result.forEach((k,v) -> System.out.println(k + " -> " + v));
+    }
+}
+
+==============================================
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class FirstNonRepeatedChar {
+
+    public static Character findFirstNonRepeatedChar(String s) {
+        // Line 1: Convert the string to a stream of characters and count occurrences.
+        Map<Character, Long> counts = s.chars()
+            // Line 2: Convert each int (ASCII value) from the stream back to a Character object.
+            .mapToObj(c -> (char) c)
+            // Line 3: Collect characters into a LinkedHashMap (maintains order)
+            // with counting collector to store frequency.
+            .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting()));
+        
+        // Line 4: Find the first entry in the map with a count of 1.
+        return counts.entrySet().stream()
+            // Line 5: Filter map entries to find those where the count is equal to 1.
+            .filter(entry -> entry.getValue() == 1L)
+            // Line 6: Get the first element of the filtered stream (due to LinkedHashMap order).
+            .map(Map.Entry::getKey)
+            // Line 7: Get the character if present, otherwise return null.
+            .findFirst()
+            .orElse(null);
+    }
+
+    public static void main(String[] args) {
+        String s1 = "swiss";
+        Character firstNonRepeated = findFirstNonRepeatedChar(s1);
+        if (firstNonRepeated != null) {
+            System.out.println("The first non-repeated character in \"" + s1 + "\" is: " + firstNonRepeated);
+        } else {
+            System.out.println("No non-repeated character found in \"" + s1 + "\".");
+        }
+    }
+}
+
+//
+if (firstNonRepeated.isPresent()) {
+            System.out.println("The first non-repeated character is: " + firstNonRepeated.get());
+        } else {
+            System.out.println("No non-repeated character found.");
+        }
+		
+		
+-----
+
+Line-by-Line Explanation:
+
+Line 1: s1.chars(): This converts the input string "swiss" into an IntStream. The characters are treated as their corresponding ASCII integer values.
+
+Line 2: .mapToObj(c -> (char) c): This maps each integer from the IntStream back to its char representation, resulting in a Stream<Character>.
+
+Line 3: .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting())): This is a crucial step that collects the stream elements into a Map.
+Function.identity(): The characters themselves are used as the keys in the map.
+LinkedHashMap::new: A LinkedHashMap is specified to ensure the order of insertion is preserved. This is essential to find the first non-repeated character.
+Collectors.counting(): This counts the occurrences of each character, which become the values in the map.
+
+Line 4: .entrySet().stream(): This creates a stream from the map's entry set (Map.Entry<Character, Long>), allowing further stream operations on the character-count pairs.
+
+Line 5: .filter(entry -> entry.getValue() == 1L): This filters the stream to keep only the entries where the count (value) is exactly 1, meaning the character is non-repeated.
+
+Line 6: .map(Map.Entry::getKey): This maps the filtered entries back to their character keys.
+
+Line 7: .findFirst(): This is a short-circuiting terminal operation that returns an Optional<Character> containing the first character that satisfies the criteria, or an empty Optional if no such character exists. 
+		
+
+===========================================
+
+Write a program to print the reverse of the String?,
+String str = "Java8";
+
+String reversed = IntStream.range(0, str.length())
+        .mapToObj(i -> str.charAt(str.length() - 1 - i))
+        .map(String::valueOf)
+        .collect(Collectors.joining());
+
+System.out.println(reversed);
+
+==============================================================
+Write a program to print First non-repeated character from given String?
+
+String str = "aabbcdeff";
+
+Character firstNonRepeat = str.chars()
+        .mapToObj(c -> (char) c)
+        .collect(Collectors.groupingBy(Function.identity(),
+                LinkedHashMap::new,
+                Collectors.counting()))
+        .entrySet().stream()
+        .filter(e -> e.getValue() == 1)
+        .map(Map.Entry::getKey)
+        .findFirst()
+        .orElse(null);
+
+System.out.println(firstNonRepeat);
+
+================================================================
+String str = "Test";
+String str1 = str + "Test1";
+
+String str2 = "TestTest1";
+
+if(str1 == str2)
+    System.out.println("Equal");
+else
+    System.out.println("Not equal");
+	
+Line 1
+String str = "Test";
+
+"Test" is a string literal
+
+It goes into the String Constant Pool
+
+str points to "Test"
+
+Memory:String Pool
+-------------
+"Test"
+
+str  -----? "Test"	
+	
+	
+	String Pool
+--------------
+"Test"
+"Test1"
+"TestTest1"
+
+Heap
+--------------
+Object1 -> "TestTest1"
+
+str  ---? "Test"
+str1 ---? Object1
+
+Case 2 (Runtime concatenation)
+String s1 = "Hello";
+String s2 = s1 + "World";
+String s3 = "HelloWorld";
+
+System.out.println(s2 == s3);
+
+Output:
+
+false
+
+If You Use intern()
+String str1 = (str + "Test1").intern();
+String str2 = "TestTest1";
+
+System.out.println(str1 == str2);
+
+Output:
+
+true
+==
+
+Output : Not equal
+Reason : str1 is created in heap (runtime concatenation)
+         str2 is in String Pool
+         == compares references
+		 
+		 
+
+Note:
+Internal Memory Diagram
+String Pool
+-------------------
+"Test"
+"Test1"
+"TestTest1"
+     ?
+     ¦
+    str2
+
+Heap
+-------------------
+Object1 ("TestTest1")
+     ?
+     ¦
+    str1
+
+Since references differ ? == ? false
+
+====
+
+Final Answer
+
+Output : Not equal
+Reason : str1 is created in heap (runtime concatenation)
+         str2 is in String Pool
+         == compares references
+
+================================================================
+
+ Write a program to print last non-repeated character from given String?
+
+Character lastNonRepeat = str.chars()
+        .mapToObj(c -> (char) c)
+        .collect(Collectors.groupingBy(Function.identity(),
+                LinkedHashMap::new,
+                Collectors.counting()))
+        .entrySet().stream()
+        .filter(e -> e.getValue() == 1)
+        .reduce((first, second) -> second)
+        .map(Map.Entry::getKey)
+        .orElse(null);
+
+System.out.println(lastNonRepeat);
+
+===============================================================
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class SecondNonRepeatedChar {
+
+    public static void main(String[] args) {
+
+        String input = "swiss";
+
+        Character result = input.chars()                 // Convert String ? IntStream
+                .mapToObj(c -> (char) c)                 // Convert int ? Character
+                .collect(Collectors.groupingBy(
+                        Function.identity(),             // Group characters
+                        LinkedHashMap::new,              // Maintain insertion order
+                        Collectors.counting()))          // Count frequency
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() == 1)  // Keep non-repeated characters
+                .skip(1)                                 // Skip first non-repeated
+                .map(Map.Entry::getKey)                  // Get character
+                .findFirst()
+                .orElse(null);
+
+        System.out.println("Second non-repeated character: " + result);
+    }
+}
+
+
+
+================================================================
+
+Write a program to remove the duplicate characters from the given String? 
+
+String noDuplicates = str.chars()
+        .distinct()
+        .mapToObj(c -> String.valueOf((char) c))
+        .collect(Collectors.joining());
+
+System.out.println(noDuplicates);
+
+==================================================================
+
+Write a program to count the number of occurrences of each character in a string?
+
+Map<Character, Long> frequency = str.chars()
+        .mapToObj(c -> (char) c)
+        .collect(Collectors.groupingBy(Function.identity(),
+                Collectors.counting()));
+
+System.out.println(frequency);
+
+
+===================================================================
+
+Write a program to print duplicate characters from the given String?
+
+frequency.entrySet().stream()
+        .filter(e -> e.getValue() > 1)
+        .map(Map.Entry::getKey)
+        .forEach(System.out::println);
+
+
+=====================================================================
+
+write a program to print all duplicate character and their count form the given String?
+
+frequency.entrySet().stream()
+        .filter(e -> e.getValue() > 1)
+        .forEach(e -> System.out.println(e.getKey() + " : " + e.getValue()));
+
+
+=====================================================================
+
+Write a program to print Highest occurred character from given String?
+
+Map.Entry<Character, Long> maxChar = frequency.entrySet().stream()
+        .max(Map.Entry.comparingByValue())
+        .orElse(null);
+
+System.out.println(maxChar);
+
+
+=====================================================================
+
+Write a program to remove the given Character from the given String?
+
+char remove = 'a';
+
+String result = str.chars()
+        .filter(c -> c != remove)
+        .mapToObj(c -> String.valueOf((char) c))
+        .collect(Collectors.joining());
+
+System.out.println(result);
+
+======================================================================
+
+Write a program to check whether given string contains digits or not?
+
+boolean hasDigit = str.chars()
+        .anyMatch(Character::isDigit);
+
+System.out.println(hasDigit);
+
+=================================================================
+
+Write a program to check whether given string contains Special Characters or not?
+
+boolean hasSpecial = str.chars()
+        .anyMatch(c -> !Character.isLetterOrDigit(c) && !Character.isWhitespace(c));
+
+System.out.println(hasSpecial);
+
+
+================================================================
+
+Write a program to whether check given string contains vowels or not?
+
+boolean hasVowel = str.toLowerCase().chars()
+        .anyMatch(c -> "aeiou".indexOf(c) != -1);
+
+System.out.println(hasVowel);
+
+
+===================================================================
+
+
+Write a program to count the characters, digits and Special Characters from the given String?
+
+long letters = str.chars().filter(Character::isLetter).count();
+long digits = str.chars().filter(Character::isDigit).count();
+long special = str.length() - (letters + digits);
+
+System.out.println("Letters: " + letters);
+System.out.println("Digits: " + digits);
+System.out.println("Special: " + special);
+
+===================================================================
+
+
+ Write a program to count the Capital letters and Small letters from the given String?
+
+long upper = str.chars().filter(Character::isUpperCase).count();
+long lower = str.chars().filter(Character::isLowerCase).count();
+
+System.out.println("Upper: " + upper);
+System.out.println("Lower: " + lower);
+
+
+============================================================
+
+
+Write a program to count the consonants and vowels from the given String?
+
+
+long vowels = str.toLowerCase().chars()
+        .filter(c -> "aeiou".indexOf(c) != -1)
+        .count();
+
+long consonants = letters - vowels;
+
+System.out.println("Vowels: " + vowels);
+System.out.println("Consonants: " + consonants);
+
+==================================================================================
+
+ Write a program to find the percentages of characters, Digits and Special characters from the given String?
+
+long vowels = str.toLowerCase().chars()
+        .filter(c -> "aeiou".indexOf(c) != -1)
+        .count();
+
+long consonants = letters - vowels;
+
+System.out.println("Vowels: " + vowels);
+System.out.println("Consonants: " + consonants);
+
+
+=========================================================================
+
+Write a program to find the percentages of the Consonants and vowels from the given String?
+
+System.out.println("Upper%: " + upper * 100.0 / total);
+System.out.println("Lower%: " + lower * 100.0 / total);
+System.out.println("Digits%: " + digits * 100.0 / total);
+System.out.println("Special%: " + special * 100.0 / total);
+
+====================================================
+
+Write a program to find the percentages of the Capital Characters , Small characters, Special Characters and Digits from the given String?
+
+System.out.println("Upper%: " + upper * 100.0 / total);
+System.out.println("Lower%: " + lower * 100.0 / total);
+System.out.println("Digits%: " + digits * 100.0 / total);
+System.out.println("Special%: " + special * 100.0 / total);
+
+=======================================
+
+Write a program to sort the given String?
+
+String sorted = str.chars()
+        .sorted()
+        .mapToObj(c -> String.valueOf((char) c))
+        .collect(Collectors.joining());
+
+System.out.println(sorted);
+
+
+====================================================================
+
+Sort Employee finanace department on the basis of salary asc and desc?
+
+class Employee {
+    String name;
+    String dept;
+    double salary;
+
+    Employee(String name, String dept, double salary) {
+        this.name = name;
+        this.dept = dept;
+        this.salary = salary;
+    }
+
+    public String getDept() { return dept; }
+    public double getSalary() { return salary; }
+    public String toString() { return name + " " + salary; }
+}
+
+List<Employee> employees = Arrays.asList(
+        new Employee("A", "Finance", 70000),
+        new Employee("B", "HR", 50000),
+        new Employee("C", "Finance", 90000),
+        new Employee("D", "Finance", 60000)
+);
+
+// ASC
+employees.stream()
+        .filter(e -> e.getDept().equalsIgnoreCase("Finance"))
+        .sorted(Comparator.comparing(Employee::getSalary))
+        .forEach(System.out::println);
+
+// DESC
+employees.stream()
+        .filter(e -> e.getDept().equalsIgnoreCase("Finance"))
+        .sorted(Comparator.comparing(Employee::getSalary).reversed())
+        .forEach(System.out::println);
+
+==============================================
+
+Write a program to Check whether two given Strings are anagram or not?
+
+String s1 = "listen";
+String s2 = "silent";
+
+boolean isAnagram = s1.chars().sorted().boxed().collect(Collectors.toList())
+        .equals(s2.chars().sorted().boxed().collect(Collectors.toList()));
+
+System.out.println(isAnagram);
+
+====================================================
+
+How to check Palindrome in java using Stream API
+
+List<String> words = Arrays.asList("radar", "hello", "deified");
+List<String> palindromes = words.stream()
+.filter(s -> s.equals(new StringBuilder(s).reverse().toString()))
+.collect(Collectors.toList());
+
+
+=====================================================
+
+Write a program to count occurrence of a given character from the String?
+
+char ch = 'a';
+
+long count = str.chars()
+        .filter(c -> c == ch)
+        .count();
+
+System.out.println(count);
+
+====================================================
+
+Write a program to replace given character to other given Character in the string?
+
+char oldChar = 'a';
+char newChar = 'x';
+
+String replaced = str.chars()
+        .map(c -> c == oldChar ? newChar : c)
+        .mapToObj(c -> String.valueOf((char) c))
+        .collect(Collectors.joining());
+
+System.out.println(replaced);
+
+===================================================
+
+Write a program to Whether Given String is palindrome String or not?
+
+String input = "madam";
+
+boolean isPalindrome = IntStream.range(0, input.length() / 2)
+        .allMatch(i -> input.charAt(i) ==
+                input.charAt(input.length() - 1 - i));
+
+System.out.println(isPalindrome);
+
+
+===============================================
+
+Write a Program to reverse words in a given String?
+
+String sentence = "Java Stream API";
+
+String reversedWords = Arrays.stream(sentence.split(" "))
+        .map(word -> new StringBuilder(word).reverse().toString())
+        .collect(Collectors.joining(" "));
+
+System.out.println(reversedWords);
+
+
+=================================================
+Task: Given int[] arr = {1, 3, 4, 6, 7, 2};, implement the count of elements using Streams. You are NOT allowed to use .count(), .collect(), .toList(), or .size(). You must use .reduce() only.
+
+import java.util.Arrays;
+
+public class CountUsingReduce {
+    public static void main(String[] args) {
+        int[] arr = {1, 3, 4, 6, 7, 2};
+
+        int count = Arrays.stream(arr)
+                          .boxed() // convert IntStream -> Stream<Integer>
+                          .reduce(0, (c, e) -> c + 1);
+
+        System.out.println("Count: " + count);
+    }
+}
+
+==================================================================
+
+Using java 8 need to sort Employee Finance Department and salary?
+
+1. Employee Class
+
+class Employee {
+    private int id;
+    private String name;
+    private String department;
+    private double salary;
+
+    public Employee(int id, String name, String department, double salary) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+        this.salary = salary;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String toString() {
+        return id + " " + name + " " + department + " " + salary;
+    }
+}
+
+2. Sample Data
+
+List<Employee> employees = Arrays.asList(
+        new Employee(1, "Ravi", "Finance", 60000),
+        new Employee(2, "Amit", "HR", 50000),
+        new Employee(3, "John", "Finance", 80000),
+        new Employee(4, "Neha", "IT", 70000),
+        new Employee(5, "Priya", "Finance", 55000)
+);
+
+3. Filter Finance Department and Sort by Salary (Ascending)
+
+List<Employee> financeEmployees = employees.stream()
+        .filter(emp -> emp.getDepartment().equalsIgnoreCase("Finance"))
+        .sorted(Comparator.comparing(Employee::getSalary))
+        .collect(Collectors.toList());
+
+financeEmployees.forEach(System.out::println);
+
+4. Sort by Salary (Descending)
+
+List<Employee> financeEmployeesDesc = employees.stream()
+        .filter(emp -> emp.getDepartment().equalsIgnoreCase("Finance"))
+        .sorted(Comparator.comparing(Employee::getSalary).reversed())
+        .collect(Collectors.toList());
+
+financeEmployeesDesc.forEach(System.out::println);
+
+5. Sort by Salary and then by Name (Optional)
+
+List<Employee> result = employees.stream()
+        .filter(emp -> emp.getDepartment().equalsIgnoreCase("Finance"))
+        .sorted(Comparator.comparing(Employee::getSalary)
+                .thenComparing(Employee::getName))
+        .collect(Collectors.toList());
+
+6. Alternative: Keep All Employees but Put Finance First and Sort by Salary
+
+employees.stream()
+        .sorted(Comparator
+                .comparing((Employee e) -> !e.getDepartment().equalsIgnoreCase("Finance"))
+                .thenComparing(Employee::getSalary))
+        .forEach(System.out::println);
+
+====================================================================
+
+Highest and lowest marks in particular subject out of Five subject by student of class 10th using java 8 streams api?
+
+class Student {
+    private int id;
+    private String name;
+    private int maths;
+    private int science;
+    private int english;
+    private int social;
+    private int hindi;
+
+    public Student(int id, String name, int maths, int science, int english, int social, int hindi) {
+        this.id = id;
+        this.name = name;
+        this.maths = maths;
+        this.science = science;
+        this.english = english;
+        this.social = social;
+        this.hindi = hindi;
+    }
+
+    public String getName() { return name; }
+    public int getMaths() { return maths; }
+    public int getScience() { return science; }
+    public int getEnglish() { return english; }
+    public int getSocial() { return social; }
+    public int getHindi() { return hindi; }
+
+    @Override
+    public String toString() {
+        return name + " [Maths=" + maths + ", Science=" + science +
+                ", English=" + english + ", Social=" + social +
+                ", Hindi=" + hindi + "]";
+    }
+}
+
+2. Sample Data
+
+List<Student> students = Arrays.asList(
+        new Student(1, "Ravi", 85, 90, 78, 88, 80),
+        new Student(2, "Neha", 92, 70, 85, 95, 89),
+        new Student(3, "Amit", 60, 65, 72, 68, 75),
+        new Student(4, "Priya", 98, 96, 91, 90, 94),
+        new Student(5, "John", 75, 80, 70, 60, 65)
+);
+
+3. Highest & Lowest in a Particular Subject (Example: Maths)
+Highest Marks in Maths
+
+Optional<Student> highestMaths = students.stream()
+        .max(Comparator.comparing(Student::getMaths));
+
+highestMaths.ifPresent(s ->
+        System.out.println("Highest in Maths: " + s.getName() + " - " + s.getMaths()));
+
+Lowest Marks in Maths
+
+Optional<Student> lowestMaths = students.stream()
+        .min(Comparator.comparing(Student::getMaths));
+
+lowestMaths.ifPresent(s ->
+        System.out.println("Lowest in Maths: " + s.getName() + " - " + s.getMaths()));
+
+
+4. Generic Method (Best Practice – Interview Level)
+
+
+public static void findHighLow(List<Student> students, 
+                               ToIntFunction<Student> subjectGetter, 
+                               String subjectName) {
+
+    students.stream()
+            .max(Comparator.comparingInt(subjectGetter))
+            .ifPresent(s -> System.out.println("Highest in " + subjectName + ": "
+                    + s.getName() + " - " + subjectGetter.applyAsInt(s)));
+
+    students.stream()
+            .min(Comparator.comparingInt(subjectGetter))
+            .ifPresent(s -> System.out.println("Lowest in " + subjectName + ": "
+                    + s.getName() + " - " + subjectGetter.applyAsInt(s)));
+}
+
+Call for Different Subjects
+
+findHighLow(students, Student::getMaths, "Maths");
+findHighLow(students, Student::getScience, "Science");
+findHighLow(students, Student::getEnglish, "English");
+findHighLow(students, Student::getSocial, "Social");
+findHighLow(students, Student::getHindi, "Hindi");
+
+===============================================================
+String s = "abcdcaf" . 
+Write java program to find count of characters. e.g. a=2, b=1, c=2, d=1, f=1
+
+
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class CharacterCount {
+    public static void main(String[] args) {
+        String s = "abcdefabc"; // Example string, 'a' and 'c' appear twice
+
+        // Use streams to count characters
+        Map<Character, Long> charCounts = s.chars()
+            .mapToObj(c -> (char) c) // Convert IntStream to Stream<Character>
+            .collect(Collectors.groupingBy(
+                Function.identity(), // Group by the character itself
+                Collectors.counting() // Count occurrences of each character
+            ));
+
+        // Print the results
+        System.out.println("Character counts for string \"" + s + "\":");
+        charCounts.forEach((character, count) -> 
+            System.out.println(character + "=" + count)
+        );
+    }
+}
+		
+---
+
+Explanation of the code:
+s.chars(): This method converts the string s into an IntStream where each element is the ASCII value of a character.
+.mapToObj(c -> (char) c): This maps each integer (ASCII value) in the IntStream to its corresponding Character object to work with the groupingBy collector.
+.collect(Collectors.groupingBy(...)): This is a terminal operation that collects the stream elements into a Map.
+Function.identity(): This is the classifier function that groups elements by their own value (i.e., all 'a's are grouped together, all 'b's together, etc.).
+Collectors.counting(): This is a downstream collector used to count the number of elements in each group, resulting in a Map<Character, Long>		
+							 
+===========================================
+
+Map<Integer, String> map = new HashMap<>();  
+write program to sort Hashmap by value using java 8
+
+map.put(1, "x");
+map.put(2, "s");
+map. Put(3, "z");
+-------------------
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class SortHashMapByValue {
+    public static void main(String[] args) {
+        Map<Integer, String> map = new HashMap<>();
+        map.put(1, "x");
+        map.put(2, "s");
+        map.put(3, "z");
+
+        // Sort by value (ascending)
+        Map<Integer, String> sortedMap = map.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (v1, v2) -> v1,
+                        LinkedHashMap::new
+                ));
+
+        System.out.println("Sorted Map: " + sortedMap);
+    }
+}
+
+Key Steps:
+.stream() & .sorted(): Converts the map to a stream and uses Map.Entry.comparingByValue() to sort by values.
+.collect(): Uses Collectors.toMap to collect results, specifically using LinkedHashMap::new to maintain the sorted order.
+
+==================================================================================
+
+Optional<List<Employee>> employees = getEmployees();
+use java 8, use optional methods and iterate over the list. for employees whose age is > 30, provide them extra 1000 rs to their existing salary. if no employees then print employee doesnot exist. Use java 8 stream
+
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+class Employee {
+    String name;
+    int age;
+    double salary;
+
+    public Employee(String name, int age, double salary) {
+        this.name = name;
+        this.age = age;
+        this.salary = salary;
+    }
+
+    public void setSalary(double salary) { this.salary = salary; }
+    public double getSalary() { return salary; }
+    public int getAge() { return age; }
+    @Override
+    public String toString() { return name + " (Age: " + age + ", Salary: " + salary + ")"; }
+}
+
+public class EmployeeProcessor {
+    public static void main(String[] args) {
+        // Example with data
+        Optional<List<Employee>> employeesOpt = getEmployees();
+        
+        // Java 8: Use ifPresent to process, orElse to handle empty
+        employeesOpt.ifPresent(list -> {
+            if (list.isEmpty()) {
+                System.out.println("employee doesnot exist");
+            } else {
+                list.stream()
+                    .filter(e -> e.getAge() > 30)
+                    .forEach(e -> e.setSalary(e.getSalary() + 1000));
+                
+                System.out.println("Updated employees: " + list);
+            }
+        });
+        
+        if (!employeesOpt.isPresent() || employeesOpt.get().isEmpty()) {
+            System.out.println("employee doesnot exist");
+        }
+    }
+
+    // Dummy method
+    public static Optional<List<Employee>> getEmployees() {
+        // Return Optional.empty() to test the "not exist" scenario
+        return Optional.of(Arrays.asList(
+            new Employee("Alice", 25, 50000),
+            new Employee("Bob", 35, 60000),
+            new Employee("Charlie", 40, 70000)
+        ));
+    }
+}
+
+
+Key Java 8 Stream/Optional Techniques:
+Optional.ifPresent(...): Executes a block if the Optional contains a list.
+stream(): Converts the list into a stream.
+filter(e -> e.getAge() > 30): Filters employees older than 30.
+forEach(...): Iterates through the filtered stream to modify the employee objects.
+======================================
+
+public class ConvertListToMapOfEmployeeInJava8 {
+ 
+    public static void main(String[] args) {
+ 
+        // create ArrayList
+        List<Employee> employees = new ArrayList<Employee>();
+ 
+        // add employee objects to list
+        employees.add(new Employee(1001, "SJ", 18, "Consultant"));
+        employees.add(new Employee(1002, "AK", 20, "Enginner"));
+        employees.add(new Employee(1003, "PJ", 23, "Developer"));
+ 
+        // printing to console - List of Employee
+        System.out.println("List of Employee : \n");
+ 
+        // print to console using Java 8 for-each
+        employees.forEach((employee) -> System.out.println(employee));
+ 
+        // convert List<Employee>
+        // to Map<empId, empName> using Java 8 Streams
+        Map<Integer, Employee> mapOfEmployees = employees
+                .stream()
+                .collect(
+                        Collectors.toMap(
+                                e -> e.getEmpId(),
+                                e -> e));
+ 
+        // printing to console - Map of Employee
+        System.out.println("\n\nMap of Employee : \n");
+ 
+        // print to console using Java 8 for-each
+        mapOfEmployees.forEach(
+                (key, value) -> System.out.println("Key: " + key
+                        + "\tValue: "+ value));
+    }
+}
+=====================================================
+
+public class ConvertListToMapSolutionForDuplicateKeysInJava8 {
+ 
+    public static void main(String[] args) {
+ 
+        // create ArrayList
+        List<Employee> employees = new ArrayList<Employee>();
+ 
+        // add employee objects to list
+        employees.add(new Employee(1001, "SJ", 18, "Consultant"));
+        employees.add(new Employee(1002, "AK", 20, "Enginner"));
+        employees.add(new Employee(1003, "PJ", 23, "Developer"));
+        employees.add(new Employee(1003, "SK", 25, "Manager"));
+ 
+        // printing to console - List of Employees
+        System.out.println("List of Employee : \n");
+ 
+        // print to console using Java 8 for-each
+        employees.forEach((employee) -> System.out.println(employee));
+ 
+        // convert List<Employee>
+        // to Map<empId, empName> using Java 8 Streams
+        Map<Integer, String> mapOfEmployees = employees
+                .stream()
+                .collect(
+                        Collectors.toMap(
+                                e -> e.getEmpId(),
+                                e -> e.getEmpName(),
+                                (e1, e2) -> e1 + ", " + e2));
+                                // Merge Function
+ 
+        // printing to console - Map of Employees
+        System.out.println("\n\nMap of Employee : \n");
+ 
+        // print to console using Java 8 for-each
+        mapOfEmployees.forEach(
+                (key, value) -> System.out.println("Key: " + key
+                        + "\tValue: "+ value));
+    }
+}
+
+===============================================
+
+Convert List to Map – preserving order of List while converting using LinkedHashMap
+
+public class ConvertListToMapOfEmployeePreservingOrderInJava8 {
+ 
+    public static void main(String[] args) {
+ 
+        // create ArrayList
+        List<Employee> employees = new ArrayList<Employee>();
+ 
+        // add employee objects to list
+        employees.add(new Employee(1001, "SJ", 18, "Consultant"));
+        employees.add(new Employee(1002, "AK", 20, "Enginner"));
+        employees.add(new Employee(1003, "PJ", 23, "Developer"));
+ 
+        // printing to console - List of Employee
+        System.out.println("List of Employee : \n");
+ 
+        // print to console using Java 8 for-each
+        employees.forEach((employee) -> System.out.println(employee));
+ 
+        // convert List<Employee>
+        // to Map<empId, empName> using Java 8 Streams
+        Map<Integer, String> mapOfEmployees = employees
+                .stream()
+                .collect(
+                        Collectors.toMap(
+                                e -> e.getEmpId(),
+                                e -> e.getEmpName(),
+                                (e1, e2) -> e1 + ", " + e2,
+                                LinkedHashMap<Integer, String>::new));
+        // line 35 - Merge Function and line 36 - Map Supplier 
+ 
+        // printing to console - Map of Employee
+        System.out.println("\n\nMap of Employee preserving"
+                + " Insertion order : \n");
+ 
+        // print to console using Java 8 for-each
+        mapOfEmployees.forEach(
+                (key, value) -> System.out.println("Key: " + key
+                        + "\tValue: "+ value));
+    }
+}
+
+==========================================
+Convert List to Map – natural sorting order of keys using TreeMap
+
+public class ConvertListToMapOfEmployeeSortingOrderInJava8 {
+ 
+    public static void main(String[] args) {
+ 
+        // create ArrayList
+        List<Employee> employees = new ArrayList<Employee>();
+ 
+        // add employee objects to list
+        employees.add(new Employee(1009, "SJ", 18, "Consultant"));
+        employees.add(new Employee(1003, "AK", 20, "Enginner"));
+        employees.add(new Employee(1007, "PJ", 23, "Developer"));
+ 
+        // printing to console - List of Employee
+        System.out.println("List of Employee : \n");
+ 
+        // print to console using Java 8 for-each
+        employees.forEach((employee) -> System.out.println(employee));
+ 
+        // convert List<Employee>
+        // to Map<empId, empName> using Java 8 Streams
+        Map<Integer, String> mapOfEmployees = employees
+                .stream()
+                .collect(
+                        Collectors.toMap(
+                                e -> e.getEmpId(),
+                                e -> e.getEmpName(),
+                                (e1, e2) -> e1 + ", " + e2, //
+                                TreeMap<Integer, String>::new)); //
+        // line 35 - Merge Function and line 36 - Map Supplier
+ 
+        // printing to console - Map of Employee
+        System.out.println("\n\nMap of Employee sorted acc. to"
+                + " natural order of keys : \n");
+ 
+        // print to console using Java 8 for-each
+        mapOfEmployees.forEach(
+                (key, value) -> System.out.println("Key: " + key
+                        + "\tValue: "+ value));
+    }
+}
+
+
+===========How to count frequency of a string in java using stream?================
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
+
+public class Test {
+    public static void main(String[] args) {
+        String input = "gain java knowledge";
+        Map<String, Long> countMap = Arrays.stream(input.split(""))
+		.collect(groupingBy(Function.identity(), counting()));
+        System.out.println(countMap);
+    }
+}
+
+============================================================
+
+Java 8 – Find duplicate elements in a Stream
+
+public class JavaDuplicated1 {
+
+    public static void main(String[] args) {
+
+        // 3, 4, 9
+        List<Integer> list = Arrays.asList(5, 3, 4, 1, 3, 7, 2, 9, 9, 4);
+
+        Set<Integer> result = findDuplicateBySetAdd(list);
+
+        result.forEach(System.out::println);
+
+    }
+
+    public static <T> Set<T> findDuplicateBySetAdd(List<T> list) {
+
+        Set<T> items = new HashSet<>();
+        return list.stream()
+                .filter(n -> !items.add(n)) // Set.add() returns false if the element was already in the set.
+                .collect(Collectors.toSet());
+
+    }
+
+}
+
+========
+public class JavaDuplicated2 {
+
+    public static void main(String[] args) {
+
+        // 3, 4, 9
+        List<Integer> list = Arrays.asList(5, 3, 4, 1, 3, 7, 2, 9, 9, 4);
+
+        Set<Integer> result = findDuplicateByGrouping(list);
+
+        result.forEach(System.out::println);
+
+    }
+
+    public static <T> Set<T> findDuplicateByGrouping(List<T> list) {
+
+        return list.stream()
+                .collect(Collectors.groupingBy(Function.identity()
+                        , Collectors.counting()))    // create a map {1=1, 2=1, 3=2, 4=2, 5=1, 7=1, 9=2}
+                .entrySet().stream()                 // Map -> Stream
+                .filter(m -> m.getValue() > 1)       // if map value > 1, duplicate element
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+    }
+
+}
+
+===================
+
+public class JavaDuplicated3 {
+
+    public static void main(String[] args) {
+
+        // 3, 4, 9
+        List<Integer> list = Arrays.asList(5, 3, 4, 1, 3, 7, 2, 9, 9, 4);
+
+        Set<Integer> result = findDuplicateByFrequency(list);
+
+        result.forEach(System.out::println);
+
+    }
+
+    public static <T> Set<T> findDuplicateByFrequency(List<T> list) {
+
+        return list.stream().filter(i -> Collections.frequency(list, i) > 1)
+                .collect(Collectors.toSet());
+
+    }
+
+}
+
+=====================
+public class GfG {
+  
+    // Function to find the
+    // duplicates in a Stream
+    public static <T> Set<T>
+    findDuplicateInStream(Stream<T> stream)
+    {
+  
+        // Return the set of duplicate elements
+        return stream
+  
+            // Group the elements along
+            // with their frequency in a map
+            .collect(
+                Collectors.groupingBy(
+                    Function.identity(),
+                    Collectors.counting()))
+  
+            // Convert this map into a stream
+            .entrySet()
+            .stream()
+  
+            // Check if frequency > 1
+            // for duplicate elements
+            .filter(m -> m.getValue() > 1)
+  
+            // Find such elements
+            .map(Map.Entry::getKey)
+  
+            // And Collect them in a Set
+            .collect(Collectors.toSet());
+    }
+  
+    // Driver code
+    public static void main(String[] args)
+    {
+  
+        // Initial stream
+        Stream<Integer> stream
+            = Stream.of(5, 13, 4,
+                        21, 13, 27,
+                        2, 59, 59, 34);
+  
+        // Print the found duplicate elements
+        System.out.println(
+            findDuplicateInStream(stream));
+    }
+}
+
+===================
+List<Integer> numbers = Arrays.asList(new Integer[]{1,2,1,3,4,4});  
+
+You can use Collections.frequency:
+
+numbers.stream().filter(i -> Collections.frequency(numbers, i) >1)
+                .collect(Collectors.toSet()).forEach(System.out::println);
+				
+============================
+
+List<Integer> numbers = Arrays.asList(1, 2, 1, 3, 4, 4);
+Set<Integer> duplicated = numbers
+  .stream()
+  .filter(n -> numbers
+        .stream()
+        .filter(x -> x == n)
+        .count() > 1)
+   .collect(Collectors.toSet());
+
+========================================   
+Set<Integer> duplicated =
+        ImmutableMultiset.copyOf(numbers).entrySet().stream()
+                .filter(entry -> entry.getCount() > 1)
+                .map(Multiset.Entry::getElement)
+                .collect(Collectors.toSet());
+===================================
+
+Use Collectors.counting() method for counting duplicates :
+Collectors.counting() method counts duplicates
+
+package net.bench.resources.java.stream;
+ 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+ 
+// using Collectors.toMap() and groupingBy() and counting()
+public class FindDuplicateCountUsingGroupingByAndCounting1 {
+ 
+    public static void main(String[] args) {
+ 
+        // 1. list of Strings
+        List<String> companies = new ArrayList<String>();
+ 
+ 
+        // 1.1 add string elements to List
+        companies.add("Meta");
+        companies.add("Apple");
+        companies.add("Amazon");
+        companies.add("Netflix");
+        companies.add("Meta"); // duplicate
+        companies.add("Google");
+        companies.add("Apple"); // duplicate
+ 
+ 
+        // 1.2 print original List to console
+        System.out.println("1. Original List with duplicates : \n");
+        companies.forEach(System.out::println);
+ 
+ 
+        // 2. get unique elements
+        Set<String> distinctCompanies = companies
+                .stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet()
+                .stream()
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+ 
+ 
+        // 2.1 print unique elements
+        System.out.println("\n2. Unique elements : \n");
+        distinctCompanies.forEach(System.out::println);
+ 
+ 
+        // 3. get duplicate elements
+        Set<String> duplicateCompanies = companies
+                .stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet()
+                .stream()
+                .filter(company -> company.getValue() > 1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+ 
+ 
+        // 3.1 print duplicate elements
+        System.out.println("\n3. Duplicate elements : \n");
+        duplicateCompanies.forEach(System.out::println);
+ 
+ 
+        // 4. get duplicate count using Map
+        Map<String, Long> duplicateCount = companies
+                .stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+ 
+ 
+        // 4.1 print Map for duplicate count
+        System.out.println("\n4. Map with Key and its duplicate count : \n");
+        duplicateCount.forEach(
+                (key, value) -> System.out.println("Key : " + key + "\t Count : " + value)
+                );
+    }
+}
+
+=======================
+
+Employee e = new Employeee(  );
+
+Q:Find the count the objects in Employee
+
+ANS:
+
+public class ObjectCount  
+{  
+static int count=0;  
+public static void main(String args[])  
+{  
+ObjectCount c1=new ObjectCount();   
+c1.count();  
+ObjectCount c2=new ObjectCount();  
+c2.count();  
+ObjectCount c3=new ObjectCount();   
+c3.count();  
+System.out.println("Total Number of Objects: "+count);  
+}  
+//function counts the number of objects  
+static void count()  
+{  
+count++;  
+}  
+}  
+============
+
+public class Department {
+
+	private static int noOfObjects;
+
+	public Department() {
+		noOfObjects++;
+	}
+
+	public static void main(String[] args) {
+
+		Department d1 = new Department();
+		Department d2 = new Department();
+		Department d3 = new Department();
+
+		System.out.println("Total objects created: " + noOfObjects);
+
+	}
+}
+
+===================================
+
+Java 8 – How to find the First Non-Repeated Character in a String?
+
+/**
+ * Find the First Non-Repeated Character in a String using Java 8 
+ * @author Deepak Verma
+ *
+ */
+ 
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+ 
+public class Find_First_Non_Repeated_Character_in_a_String_using_Java8 {
+ 
+ public static void main(String[] args) {
+ System.out.println("First Non-Repeated Character in the String: 'AMAZING' is: "+firstNonRepeatedCharacter("AMAZING"));
+ }
+       
+ public static Optional<Character> firstNonRepeatedCharacter(String inputString) {
+ Map<Character, Long> characterCount = inputString.chars()
+                                                  .mapToObj(c -> (char) c)
+                                                  .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+ 
+ return inputString.chars()
+                   .mapToObj(c -> (char) c)
+                   .filter(c -> characterCount.get(c) == 1)
+                   .findFirst();
+    }
+ 
+}
+============================================================================
+Q: String s = "Welcome to bottomline"
+
+WP to find 2nd non repetative character 
+
+public static<Character>Map<Character,Long>
+   frequencyMap(stream<Charcter>elements)
+    {
+    	return elements.collect(Collectors.groupingBy(Function::identity(),
+	HashMap::new,Collectors.counting());
+
+}
+
+
+public static void main(String[] args)
+ {
+	Charcter[] letters = {"Welcome to bottomline"};
+	System.out.println(Arrays.stream(letters));
+}
+
+=====================================================
+
+Program to print whether any of the element of stream found, those stream elements are divisible by 7 from list of elements using filter() and findAny() of Stream interface.
+
+public class StreamFindAnyDemo {
+ 
+    public static void main(String[] args) {
+        
+         List<Integer> list = Arrays.asList(10,13,5,15,12,20,11,25,16);
+            
+         boolean itemFound = list.stream() 
+         .filter(i -> i%7 == 0)
+         .findAny().isPresent();
+          
+         //no element satisfy filter
+         //Output - false
+         System.out.println(itemFound);
+    }
+}
+======================================================
+public static void main(String[] args) {
+		
+		List<Integer> numbers = List.of(12, 9, 13, 4, 6, 2, 4, 12, 15);
+				
+		Predicate<Integer> isEvenPredicate = x -> x%2==0;
+		
+		Predicate<Integer> isEvenPredicate2 = new Predicate<Integer>() {
+			@Override
+			public boolean test(Integer x) {
+				return x%2==0;
+			}
+			
+		};
+
+		Function<Integer, Integer> squareFunction = x -> x * x;
+		
+		Function<Integer, Integer> squareFunction2 = new Function<Integer, Integer>() {
+			@Override
+			public Integer apply(Integer x) {
+				return x*x;
+			}
+			
+		};
+		
+==================================
+
+public class FirstRepeatedCharcter {
+    public static void main(String args[]) {
+     Map<Charcter,Long>collect = "StorageResourceManagement".chars.mapToObj(i->(char).collect(Collectors.groupingBy(Function::identity(),LinkedhashMap::new,Collectors.counting()));
+     collect.forEach((x,y) -> System.out.println("Key: " + "Val: " + y) );
+     
+      Optional<Charcter>firstRepeated = collect.entrySet.stream().filter((e ) -> e.getValue()==1).map(e ->e.getKey().findFirst();
+    }
+}
+
+==================================
+"0,0,1,1,1,9,45,43,23,32,23,32"
+
+List<Integer>withDuplicates = Arrays.asList(0,0,1,1,1,9,45,43,23,32,23,32);
+
+System.out.println(" withDuplicates:" +withDuplicates  );
+
+List<Integer>withoutDuplicates = withDuplicates.stream().distinct().collect(Collectors.toList());
+
+System.out.println(" withoutDuplicates:" +withoutDuplicates  );
+
+=======================================================
+1)Count Occurrence of each character in String using Java 8
+
+String input = "gainjavaknowledge";
+
+String [] array = input.split("");
+ 
+Map<String, Long> output = Arrays.stream(array).collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+2) Count Occurrence of each character in String using Java 8
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public class CountCharacterOccurrence {
+
+    public static void main(String[] args) {
+        String input = "gainjavaknowledge";
+
+        Map<String, Long> output = Arrays.stream(input.split("")).collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        System.out.println("Output : "+output);
+
+    }
+}
+
+================================================
+
+		List<Integer> list = Arrays.asList(10, 23, -4, 0, 18);
+List<Integer> sortedList = list.stream()
+        .sorted(Collections.reverseOrder())
+        .collect(Collectors.toList());
+
+System.out.println(sortedList);
+
+================================================
+
+For cases like these, we'll want to write a custom Comparator:
+
+List<User> userList = new ArrayList<>(Arrays.asList(
+        new User("John", 33),
+        new User("Robert", 26),
+        new User("Mark", 26),
+        new User("Brandon", 42)));
+
+List<User> sortedList = userList.stream()
+        .sorted((o1, o2) -> {
+            if(o1.getAge() == o2.getAge())
+                return o1.getName().compareTo(o2.getName());
+            else if(o1.getAge() > o2.getAge())
+                return 1;
+            else return -1;
+        })
+        .collect(Collectors.toList());
+
+sortedList.forEach(System.out::println);
+====================================================
+
+// A Java program to demonstrate use of Comparable
+import java.io.*;
+import java.util.*;
+ 
+// A class 'Movie' that implements Comparable
+class Movie implements Comparable<Movie>
+{
+    private double rating;
+    private String name;
+    private int year;
+ 
+    // Used to sort movies by year
+    public int compareTo(Movie m)
+    {
+        return this.year - m.year;
+    }
+ 
+    // Constructor
+    public Movie(String nm, double rt, int yr)
+    {
+        this.name = nm;
+        this.rating = rt;
+        this.year = yr;
+    }
+ 
+    // Getter methods for accessing private data
+    public double getRating() { return rating; }
+    public String getName()   {  return name; }
+    public int getYear()      {  return year;  }
+}
+ 
+// Driver class
+class Main
+{
+    public static void main(String[] args)
+    {
+        ArrayList<Movie> list = new ArrayList<Movie>();
+        list.add(new Movie("Force Awakens", 8.3, 2015));
+        list.add(new Movie("Star Wars", 8.7, 1977));
+        list.add(new Movie("Empire Strikes Back", 8.8, 1980));
+        list.add(new Movie("Return of the Jedi", 8.4, 1983));
+ 
+        Collections.sort(list);
+ 
+        System.out.println("Movies after sorting : ");
+        for (Movie movie: list)
+        {
+            System.out.println(movie.getName() + " " +
+                               movie.getRating() + " " +
+                               movie.getYear());
+        }
+    }
+}
+================================
+// A Java program to demonstrate Comparator interface
+import java.io.*;
+import java.util.*;
+ 
+// A class 'Movie' that implements Comparable
+class Movie implements Comparable<Movie> {
+    private double rating;
+    private String name;
+    private int year;
+ 
+    // Used to sort movies by year
+    public int compareTo(Movie m)
+    {
+        return this.year - m.year;
+    }
+ 
+    // Constructor
+    public Movie(String nm, double rt, int yr)
+    {
+        this.name = nm;
+        this.rating = rt;
+        this.year = yr;
+    }
+ 
+    // Getter methods for accessing private data
+    public double getRating() { return rating; }
+    public String getName() { return name; }
+    public int getYear() { return year; }
+}
+ 
+// Class to compare Movies by ratings
+class RatingCompare implements Comparator<Movie> {
+    public int compare(Movie m1, Movie m2)
+    {
+        if (m1.getRating() < m2.getRating())
+            return -1;
+        if (m1.getRating() > m2.getRating())
+            return 1;
+        else
+            return 0;
+    }
+}
+ 
+// Class to compare Movies by name
+class NameCompare implements Comparator<Movie> {
+    public int compare(Movie m1, Movie m2)
+    {
+        return m1.getName().compareTo(m2.getName());
+    }
+}
+ 
+// Driver class
+class Main {
+    public static void main(String[] args)
+    {
+        ArrayList<Movie> list = new ArrayList<Movie>();
+        list.add(new Movie("Force Awakens", 8.3, 2015));
+        list.add(new Movie("Star Wars", 8.7, 1977));
+        list.add(
+            new Movie("Empire Strikes Back", 8.8, 1980));
+        list.add(
+            new Movie("Return of the Jedi", 8.4, 1983));
+ 
+        // Sort by rating : (1) Create an object of
+        // ratingCompare
+        //                  (2) Call Collections.sort
+        //                  (3) Print Sorted list
+        System.out.println("Sorted by rating");
+        RatingCompare ratingCompare = new RatingCompare();
+        Collections.sort(list, ratingCompare);
+        for (Movie movie : list)
+            System.out.println(movie.getRating() + " "
+                               + movie.getName() + " "
+                               + movie.getYear());
+ 
+        // Call overloaded sort method with RatingCompare
+        // (Same three steps as above)
+        System.out.println("\nSorted by name");
+        NameCompare nameCompare = new NameCompare();
+        Collections.sort(list, nameCompare);
+        for (Movie movie : list)
+            System.out.println(movie.getName() + " "
+                               + movie.getRating() + " "
+                               + movie.getYear());
+ 
+        // Uses Comparable to sort by year
+        System.out.println("\nSorted by year");
+        Collections.sort(list);
+        for (Movie movie : list)
+            System.out.println(movie.getYear() + " "
+                               + movie.getRating() + " "
+                               + movie.getName() + " ");
+    }
+	
+=======================================================
+	What is  CompletableFuture?
+	<============>
+CompletableFuture is a class in java.util.concurrent package that implements the Future and CompletionStage Interface. It represents a future result of an asynchronous computation. It can be thought of as a container that holds the result of an asynchronous operation that is being executed in a different thread. It provides a number of methods to perform various operations on the result of the async computation.
+
+Creating a CompletableFuture:
+	<================>
+To create an instance of CompletableFuture, we can use the static method supplyAsync provided by CompletableFuture class which takes Supplier as an argument. Supplier is a Functional Interface that takes no value and returns a result.
+
+import java.util.concurrent.*;
+  
+class GFG {
+    public static void main(String[] args) throws Exception
+    {
+        CompletableFuture<String> greetingFuture
+            = CompletableFuture.supplyAsync(() -> {
+                  // some async computation
+                  return "Hello from CompletableFuture";
+              });
+  
+        System.out.println(greetingFuture.get());
+    }
+}
+
+==================================================
+### /src/programming/FP01Functional.java
+
+```java
+package programming;
+
+import java.util.List;
+
+public class FP01Functional { 
+	
+	public static void main(String[] args) {
+		List<Integer> numbers = List.of(12, 9, 13, 4, 6, 2, 4, 12, 15);
+		//printEvenNumbersInListFunctional(numbers);
+	}
+
+	// private static void print(int number) {
+	// System.out.println(number);
+	// }
+
+	private static boolean isEven(int number) {
+	 return number%2 == 0;
+
+	// number -> number%2 == 0
+	private static void printEvenNumbersInListFunctional(List<Integer> numbers) {
+		// What to do?
+
+		numbers.stream() // Convert to Stream
+				.filter(number -> number % 2 == 0) // Lamdba Expression
+				.forEach(System.out::println);// Method Reference
+
+		// .filter(FP01Functional::isEven)//Filter - Only Allow Even Numbers
+	}
+==============================================================
+
+import java.util.stream.Collectors;
+
+public class ReverseString {
+
+    public static void main(String[] args) {
+
+        String input = "HELLO";
+
+        String reversed = 
+                new StringBuilder(input)
+                .reverse()
+                .toString();
+
+        System.out.println(reversed);
+    }
+}
+=====================================================
+
+import java.util.stream.Collectors;
+
+public class ReverseExample {
+
+    public static void main(String[] args) {
+
+        String str = "JAVA";
+
+        String result =
+                new StringBuilder(
+                        str.chars()
+                           .mapToObj(c -> (char) c)
+                           .collect(Collectors.toList())
+                ).reverse().toString();
+
+        System.out.println(result);
+    }
+}
+
+=================================================								 
+import java.util.stream.Stream;
+
+public class ReverseString {
+
+    public static void main(String[] args) {
+
+        String input = "STREAM";
+
+        String reversed =
+                Stream.of(input.split(""))
+                        .reduce("", (a, b) -> b + a);
+
+        System.out.println(reversed);
+    }
+}
+
+==================================================
+import java.util.*;
+import java.util.stream.*;
+
+public class EvenOddGrouping {
+
+    public static void main(String[] args) {
+
+        List<Integer> list = Arrays.asList(1,2,3,4,5,6);
+
+        Map<String, List<Integer>> result =
+                list.stream()
+                    .collect(Collectors.groupingBy(
+                            n -> n % 2 == 0 ? "Even" : "Odd"
+                    ));
+
+        System.out.println(result);
+    }
+}
+
+=========================================================
+
+swappin two number without third variable
+
+import java.util.stream.Stream;
+
+public class SwapUsingStream {
+
+    public static void main(String[] args) {
+
+        int a = 10;
+        int b = 20;
+
+        int[] swapped =
+                Stream.of(new int[]{a, b})
+                      .map(arr -> new int[]{arr[1], arr[0]})
+                      .findFirst()
+                      .get();
+
+        System.out.println("a = " + swapped[0]);
+        System.out.println("b = " + swapped[1]);
+    }
+}
+
+===========================================================
+public class SwapNumbers {
+
+    public static void main(String[] args) {
+
+        int a = 10;
+        int b = 20;
+
+        System.out.println("Before Swap:");
+        System.out.println("a = " + a + ", b = " + b);
+
+        a = a + b;
+        b = a - b;
+        a = a - b;
+
+        System.out.println("After Swap:");
+        System.out.println("a = " + a + ", b = " + b);
+    }
+}
+
+==================================================================

@@ -1,0 +1,81 @@
+
+
+GitHub Copilot Masterclass for Java, Spring, AI and IntelliJ
+============================================================
+
+Chapter 1: Getting Started with Github Copilot
+
+Introduction to the GitHub Copilot Masterclass for Enterprise Java Developers
+
+How to Install GitHub Copilot in IntelliJ and Smoke Test with a Snake Game
+
+Build Your First Java Project with GitHub Copilot's Ask, Agent & Planning Modes
+
+From Ghost Code to Inline Editing - How to Write Code with GitHub Copilot
+
+Explain, Fix and Setup Tests with Built-In GitHub Copilot Prompts
+
+Build an Interactive JavaFX App with GitHub Copilot in Less Than 5 Minutes
+
+-----------------------------------------------------------------
+
+Chapter 2: Spring Boot, Restful APIs, and the power of Copilots artifact
+
+Introduction to the Poorly RESTed API Project
+
+Creating the Poorly RESTed API with GitHub Copilot
+Prompting Your LLM to Use Java 25 Idioms and Features
+Getting Spring Boot DevTools to Chill with Copilot's Prompt Artefact
+Resolving Port Conflicts & Improving Logging with Tim Horton & Mario Lemieux
+Wave Your Spring Boot Banner with the Copilot's Global Prompt Artefact
+
+
+-----------------------------------------------------
+
+Chapter 3: SuperCharging Github Copilot with skill files
+
+What is a Copilot Skill? Building a Quick Quarkus Project
+Teaching Your LLM all about Roy Fielding's, RESTful API, PhD Dissertation
+Building a Better RESTful API by Invoking a GitHub Copilot Skill
+How to Create Global Skills: Improved Persistence & App Server Deployment Skills
+Build a Windows Native .exe and GraalVM Image with Copilot in only 10 minutes!
+
+-----------------------------------------------------------
+
+Chapter 4: Github Copilt Instructions: How to Steer your LLM to Victory
+
+An Introduction to GitHub Copilot Instruction Files
+Create a Full-Stack, Java Web Application *without* a Copilot Instructions File
+Create a GitHub Copilot Instructions File
+Building a Java 25 Development Instructions File4:24ub Copilot
+Building a Jakarta EE Instructions File
+Rebuilding the Enterprise Java Application with Proper Instructions
+Digging into the Jakarta EE App built with the H2 Database and Open Liberty
+
+-------------------------------------------------------
+
+Chapter 5: The Ins and Outs of Github Copilot Custom agents
+
+What is a Custom Agent and When Should You Use Them?
+Building a Hangman Application with the Cautious Captain Custom Agent
+Handoffs, UI Interactions, the Planning Pirate and the Building Buccaneer
+
+-------------------------------------------------------
+
+Chapter 6: Model Context Protocol Mastery
+
+Why Do We Need Model Context Protocol (MCP)?
+Configuring Your First MCP Server || Detecting Server Vulnerabilities
+Model Context Protocol for Web Developers || Working with Chrome DevTools
+Easily Auditing Website Performance, SEO & Accessibility with MCP Tools
+Configuring Jira's MCP Server with IntelliJ
+Developer-Free Java, Python & TS Dev with Jira, MCP, IntelliJ & GitHub Copilot
+
+------------------------------------------------------
+
+
+Chapter 7: Building apps at command line with Github Copilots command line interface
+
+Getting Started with the Copilot CLI
+Building React Apps, Pushing to Your GitHub Repo & Running Actions with the CLI
+Delegating Work, Creating Pull Requests, Doing Reviews & CLI Code Merges
